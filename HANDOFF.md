@@ -7,6 +7,8 @@ allocation, activations (advance, run, charge, aim), ranged and melee attacks wi
 feats, triggered moves (Reposition, Avenging Force), scoring and the game-over screen. The bottom dock always says
 what the game is waiting for, with the engine's numbers. `npm run e2e` plays Cygnar to round 3 through UI clicks.
 
+**M4 AI (done):** easy/normal utility bot tiers in `src/ai/` (start screen default Normal), slam/trample and exact previews in the engine; normal beat random 20/20 (`npm run bench:ai -- --games 20 --seed 1`).
+
 **Audio (M6):** owner should audition every clip at /whirr-machine/sounds.html and name the ids to redo.
 
 **Next, in order:**

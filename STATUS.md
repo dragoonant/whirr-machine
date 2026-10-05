@@ -33,6 +33,10 @@
   crit, ARM, expected damage, pKill), threat ranges, scenario control, stat trace, move check, power-attack POW.
 - `src/ai/random.ts`: `createSensibleRandomDecider(seed)` / `pickSensible`: random over legal actions, weighted toward
   charging, attacking and moving toward enemies/objectives (leaders hang back). Seeded by (seed, decision id).
+- **M4 AI** (`src/ai/`): utility decider with easy and normal tiers (`tiers.ts`, 40-ai §8; the Opponent select defaults
+  to Normal): scored moves with threat and cover lookahead, scenario roles, Leader safety, focus knapsack, assassination
+  lines, run in a worker (`worker.ts`). `npm run bench:ai -- --games 20 --seed 1`: normal beats random 20/20 and easy
+  16/20, 4.6 ms/decision mean, 0 rejected, 0 stalls, 0 fallbacks.
 - `tools/sim.ts` (`npm run sim -- --games N --seed S [--scenario id] [--json]`): bot vs bot on the starter lists; checks
   60 §2 invariants after every step, a 5000-decision cap, a 200-decision stall detector, save/load mid-game and replay
   determinism. `npm run sim -- --games 50 --seed 1`: 50/50 games end, 0 violations, mean 4.4 rounds.
@@ -71,7 +75,8 @@
 | `factions/cygnar.md`, `factions/khador.md` | QS-2025 values marked; open: app version, spell stats, trooper box counts |
 
 ## Known gaps (engine)
-- Slam and trample movement options are not offered (`chooseMovement` filters them); headbutt/throw work as power attacks.
+- (M4 closed: slam and trample are Normal Movement options per R7.12/R7.14; `query.attackPreview` takes `attackType`
+  and infers `chargeAttack`; see §14. `npm run sim -- --games 30 --seed 4`: 30/30 end, 0 violations.)
 - `reroll`, `rollAnyway`, `chooseGrid`, `combinedAttack`, `channel` decisions are not raised by the starter content.
 - Out-of-activation attacks other than Avenging Force (Reciprocate etc.) are not needed by the starter lists.
 - Additional attacks while initial attacks remain are accepted but not listed as options.
