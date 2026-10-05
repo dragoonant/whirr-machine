@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { settings, useSettings } from '../../contract'
+import { SoundSettings } from '../../audio/SoundSettings'
 import { openHelp } from '../help/HelpGuide'
 import { BOT_TIERS, buildNewGame, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
 import './start.css'
@@ -78,6 +79,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
             ))}
           </div>
         </section>
+        <SoundSettings />
       </div>
 
       {error && <p className="start-error" role="alert">{error}</p>}

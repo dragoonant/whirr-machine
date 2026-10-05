@@ -7,6 +7,8 @@ allocation, activations (advance, run, charge, aim), ranged and melee attacks wi
 feats, triggered moves (Reposition, Avenging Force), scoring and the game-over screen. The bottom dock always says
 what the game is waiting for, with the engine's numbers. `npm run e2e` plays Cygnar to round 3 through UI clicks.
 
+**Audio (M6):** owner should audition every clip at /whirr-machine/sounds.html and name the ids to redo.
+
 **Next, in order:**
 1. **Owner playtest feedback.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong.
    Fix the top items before new features. Repeatable bug reports: add `?seed=<word>` to the URL before Start.

@@ -43,6 +43,22 @@
   `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
 
+## Audio (M6)
+- 59 SFX and narrator clips in `public/audio/`, 10 music tracks in `public/audio/music/` (title, two battle loops,
+  victory and defeat stingers; two candidates each), all made with ElevenLabs from `tools/audio-manifest.json`
+  (credits in `public/audio/CREDITS.md`). Audition page: `/whirr-machine/sounds.html`.
+- Tools: `tools/gen-audio.ts` (idempotent, credit ceiling, `--kind=music` opt-in), `measure-audio.ts` (RMS, crest),
+  `compose-audio.ts` (layer clips from `tools/audio-src/`). Per-asset trims in `src/client/audio/trims.ts`.
+- Client (`src/client/audio/`): Web Audio manager unlocked on the first click; master/effects/narrator/music volumes and
+  mute on the start screen (persisted); music bus -14 dB and ducked under narrator lines; 2 s crossfades; title theme
+  on the start screen, battle loops alternating in game, stingers at game over. `eventSounds.ts` maps engine events to
+  sounds: moves (war-engine step or troop march), shots by `src/client/weaponFlavour.ts`, melee, power attacks,
+  spells, dice, focus, boost, hits, misses, crippled systems, deaths, clouds and conditions, perspective-aware narrator.
+- Hook: `presentation/director.ts` calls `playBeatAudio` once per beat. `?test=1` exposes `window.__audio.stats`.
+- Tests: `tests/client/audio.test.ts` (mapping), `tests/e2e/audio.spec.ts` (every audition file exists; a game
+  decodes 57 clips and plays moves, shots, dice, focus, narrator, title and battle music, no console errors).
+- ElevenLabs account at about 23.1k of the 35.4k overnight ceiling (music cost about 12.5 credits per second).
+
 ## Spec status
 
 | Spec | State |

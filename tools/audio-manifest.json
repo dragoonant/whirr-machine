@@ -38,6 +38,14 @@
       "promptInfluence": 0.65
     },
     {
+      "id": "move-troops",
+      "kind": "sfx",
+      "group": "engine",
+      "prompt": "A small squad of armoured infantry advancing a few quick paces over gravel: boots crunching, leather straps creaking and metal kit rattling softly, no voices, no music, no gunfire",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.6
+    },
+    {
       "id": "melee-fist",
       "kind": "sfx",
       "group": "melee",

@@ -5,6 +5,7 @@
 import type { GameState } from '../../engine/index'
 import { getSettings, scaled } from '../store/settingsStore'
 import { addNarration, clearBanner, resetAnnouncements, showBanner, type NarrationLine } from './announceStore'
+import { playBeatAudio } from '../audio/beatAudio'
 import { applyEvent } from './apply'
 import { buildBeats, type Beat, type SeqEvent } from './beats'
 import { modelName, narrate, playerName, rollLabel, rollVerdict } from './labels'
@@ -91,6 +92,7 @@ function startBeat(beat: Beat, dur: number): void {
     const line = narrate(cur.state, se.event)
     if (line) draft.lines.push({ seq: se.seq, text: line })
   }
+  if (!fastForward && getSettings().speed > 0) playBeatAudio(beat.events.map((se) => se.event), cur.state)
   if (beat.applyAt === 'start') applyBeatEvents(beat)
   if (beat.roll) {
     const seq = beat.events[0]?.seq ?? 0

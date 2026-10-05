@@ -57,4 +57,16 @@ export const TRIMS: Record<string, number> = {
   "we-steam-vent": 0.71,
   "we-step": 1,
   "we-wreck": 0.66,
+  "move-troops": 1,
+  // music: aim at RMS ~0.125 before the music bus offset (MUSIC_DB)
+  "music-title-a": 0.71,
+  "music-title-b": 0.78,
+  "music-battle-a-a": 0.95,
+  "music-battle-a-b": 0.7,
+  "music-battle-b-a": 0.78,
+  "music-battle-b-b": 0.96,
+  "music-victory-a": 0.74,
+  "music-victory-b": 1,
+  "music-defeat-a": 1,
+  "music-defeat-b": 0.95,
 }
