@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 4173
+// PW_PORT lets a run avoid a port another project already holds.
+const PORT = Number(process.env.PW_PORT ?? 4173)
 // Production base path (see vite.config.ts) — the preview server serves the
 // build under this sub-path, matching GitHub Pages.
 const BASE_URL = `http://localhost:${PORT}/whirr-machine/`

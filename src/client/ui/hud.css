@@ -188,3 +188,23 @@
   .hud-left, .hud-right { top: auto; bottom: 12px; position: absolute; max-height: 34vh; width: 46vw; }
   .hud-dock { bottom: calc(34vh + 20px); width: calc(100vw - 24px); }
 }
+
+/* settings popover */
+.set-wrap { position: relative; display: flex; align-items: center; }
+.set-gear { padding: 5px 7px; align-items: center; }
+.set-pop { position: absolute; top: calc(100% + 10px); right: 0; width: 280px; max-height: calc(100vh - 100px); overflow-y: auto; z-index: 30; }
+.set-group { margin: 6px 0; }
+.set-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent2); margin-bottom: 3px; }
+.set-seg { display: flex; gap: 4px; }
+.set-seg button { flex: 1; cursor: pointer; padding: 4px 6px; background: #14161a; color: var(--fg); border: 1px solid var(--line); border-radius: 5px; font: 12px system-ui; }
+.set-seg button.on { background: var(--accent); color: #14161a; border-color: var(--accent); font-weight: 650; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; margin: 4px 0; }
+.set-row input[type=range] { width: 150px; }
+.set-check { justify-content: flex-start; }
+
+/* end screen tables */
+.over-cause { margin: 2px 0 6px; font-size: 12px; }
+.over-table { margin: 8px auto 0; border-collapse: collapse; font-size: 12px; min-width: 60%; }
+.over-table caption { color: var(--accent2); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding-bottom: 2px; }
+.over-table th, .over-table td { padding: 2px 12px; border-bottom: 1px solid #2a2e36; text-align: center; }
+.over-table td:first-child { text-align: left; color: var(--dim); }

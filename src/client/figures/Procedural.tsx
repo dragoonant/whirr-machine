@@ -1,8 +1,12 @@
 // Procedural SD figures (30-figures section 3): ~3 heads tall, oversized hands and weapons, heavier engines.
 // Built only from the shared geometries/materials in kit.ts. Local units: y up from the top of the base disc.
-import type { ReactElement } from 'react'
+import { createContext, useContext, type ReactElement } from 'react'
 import type { PlayerId } from '../../engine/index'
 import { GEO, partMaterial, type Archetype, type Part } from './kit'
+import type { ArmyPaint } from './paintStore'
+
+/** The army paint the bodies below wear (set by ProceduralBody). */
+const PaintContext = createContext<ArmyPaint | undefined>(undefined)
 
 interface PartProps {
   geo: keyof typeof GEO
@@ -14,10 +18,11 @@ interface PartProps {
   grey?: boolean
 }
 function P({ geo, part, side, pos, scale, rot, grey }: PartProps): ReactElement {
-  return <mesh geometry={GEO[geo]} material={partMaterial(side, grey ? 'disabled' : part)} position={pos} scale={scale} rotation={rot} castShadow />
+  const paint = useContext(PaintContext)
+  return <mesh geometry={GEO[geo]} material={partMaterial(side, grey ? 'disabled' : part, paint)} position={pos} scale={scale} rotation={rot} castShadow />
 }
 
-export interface BodyProps { archetype: Archetype; h: number; r: number; side: PlayerId; grey: boolean }
+export interface BodyProps { archetype: Archetype; h: number; r: number; side: PlayerId; grey: boolean; paint?: ArmyPaint }
 
 function Trooper({ h, side, grey, withProp }: { h: number; side: PlayerId; grey: boolean; withProp?: boolean }): ReactElement {
   const g = grey
@@ -98,7 +103,11 @@ function Chassis({ h, r, side, grey }: { h: number; r: number; side: PlayerId; g
   )
 }
 
-export function ProceduralBody({ archetype, h, r, side, grey }: BodyProps): ReactElement {
+export function ProceduralBody({ paint, ...props }: BodyProps): ReactElement {
+  return <PaintContext.Provider value={paint}><Body {...props} /></PaintContext.Provider>
+}
+
+function Body({ archetype, h, r, side, grey }: BodyProps): ReactElement {
   switch (archetype) {
     case 'caster': return <Caster h={h} side={side} grey={grey} />
     case 'heavyEngine': return <HeavyEngine h={h} r={r} side={side} grey={grey} />

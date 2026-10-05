@@ -1,6 +1,6 @@
 # Handoff
 
-**Current state:** M3 is done. The playable vertical slice is on Pages (https://dragoonant.github.io/whirr-machine/):
+**Current state:** M3 to M7 are done (M4 AI, M5 figures, M6 audio, M7 polish). The playable vertical slice is on Pages (https://dragoonant.github.io/whirr-machine/):
 pick Cygnar or Khador, a scenario (Ashwall Divide or the Quick Start demo) and an animation speed, read How to Play
 (9 tabs), then play a whole game against the sensible random bot: roll-off, edges, deployment, Prey, focus
 allocation, activations (advance, run, charge, aim), ranged and melee attacks with boosts, Powerful Attack, spells,
@@ -11,12 +11,20 @@ what the game is waiting for, with the engine's numbers. `npm run e2e` plays Cyg
 
 **Audio (M6):** owner should audition every clip at /whirr-machine/sounds.html and name the ids to redo.
 
+**M5 figures + M7 polish (done):** eight Hunyuan SD figure GLBs replace the procedural figures (fallback kept), army
+painter shader, status visuals and attack VFX; feed breakdowns, end-screen stats, settings popover, narration pauses,
+title art. Review the figures at /whirr-machine/?gallery. `tests/e2e/art.spec.ts` plays Khador vs the Normal bot for two
+rounds and writes `e2e-out/art-*.png` and `gallery.png`.
+
 **Next, in order:**
-1. **Owner playtest feedback.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong.
-   Fix the top items before new features. Repeatable bug reports: add `?seed=<word>` to the URL before Start.
-2. **M4 AI.** Read `40-ai` (all) and `50-client` §2. Add stronger bot tiers behind `chooseBotAction` in
-   `src/client/bot/botDriver.ts` (the start screen's Opponent select lists `BOT_TIERS` in `ui/start/startOptions.ts`);
-   benchmark with `npm run bench:ai` and `npm run sim`.
+1. **Owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
+   top items before new features. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
+2. **Owner veto of the figure concept picks.** The candidates for each figure are in
+   `C:/Users/antho/Hunyuan3D-2/outputs/wm-<slug>/concepts/` (`s0.png`..`s5.png` plus `sheet.png`). Name any figure
+   to redo and which concept to use. Rebuild that GLB, drop it into `public/assets/models/<slug>.glb` (scaled in inches,
+   black base) and re-run the art spec.
+3. Then: an in-game army painter control (it is on the gallery page only today), and panels that cover less of the
+   board at 1280 wide.
 
 **Client map (`src/client/`):**
 - `App.tsx` start <-> game routing; `GameScreen.tsx` mounts `board/Board.tsx` (Battlefield) and `ui/Hud.tsx`.
@@ -25,7 +33,9 @@ what the game is waiting for, with the engine's numbers. `npm run e2e` plays Cyg
   prompts open only when the presentation is idle.
 - `ui/promptView.ts` (prompt text per decision kind), `ui/PromptForms.tsx` (board, focus, upkeep, shake forms),
   `ui/activationView.ts` + `ActivationPanel.tsx` (movement/combat/attack/spell buttons), `interaction/` (board clicks).
-- Test hooks: `?test=1` exposes `window.__game`; `?scenario=&lists=&control=bot,bot&seed=` skips the start screen.
+- Test hooks: `?test=1` exposes `window.__game`; `?scenario=&lists=&control=bot,bot&seed=` skips the start screen;
+  `?gallery` shows the figure gallery.
+- `figures/` (GLB loader, models map, painter, procedural fallback, gallery), `vfx/` (beat-driven effects, status FX).
 
 **Engine requests from M3 (not done; the client works around them):**
 - `query.attackPreview` should accept `attackType` (shot modes such as a blast shot) and infer `chargeAttack`.

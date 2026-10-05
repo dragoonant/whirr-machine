@@ -14,7 +14,7 @@ export function SoundSettings() {
     return () => { audio.setMusicScene('battle') }
   }, [])
   return (
-    <section className="start-card" data-testid="sound-settings" style={{ gridColumn: "1 / -1" }}>
+    <section className="start-card start-sound" data-testid="sound-settings">
       <h2>Sound</h2>
       {BUSES.map(([bus, label]) => (
         <label key={bus}>{label}
@@ -22,7 +22,7 @@ export function SoundSettings() {
             data-testid={`sound-${bus}`} onChange={(e) => audio.setVolume(bus, Number(e.target.value) / 100)} />
         </label>
       ))}
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <label className="start-sound-mute">
         <input type="checkbox" checked={s.muted} data-testid="sound-mute" onChange={(e) => audio.setMuted(e.target.checked)} />
         Mute all sound
       </label>

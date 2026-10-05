@@ -98,9 +98,17 @@ export class AudioManager {
     this.ctx = ctx
     this.master = ctx.createGain()
     this.master.connect(ctx.destination)
+    // sfx goes through a fast limiter so boosted quiet clips (trim up to 4x) never clip
+    const limiter = ctx.createDynamicsCompressor()
+    limiter.threshold.value = -6
+    limiter.knee.value = 6
+    limiter.ratio.value = 20
+    limiter.attack.value = 0.002
+    limiter.release.value = 0.12
+    limiter.connect(this.master)
     for (const b of ['sfx', 'voice', 'music'] as const) {
       const g = ctx.createGain()
-      g.connect(this.master)
+      g.connect(b === 'sfx' ? limiter : this.master)
       this.bus[b] = g
     }
     this.duck = ctx.createGain()
@@ -175,7 +183,7 @@ export class AudioManager {
     const jitter = opts.detuneJitter ?? JITTER_CENTS[bus]
     if (jitter) src.detune.value = (Math.random() * 2 - 1) * jitter
     const g = ctx.createGain()
-    g.gain.value = clamp01((opts.volume ?? 1) * (TRIMS[id] ?? 1))
+    g.gain.value = clamp01(opts.volume ?? 1) * Math.min(4, TRIMS[id] ?? 1)
     src.connect(g).connect(dest)
     st.active++
     this.stats.played[id] = (this.stats.played[id] ?? 0) + 1

@@ -1,5 +1,5 @@
 // Dismissible first-time tip at the bottom of the screen, driven by the engine's pending decision.
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { usePrompt } from '../../contract'
 import { COACH_KEY, coachTip, dismissKind, parseCoach, shouldCoach, type CoachMemory } from './coachText'
 import { openHelp } from './HelpGuide'
@@ -12,13 +12,23 @@ function load(): CoachMemory {
   try { raw = localStorage.getItem(COACH_KEY) } catch { /* blocked */ }
   return (mem = parseCoach(raw))
 }
+const listeners = new Set<() => void>()
 function save(next: CoachMemory): void {
   mem = next
   try { localStorage.setItem(COACH_KEY, JSON.stringify(next)) } catch { /* blocked */ }
+  for (const l of listeners) l()
+}
+
+/** First-time tips on or off (the settings popover and the tip's own "Turn tips off" share this). */
+export function tipsEnabled(): boolean { return !load().off }
+export function setTipsEnabled(on: boolean): void { save({ ...load(), off: !on, ...(on ? { seen: [] } : {}) }) }
+export function useTipsEnabled(): boolean {
+  return useSyncExternalStore((cb) => { listeners.add(cb); return () => { listeners.delete(cb) } }, tipsEnabled, () => true)
 }
 
 export function CoachLine() {
   const prompt = usePrompt()
+  useTipsEnabled()
   const [, bump] = useState(0)
   const m = load()
   const kind = prompt?.kind

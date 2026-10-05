@@ -161,9 +161,9 @@
       "id": "gun-spellstorm-pistol",
       "kind": "sfx",
       "group": "gun",
-      "prompt": "A rapid stuttering burst of electrically charged pistol shots, each a crack with a bright crackling zap tail, no music, no voices",
+      "prompt": "One electrically charged pistol shot: a sharp crack with a brief bright zap, decays quickly, single sharp report, fast attack, no sustained rumble, no music",
       "durationSeconds": 0.9,
-      "promptInfluence": 0.65
+      "promptInfluence": 0.7
     },
     {
       "id": "gun-spellstorm-cannon",
@@ -185,7 +185,7 @@
       "id": "gun-scattergun",
       "kind": "sfx",
       "group": "gun",
-      "prompt": "A single wide shotgun blast: a loud booming report with a spray of pellets whistling and rattling against metal, no music, no voices",
+      "prompt": "One shotgun blast: an instant sharp loud report with a short pellet rattle, decays quickly, single sharp report, fast attack, no sustained rumble, no music",
       "durationSeconds": 0.9,
       "promptInfluence": 0.7
     },
@@ -193,7 +193,7 @@
       "id": "gun-cannon",
       "kind": "sfx",
       "group": "gun",
-      "prompt": "A single large artillery cannon shot recorded up close: a sudden huge explosive boom with a sharp crack, brief rumble, no music, no voices",
+      "prompt": "One large artillery cannon firing: an instant sharp explosive crack that decays quickly, single sharp report, fast attack, no sustained rumble, no music",
       "durationSeconds": 1.5,
       "promptInfluence": 0.7
     },
@@ -201,7 +201,7 @@
       "id": "gun-cannon-blast",
       "kind": "sfx",
       "group": "gun",
-      "prompt": "A deep heavy cannon thump followed by a loud explosive burst of a shell detonating with rumbling debris, no music, no voices",
+      "prompt": "One heavy cannon shell: a sharp thump and explosive burst, decays quickly, single sharp report, fast attack, no sustained rumble, no music",
       "durationSeconds": 1.5,
       "promptInfluence": 0.7
     },
@@ -217,7 +217,7 @@
       "id": "gun-grenade-launcher",
       "kind": "sfx",
       "group": "gun",
-      "prompt": "A sudden punchy thump of a grenade fired from a tube followed by a sharp loud explosion bang, dry, short tail, no music, no voices",
+      "prompt": "One grenade launcher firing: a sharp punchy thump and bang that decays quickly, dry, single sharp report, fast attack, no sustained rumble, no music",
       "durationSeconds": 1.5,
       "promptInfluence": 0.7
     },

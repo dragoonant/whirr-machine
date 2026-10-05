@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import type { ModelState, ModelType, PlayerId } from '../../engine/index'
 import { baseRadius } from '../../engine/geometry'
 import { SIDE_COLOURS } from '../board/layout'
+import { paintKey, type ArmyPaint } from './paintStore'
 
 export type Archetype = 'caster' | 'heavyEngine' | 'lightEngine' | 'solo' | 'trooper' | 'battleEngine' | 'structure'
 
@@ -72,15 +73,20 @@ const PART_COLOUR = (side: PlayerId, part: Part): string => {
     case 'disabled': return '#5a5c60'
   }
 }
-export function partMaterial(side: PlayerId, part: Part): THREE.Material {
-  return mat(`${side}:${part}`, () => new THREE.MeshStandardMaterial({
-    color: PART_COLOUR(side, part), roughness: part === 'metal' ? 0.45 : 0.7, metalness: part === 'metal' || part === 'brass' ? 0.6 : 0.1,
+/** Army-painter colour for a part, or the side's stock colour. Only primary and secondary are repainted. */
+const paintedColour = (side: PlayerId, part: Part, paint?: ArmyPaint): string =>
+  (part === 'primary' && paint?.primary) || (part === 'secondary' && paint?.secondary) || PART_COLOUR(side, part)
+export function partMaterial(side: PlayerId, part: Part, paint?: ArmyPaint): THREE.Material {
+  const pk = part === 'primary' || part === 'secondary' ? paintKey(paint) : ''
+  return mat(`${side}:${part}:${pk}`, () => new THREE.MeshStandardMaterial({
+    color: paintedColour(side, part, paint), roughness: part === 'metal' ? 0.45 : 0.7, metalness: part === 'metal' || part === 'brass' ? 0.6 : 0.1,
     ...(part === 'glow' ? { emissive: '#ffb830', emissiveIntensity: 1.2 } : {}),
   }))
 }
 export const BASE_MATERIAL = new THREE.MeshStandardMaterial({ color: '#15161a', roughness: 0.9, metalness: 0 })
 export const HIT_MATERIAL = new THREE.MeshBasicMaterial({ visible: false })
 export const shellMaterial = new THREE.MeshBasicMaterial({ color: '#9fe3ff', transparent: true, opacity: 0.22, depthWrite: false })
+export const iceMaterial = new THREE.MeshStandardMaterial({ color: '#bfeaff', emissive: '#5fb8e8', emissiveIntensity: 0.5, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.85 })
 export function lineMaterial(key: string, color: string, opacity = 1): THREE.MeshBasicMaterial {
   return mat(`line:${key}:${color}:${opacity}`, () => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, side: THREE.DoubleSide, depthWrite: false })) as THREE.MeshBasicMaterial
 }

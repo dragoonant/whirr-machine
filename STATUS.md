@@ -43,9 +43,35 @@
 - E2E (`npm run e2e`, vite preview at /whirr-machine/): `tests/e2e/play.spec.ts` plays Cygnar vs the bot through UI
   clicks to round 3 (How to Play tabs checked, screenshots in `e2e-out/`), and Khador on the Quick Start demo for a round
   with attacks made by clicking the enemy. Shared click policy in `tests/e2e/policy.ts`.
-- Tests: 171 unit tests in 21 files (engine, data, client store/board/HUD/start/prompts), including
+- Tests: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
   `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
+
+## Figures and VFX (M5)
+- Eight Hunyuan SD figure GLBs in `public/assets/models/` (wm-caine, wm-falk, wm-black13 for all three Black 13th,
+  wm-deuce, wm-vilkul, wm-lazarenko, wm-hounds for all three Hounds, wm-razor; 8.8 MB). `figures/glbModels.ts` maps
+  profile ids to slugs; `glbLoader.ts` loads each once (shared geometry and materials). The procedural figure stands
+  in while a GLB loads or if it fails.
+- Army painter (`glbPaint.ts`, `paintStore.ts`): a hue-band shader remaps each faction's two main hues; stock colours
+  by default. Presets and colour pickers are on the gallery page only for now.
+- Status visuals: knocked down tips over, stationary ice shell, crippled-system sparks and smoke, focus orbs, selection
+  ring, destroyed fade. VFX (`src/client/vfx/`): muzzle flash and tracer, melee sparks, spell glow, blast ring, driven
+  by presentation beats. Low graphics drops particles and shadows.
+- `?gallery`: every figure GLB on a turntable with names, paint pickers and status toggles (procedural twin off by
+  default).
+- Frame time (headless Chromium, software WebGL, 1280x760, all 8 GLBs on the table, camera panning): 18.5 ms mean,
+  33 ms p95. A real GPU will be faster.
+
+## Polish (M7)
+- Event feed with attack breakdowns (dice, boosts, target number, expected vs actual damage) and per-turn damage
+  totals. End screen with the cause, VP per round, damage per side, Play again and Menu.
+- Settings popover (gear in the top bar): speed, graphics Low/High, narration pauses, tips. Phase and turn banners
+  pause the narration (scaled by speed; a click skips). Title art (gold gears and steam). The start screen keeps Start
+  above the fold at 1280x760 (one-row sound controls).
+- `tests/e2e/art.spec.ts`: Khador vs the Normal bot for two rounds through UI clicks (the warcaster hangs back; Razor
+  is activated by clicking its figure for the close-up). It checks that all GLBs load with no page errors, measures
+  ms/frame, fast-forwards to the end screen, and writes `e2e-out/art-*.png` and `gallery.png`.
+  `PW_PORT=4183 npx playwright test` runs the suite on another port when 4173 is taken.
 
 ## Audio (M6)
 - 59 SFX and narrator clips in `public/audio/`, 10 music tracks in `public/audio/music/` (title, two battle loops,
@@ -87,6 +113,9 @@
   `chargeAttack` (the client cannot tell a charge attack apart; the engine could infer it).
 - Movement is click-to-place (single waypoint); multi-waypoint paths need Shift-click. No drag yet.
 - Side colours are fixed by seat (A blue, B orange), not by faction. Left activation panel repeats some card stats.
-- Game chunk is ~1.05 MB (three.js + board); the start chunk is ~0.47 MB.
+- Game chunks total ~1.1 MB (three.js, board, figures); the start chunk is ~0.55 MB. At 1280 wide the side panels
+  cover much of the board.
+- The army painter has no in-game control yet (gallery only).
 
-Next: owner playtest feedback on the Pages build, then M4 AI (see HANDOFF.md).
+Next: owner playtest of the M5/M7 build on Pages, and veto the figure concept picks (candidates in
+`C:/Users/antho/Hunyuan3D-2/outputs/wm-*/concepts/`). See HANDOFF.md.

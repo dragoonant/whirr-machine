@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { settings, useSettings } from '../../contract'
 import { SoundSettings } from '../../audio/SoundSettings'
+import { TitleArt } from './TitleArt'
 import { openHelp } from '../help/HelpGuide'
 import { BOT_TIERS, buildNewGame, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
 import './start.css'
@@ -21,6 +22,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const [listId, setListId] = useState(sides[0]?.listId ?? '')
   const [scenario, setScenario] = useState(scenarios[0]?.id ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [tier, setTier] = useState<string>(BOT_TIERS[0].id)
   const side = sides.find((s) => s.listId === listId)
   const scn = scenarios.find((s) => s.id === scenario)
 
@@ -35,6 +37,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   return (
     <main className="start" data-testid="start-screen">
       <header className="start-title">
+        <TitleArt />
         <h1 data-testid="title">Whirr Machine</h1>
         <p>An unofficial fan project, not affiliated with Steamforged Games.</p>
       </header>
@@ -61,10 +64,11 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
         <section className="start-card">
           <h2>Match</h2>
           <label>Opponent
-            <select data-testid="start-opponent" defaultValue={BOT_TIERS[0].id}>
+            <select data-testid="start-opponent" defaultValue={BOT_TIERS[0].id} onChange={(e) => setTier(e.target.value)}>
               {BOT_TIERS.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
             </select>
           </label>
+          <p className="start-note" data-testid="start-opponent-note">{BOT_TIERS.find((b) => b.id === tier)?.note}</p>
           <label>Scenario
             <select data-testid="start-scenario" value={scenario} onChange={(e) => setScenario(e.target.value)}>
               {scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}

@@ -1,4 +1,4 @@
-// Routes start screen <-> game. Hooks: ?test=1 (window.__game), ?scenario=&lists=&seed= (skip start).
+// Routes start screen <-> game. Hooks: ?test=1 (window.__game), ?scenario=&lists=&seed= (skip start), ?gallery (figures).
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { bootClient, game, setupFromUrl, useHasGame } from './contract'
 import { CoachLine } from './ui/help/CoachLine'
@@ -8,10 +8,17 @@ import { useGameStore } from './store/gameStore'
 
 // three.js and the board live in their own chunk; the start screen loads without them.
 const GameView = lazy(() => import('./GameScreen'))
+// ?gallery: every figure GLB on a turntable for owner review, in its own chunk.
+const GalleryView = lazy(() => import('./figures/Gallery'))
 
 const params = () => new URLSearchParams(typeof location !== 'undefined' ? location.search : '')
 
 export function App() {
+  if (params().has('gallery')) return <Suspense fallback={<Loading />}><GalleryView /></Suspense>
+  return <GameApp />
+}
+
+function GameApp() {
   const hasGame = useHasGame()
   const [screen, setScreen] = useState<'start' | 'game'>(() => (setupFromUrl() ? 'game' : 'start'))
 
