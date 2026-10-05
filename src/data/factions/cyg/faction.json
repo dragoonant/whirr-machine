@@ -1,0 +1,23 @@
+{
+  "id": "cyg",
+  "name": "Cygnar",
+  "short": "Cygnar",
+  "appVersion": "qs-2025+community",
+  "source": "Quick Start Jul 2025 verified values plus community card data; see docs/spec/factions/cygnar.md.",
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre"
+  ],
+  "palette": {
+    "primary": "#2b4a8c",
+    "secondary": "#c9a227",
+    "metal": "#9aa3ad",
+    "base": "#3b3a35",
+    "ui": "#4f78c8"
+  },
+  "sourceHues": [
+    220,
+    45
+  ],
+  "marking": "storm-bolt"
+}

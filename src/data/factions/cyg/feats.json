@@ -1,0 +1,17 @@
+[
+  {
+    "id": "cyg.f.arcane-conflagration",
+    "name": "Arcane Conflagration",
+    "text": "For a round, each Spellstorm Pistol hit on an enemy adds a stacking +1 to later pistol damage rolls, and a boxed target explodes in a POW 10 magical blast.",
+    "effect": [
+      {
+        "code": "arcaneConflagrationCounter"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round",
+    "verify": "Community data; confirm in app."
+  }
+]

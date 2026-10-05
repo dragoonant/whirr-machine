@@ -1,0 +1,23 @@
+{
+  "id": "cyg.l.qs-recon",
+  "name": "Quick Start Cygnar",
+  "faction": "cyg",
+  "level": "recon",
+  "points": 30,
+  "leader": "cyg.caine",
+  "entries": [
+    {
+      "profile": "cyg.deuce"
+    },
+    {
+      "profile": "cyg.falk",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "cyg.black13",
+      "size": 3,
+      "advanceDeploy": true
+    }
+  ],
+  "source": "Quick Start starter set"
+}

@@ -1,0 +1,23 @@
+{
+  "id": "kha.l.qs-recon",
+  "name": "Quick Start Khador",
+  "faction": "kha",
+  "level": "recon",
+  "points": 30,
+  "leader": "kha.vilkul",
+  "entries": [
+    {
+      "profile": "kha.razor"
+    },
+    {
+      "profile": "kha.lazarenko",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "kha.hounds",
+      "size": 3,
+      "advanceDeploy": true
+    }
+  ],
+  "source": "Quick Start starter set"
+}

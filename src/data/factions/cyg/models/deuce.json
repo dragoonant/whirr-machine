@@ -1,0 +1,57 @@
+{
+  "id": "cyg.deuce",
+  "name": "Deuce",
+  "faction": "cyg",
+  "type": "warEngine",
+  "engineClass": "heavy",
+  "character": true,
+  "keywords": [
+    "construct",
+    "gun-mage-ally"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 7,
+    "DEF": 13,
+    "ARM": 18
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "---L",
+      "--LLM",
+      "----MM",
+      "----CC",
+      "--RRC",
+      "---R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.spellstorm-cannon",
+      "location": "L"
+    },
+    {
+      "weapon": "cyg.w.crescent-blade",
+      "location": "R"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "core.a.true-sight",
+    "core.a.reposition",
+    "cyg.a.accumulator"
+  ],
+  "cost": 17,
+  "fa": "C",
+  "figure": {
+    "archetype": "heavyEngine"
+  },
+  "verify": "Grid assumed the same as Razor (QS p41); MAT community data."
+}

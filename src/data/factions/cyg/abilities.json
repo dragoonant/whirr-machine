@@ -1,0 +1,567 @@
+[
+  {
+    "id": "cyg.a.evasive",
+    "name": "Evasive",
+    "text": "When an enemy ranged attack hits this model, it may advance 2 inches after the attack resolves.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "test": "attackKind",
+          "value": "ranged"
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cyg.a.field-marshal-evasive",
+    "name": "Field Marshal [Evasive]",
+    "text": "Warjacks in this model's battlegroup have Evasive.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cyg.a.evasive"
+      }
+    ],
+    "scope": {
+      "who": "warEngines"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.gatecrasher",
+    "name": "Gatecrasher",
+    "text": "After destroying an enemy this activation, this model may advance 5 inches, which ends its activation.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "code": "destroyedEnemyThisActivation"
+    },
+    "effect": [
+      {
+        "op": "place",
+        "dist": 5,
+        "direction": "any"
+      },
+      {
+        "op": "endActivation"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cyg.a.head-shot",
+    "name": "Head Shot",
+    "text": "A ranged attack that boxes the target removes it from play and denies Tough.",
+    "kind": "triggered",
+    "trigger": "death.boxed",
+    "when": {
+      "test": "attackKind",
+      "value": "ranged"
+    },
+    "effect": [
+      {
+        "op": "forbid",
+        "what": "tough"
+      },
+      {
+        "op": "removeFromPlay"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.leadership-gun-mage",
+    "name": "Leadership [Gun Mage]",
+    "text": "Friendly Gun Mage models within 10 inches have Head Shot.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cyg.a.head-shot"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 10,
+      "filter": {
+        "test": "keyword",
+        "value": "gun-mage"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.accumulator",
+    "name": "Accumulator [Gun Mage]",
+    "text": "Starting an activation within 3 inches of a friendly Gun Mage gives this model one focus, up to its cap.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "when": {
+      "all": [
+        {
+          "test": "keyword",
+          "value": "gun-mage"
+        },
+        {
+          "test": "withinInches",
+          "of": "self",
+          "dist": 3
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "gainFocus",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.leadership-gun-mages",
+    "name": "Leadership [Gun Mages]",
+    "text": "Friendly Gun Mage models within 10 inches have Reciprocate.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cyg.a.reciprocate"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 10,
+      "filter": {
+        "test": "keyword",
+        "value": "gun-mage"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.reciprocate",
+    "name": "Reciprocate",
+    "text": "When an enemy ranged attack misses this model, it makes a basic ranged attack back at the attacker.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "not": {
+            "test": "hit"
+          }
+        },
+        {
+          "test": "attackKind",
+          "value": "ranged"
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "makeAttack",
+        "target": "attacker",
+        "weaponFilter": "ranged",
+        "basic": true
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.run-and-gun",
+    "name": "Run & Gun",
+    "text": "After destroying an enemy with a ranged attack, this model may advance its full speed at the end of its activation.",
+    "kind": "triggered",
+    "trigger": "activation.end",
+    "effect": [
+      {
+        "code": "runAndGun"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cyg.a.prey",
+    "name": "Granted: Prey",
+    "text": "After deployment the unit picks an enemy model; its attack and damage rolls against it get +2 until it dies, then it picks a new one.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": {
+      "test": "isPrey",
+      "subject": "target"
+    },
+    "effect": [
+      {
+        "code": "prey"
+      },
+      {
+        "op": "modRoll",
+        "roll": "attack",
+        "value": 2
+      },
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "unit"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.granted-true-sight",
+    "name": "Granted: True Sight",
+    "text": "While this trooper lives its whole unit has True Sight.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "core.a.true-sight"
+      }
+    ],
+    "scope": {
+      "who": "unit"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.witch-mark",
+    "name": "Witch Mark",
+    "text": "A hit marks the target: this activation the caster's spells at it auto-hit and ignore range and LOS.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "code": "witchMark"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.thunderbolt",
+    "name": "Thunderbolt",
+    "text": "A hit pushes the target d3 inches away.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "op": "push",
+        "dist": "d3",
+        "direction": "away"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.thunderbolt-crit",
+    "name": "Thunderbolt (crit)",
+    "text": "A critical hit also knocks the target down.",
+    "kind": "specialAttack",
+    "trigger": "attack.crit",
+    "effect": [
+      {
+        "op": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.heart-seeker",
+    "name": "Heart Seeker",
+    "text": "Roll an extra damage die and discard the lowest.",
+    "kind": "specialAttack",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "op": "addDie",
+        "roll": "damage"
+      },
+      {
+        "op": "discardLowest",
+        "roll": "damage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.blast",
+    "name": "Blast",
+    "text": "This shot becomes a small blast: AOE 2, POW 12 direct and 6 blast.",
+    "kind": "specialAttack",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "blastShot"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.powerful-attack",
+    "name": "Powerful Attack",
+    "text": "Optional: one focus boosts the attack roll and its damage roll.",
+    "kind": "specialAttack",
+    "trigger": "attack.beforeRoll",
+    "effect": [
+      {
+        "code": "powerfulAttack"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true,
+    "cost": {
+      "focus": 1
+    }
+  },
+  {
+    "id": "cyg.a.incendiary",
+    "name": "Incendiary",
+    "text": "This shot deals fire damage and sets the target on fire.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "op": "applyCondition",
+        "condition": "fire"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.banish",
+    "name": "Banish",
+    "text": "A damaging hit moves a non-leader target up to 1 inch.",
+    "kind": "specialAttack",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "not": {
+            "test": "modelType",
+            "subject": "target",
+            "value": "leader"
+          }
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "place",
+        "dist": 1,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.shadow-fire",
+    "name": "Shadow Fire",
+    "text": "The hit model does not block line of sight for a turn.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "code": "shadowFire"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.mage-storm",
+    "name": "Mage Storm",
+    "text": "Chain attack: if both initial shots hit the same model, a fire hazard cloud appears on it for a round.",
+    "kind": "specialAttack",
+    "trigger": "attack.resolved",
+    "effect": [
+      {
+        "code": "mageStorm"
+      },
+      {
+        "op": "cloud",
+        "area": "hazard",
+        "placement": "centredOnTarget",
+        "count": 1,
+        "aoe": 3,
+        "hazard": {
+          "pow": 12,
+          "damageType": "fire",
+          "on": [
+            "enter",
+            "endActivation"
+          ]
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.momentum",
+    "name": "Momentum",
+    "text": "A hit slams a target on a base of 40 mm or smaller d3 inches.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "when": {
+      "test": "baseAtMost",
+      "subject": "target",
+      "value": 40
+    },
+    "effect": [
+      {
+        "op": "slam",
+        "dist": "d3",
+        "collateralPow": 10
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.momentum-large",
+    "name": "Momentum (large)",
+    "text": "A hit knocks down a target on a base larger than 40 mm.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "when": {
+      "test": "baseAtLeast",
+      "subject": "target",
+      "value": 50
+    },
+    "effect": [
+      {
+        "op": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.both-barrels",
+    "name": "Both Barrels",
+    "text": "Replaces the initial attacks with one attack that adds 4 to its damage roll.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 4
+      },
+      {
+        "op": "forbid",
+        "what": "weaponAttacks"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.arcane-conflagration-burst",
+    "name": "Arcane Conflagration Burst",
+    "text": "When a Spellstorm Pistol shot boxes a model, everything within 1 inch takes a POW 10 blast and the boxed model is removed.",
+    "kind": "triggered",
+    "trigger": "death.boxed",
+    "effect": [
+      {
+        "op": "damage",
+        "pow": 10,
+        "damageType": "magical"
+      },
+      {
+        "op": "removeFromPlay"
+      }
+    ],
+    "scope": {
+      "who": "any",
+      "range": 1
+    },
+    "duration": "instant"
+  }
+]

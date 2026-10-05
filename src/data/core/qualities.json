@@ -1,0 +1,112 @@
+[
+  {
+    "id": "core.q.magical",
+    "name": "Magical",
+    "text": "Damage from this weapon is magical.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "magical"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.q.pistol",
+    "name": "Pistol",
+    "text": "This ranged weapon may be fired while the model is in melee.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "pistol"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.q.throw",
+    "name": "Throw PA",
+    "text": "May be used for the throw power attack.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "throwPA"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.q.buckler",
+    "name": "Buckler",
+    "text": "While the system holding this weapon works, its owner has +1 ARM, even when knocked down.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.q.shield",
+    "name": "Shield",
+    "text": "While the system holding this weapon works, its owner has +2 ARM.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.q.weapon-master",
+    "name": "Weapon Master",
+    "text": "This weapon rolls one extra damage die.",
+    "kind": "weaponQuality",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "op": "addDie",
+        "roll": "damage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  }
+]

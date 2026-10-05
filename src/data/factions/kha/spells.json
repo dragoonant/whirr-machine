@@ -1,0 +1,56 @@
+[
+  {
+    "id": "kha.s.superiority",
+    "name": "Superiority",
+    "text": "A warjack in Vilkul's battlegroup gains +2 SPD, MAT and DEF and cannot be knocked down. Upkeep.",
+    "cost": 2,
+    "rng": 10,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "SPD",
+        "value": 2
+      },
+      {
+        "op": "modStat",
+        "stat": "MAT",
+        "value": 2
+      },
+      {
+        "op": "modStat",
+        "stat": "DEF",
+        "value": 2
+      },
+      {
+        "op": "forbid",
+        "what": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "warEngines",
+      "count": 1
+    },
+    "verify": "Range unknown (guess 10)."
+  },
+  {
+    "id": "kha.s.avenging-force",
+    "name": "Avenging Force",
+    "text": "A warjack in her battlegroup that saw a friendly model damaged in the enemy turn advances 3 inches and makes one basic attack in her next maintenance. Upkeep.",
+    "cost": 2,
+    "rng": 10,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "code": "avengingForce"
+      }
+    ],
+    "scope": {
+      "who": "warEngines",
+      "count": 1
+    },
+    "verify": "Range and targeting unknown (guess 10)."
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "id": "cyg.black13",
+  "name": "The Black 13th",
+  "faction": "cyg",
+  "type": "unit",
+  "character": true,
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre"
+  ],
+  "cost": 9,
+  "fa": "C",
+  "composition": {
+    "grunts": {
+      "profile": "cyg.black13-ryan",
+      "min": 1,
+      "max": 1
+    },
+    "extra": [
+      {
+        "profile": "cyg.black13-glover",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "profile": "cyg.black13-watts",
+        "min": 1,
+        "max": 1
+      }
+    ],
+    "costBySize": {
+      "3": 9
+    }
+  }
+}

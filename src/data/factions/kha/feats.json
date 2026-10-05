@@ -1,0 +1,24 @@
+[
+  {
+    "id": "kha.f.pall-of-ashes",
+    "name": "Pall of Ashes",
+    "text": "Place d3+3 ash clouds in Vilkul's CTRL until her next turn. Living enemies in them suffer -2 DEF, -2 to attack, and lose Tough; friendly models moving through them gain Pathfinder and may pass over other models.",
+    "effect": [
+      {
+        "op": "cloud",
+        "area": "cloud",
+        "placement": "ctrl",
+        "count": "d3+3",
+        "aoe": 3
+      },
+      {
+        "code": "pallOfAshesMove"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round",
+    "verify": "Per-cloud effects on enemies are modelled by the engine cloud logic and hook; QS verified count and LOS block."
+  }
+]

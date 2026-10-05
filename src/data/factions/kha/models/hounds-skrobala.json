@@ -1,0 +1,48 @@
+{
+  "id": "kha.hounds-skrobala",
+  "name": "Skrobala (Hounds)",
+  "faction": "kha",
+  "type": "trooper",
+  "character": true,
+  "keywords": [
+    "hounds"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 6,
+    "DEF": 14,
+    "ARM": 15
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "kha.w.assault-cannon"
+    },
+    {
+      "weapon": "kha.w.battle-shield"
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "core.a.resist-fire",
+    "core.a.resist-corrosion",
+    "core.a.tough",
+    "kha.a.alchemical-mask",
+    "kha.a.girded",
+    "kha.a.shield-wall",
+    "core.a.prowl",
+    "core.a.reposition"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Box count assumed 5."
+}

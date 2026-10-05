@@ -1,0 +1,420 @@
+[
+  {
+    "id": "kha.a.field-marshal-prowl",
+    "name": "Field Marshal [Prowl]",
+    "text": "Warjacks in this model's battlegroup have Prowl.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "core.a.prowl"
+      }
+    ],
+    "scope": {
+      "who": "warEngines"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.rise",
+    "name": "Rise",
+    "text": "At the start of maintenance a knocked-down model stands up.",
+    "kind": "triggered",
+    "trigger": "maintenance.start",
+    "when": {
+      "test": "hasCondition",
+      "value": "knockedDown"
+    },
+    "effect": [
+      {
+        "op": "removeCondition",
+        "condition": "knockedDown"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.take-down",
+    "name": "Take Down",
+    "text": "A melee attack that boxes the target removes it from play and denies Tough.",
+    "kind": "triggered",
+    "trigger": "death.boxed",
+    "when": {
+      "test": "attackKind",
+      "value": "melee"
+    },
+    "effect": [
+      {
+        "op": "forbid",
+        "what": "tough"
+      },
+      {
+        "op": "removeFromPlay"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.enhanced-alchemical-mask",
+    "name": "Enhanced Alchemical Mask",
+    "text": "Ignores gas, clouds and concealment.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "gas"
+      },
+      {
+        "op": "ignore",
+        "ignore": "clouds"
+      },
+      {
+        "op": "ignore",
+        "ignore": "concealment"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.alchemical-mask",
+    "name": "Alchemical Mask",
+    "text": "Ignores gas and clouds.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "gas"
+      },
+      {
+        "op": "ignore",
+        "ignore": "clouds"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.anchor",
+    "name": "Anchor",
+    "text": "Friendly warrior models in base contact with this model cannot be knocked down.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "forbid",
+        "what": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "filter": {
+        "test": "b2b"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.swift-hunter",
+    "name": "Swift Hunter",
+    "text": "After a basic ranged attack destroys an enemy, this model may advance 2 inches.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "code": "destroyedEnemyWithBasicRanged"
+    },
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "kha.a.marksman",
+    "name": "Marksman",
+    "text": "When this model damages a war-engine with a ranged attack, the attacker picks the grid column.",
+    "kind": "triggered",
+    "trigger": "damage.beforeApply",
+    "effect": [
+      {
+        "code": "marksmanColumn"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.girded",
+    "name": "Girded",
+    "text": "This model and friendly models in base contact with it have Resistance: Blast.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantResistance",
+        "damageType": "blast"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "filter": {
+        "test": "b2b"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.shield-wall",
+    "name": "Shield Wall",
+    "text": "While in base contact with a unit-mate: +2 ARM and cannot be knocked down.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": {
+      "test": "b2b"
+    },
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 2
+      },
+      {
+        "op": "forbid",
+        "what": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.ward-breaker",
+    "name": "Ward Breaker",
+    "text": "This attack gains the Blessed quality.",
+    "kind": "specialAttack",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "grantQuality",
+        "params": {
+          "quality": "blessed"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.eruption-of-ash",
+    "name": "Eruption of Ash",
+    "text": "A direct hit that boxes the target leaves a fire hazard cloud for a round and removes the target from play.",
+    "kind": "specialAttack",
+    "trigger": "death.boxed",
+    "effect": [
+      {
+        "op": "cloud",
+        "area": "hazard",
+        "placement": "centredOnTarget",
+        "count": 1,
+        "aoe": 3,
+        "hazard": {
+          "pow": 12,
+          "damageType": "fire",
+          "on": [
+            "enter",
+            "endActivation"
+          ]
+        }
+      },
+      {
+        "op": "removeFromPlay"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.targeting-flare",
+    "name": "Targeting Flare",
+    "text": "Place a flare cloud within 10 inches; shots into it ignore intervening models.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "cloud",
+        "area": "flare",
+        "placement": "point",
+        "aoe": 3,
+        "blocksLos": false
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.momentum",
+    "name": "Momentum",
+    "text": "A hit slams a target on a base of 40 mm or smaller d3 inches.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "when": {
+      "test": "baseAtMost",
+      "subject": "target",
+      "value": 40
+    },
+    "effect": [
+      {
+        "op": "slam",
+        "dist": "d3",
+        "collateralPow": 16
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.momentum-large",
+    "name": "Momentum (large)",
+    "text": "A hit knocks down a target on a base larger than 40 mm.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "when": {
+      "test": "baseAtLeast",
+      "subject": "target",
+      "value": 50
+    },
+    "effect": [
+      {
+        "op": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.siege-weapon",
+    "name": "Siege Weapon",
+    "text": "Roll an extra damage die against 120 mm bases and structures.",
+    "kind": "weaponQuality",
+    "trigger": "damage.beforeRoll",
+    "when": {
+      "any": [
+        {
+          "test": "baseAtLeast",
+          "subject": "target",
+          "value": 120
+        },
+        {
+          "test": "modelType",
+          "subject": "target",
+          "value": "structure"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "addDie",
+        "roll": "damage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.armor-piercing",
+    "name": "Armor-Piercing",
+    "text": "Halve the target's base ARM against this weapon.",
+    "kind": "weaponQuality",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "code": "armorPiercing"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.volume-fire-small",
+    "name": "Volume Fire",
+    "text": "Against 40 mm bases: +1 to attack and damage rolls.",
+    "kind": "weaponQuality",
+    "trigger": "attack.beforeRoll",
+    "when": {
+      "test": "baseAtMost",
+      "subject": "target",
+      "value": 40
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "any",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.volume-fire-large",
+    "name": "Volume Fire (large)",
+    "text": "Against 50 mm and larger bases: +2 to attack and damage rolls.",
+    "kind": "weaponQuality",
+    "trigger": "attack.beforeRoll",
+    "when": {
+      "test": "baseAtLeast",
+      "subject": "target",
+      "value": 50
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "any",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  }
+]

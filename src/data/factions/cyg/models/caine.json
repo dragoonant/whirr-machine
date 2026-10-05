@@ -1,0 +1,51 @@
+{
+  "id": "cyg.caine",
+  "name": "Major Allister Caine",
+  "faction": "cyg",
+  "type": "leader",
+  "character": true,
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre",
+    "warcaster"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 7,
+    "AAT": 6,
+    "MAT": 0,
+    "RAT": 9,
+    "DEF": 17,
+    "ARM": 13,
+    "ARC": 6,
+    "CTRL": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 15
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.spellstorm-pistol",
+      "count": 2
+    }
+  ],
+  "abilities": [
+    "core.a.gunfighter",
+    "core.a.pathfinder",
+    "core.a.power-field",
+    "cyg.a.evasive",
+    "cyg.a.field-marshal-evasive",
+    "cyg.a.gatecrasher",
+    "cyg.a.leadership-gun-mage"
+  ],
+  "spells": [
+    "cyg.s.deflection"
+  ],
+  "feat": "cyg.f.arcane-conflagration",
+  "cost": 0,
+  "figure": {
+    "archetype": "caster"
+  },
+  "verify": "MAT 0: no melee weapon in data. Other spells unknown."
+}

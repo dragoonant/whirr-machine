@@ -1,0 +1,46 @@
+{
+  "id": "cyg.black13-ryan",
+  "name": "Ryan (Black 13th)",
+  "faction": "cyg",
+  "type": "trooper",
+  "character": true,
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 5,
+    "RAT": 7,
+    "DEF": 15,
+    "ARM": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.magelock-pistol",
+      "count": 2
+    },
+    {
+      "weapon": "cyg.w.gun-blade",
+      "count": 2
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.gunfighter",
+    "core.a.pathfinder",
+    "core.a.prowl",
+    "core.a.reposition",
+    "cyg.a.prey"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Box count assumed 5 (QS: survives 4)."
+}

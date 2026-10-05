@@ -1,0 +1,153 @@
+[
+  {
+    "id": "cyg.w.spellstorm-pistol",
+    "name": "Spellstorm Pistol",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "cyg.a.witch-mark",
+      "cyg.a.thunderbolt",
+      "cyg.a.thunderbolt-crit",
+      "cyg.a.heart-seeker",
+      "core.a.reload-inf"
+    ]
+  },
+  {
+    "id": "cyg.w.spellstorm-cannon",
+    "name": "Spellstorm Cannon",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "pow": 14,
+    "location": "L",
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "core.a.beat-back",
+      "core.a.decrepitation",
+      "cyg.a.blast",
+      "cyg.a.powerful-attack",
+      "core.a.reload-1"
+    ]
+  },
+  {
+    "id": "cyg.w.crescent-blade",
+    "name": "Crescent Blade",
+    "type": "melee",
+    "rng": 1,
+    "pow": 15,
+    "location": "R",
+    "qualities": [
+      "core.q.buckler",
+      "core.q.magical",
+      "core.q.throw"
+    ]
+  },
+  {
+    "id": "cyg.w.magelock-scattergun",
+    "name": "Magelock Scattergun",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "core.a.decrepitation",
+      "cyg.a.incendiary",
+      "cyg.a.banish"
+    ]
+  },
+  {
+    "id": "cyg.w.sword",
+    "name": "Sword",
+    "type": "melee",
+    "rng": 1,
+    "pow": 10
+  },
+  {
+    "id": "cyg.w.magelock-pistol",
+    "name": "Magelock Pistol",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "pow": 10,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "cyg.a.shadow-fire",
+      "cyg.a.thunderbolt",
+      "cyg.a.thunderbolt-crit",
+      "core.a.brutal-damage",
+      "cyg.a.mage-storm"
+    ]
+  },
+  {
+    "id": "cyg.w.gun-blade",
+    "name": "Gun Blade",
+    "type": "melee",
+    "rng": 1,
+    "pow": 8
+  },
+  {
+    "id": "cyg.w.magelock-rifle",
+    "name": "Magelock Rifle",
+    "type": "ranged",
+    "rng": 14,
+    "rof": 1,
+    "pow": 10,
+    "qualities": [
+      "core.q.magical"
+    ],
+    "abilities": [
+      "core.a.brutal-damage",
+      "cyg.a.blast",
+      "core.a.black-penny"
+    ]
+  },
+  {
+    "id": "cyg.w.rifle-butt",
+    "name": "Rifle Butt",
+    "type": "melee",
+    "rng": 1,
+    "pow": 6
+  },
+  {
+    "id": "cyg.w.dual-magelock-pistol",
+    "name": "Dual Magelock Pistol",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 2,
+    "pow": 10,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "core.a.black-penny",
+      "cyg.a.momentum",
+      "cyg.a.momentum-large",
+      "core.a.brutal-damage",
+      "cyg.a.both-barrels"
+    ]
+  },
+  {
+    "id": "cyg.w.trench-knife",
+    "name": "Trench Knife",
+    "type": "melee",
+    "rng": 1,
+    "pow": 9
+  }
+]

@@ -1,0 +1,529 @@
+[
+  {
+    "id": "core.a.dual-attack",
+    "name": "Dual Attack",
+    "text": "On its Combat Action this model makes its melee or ranged initial attacks twice over, as the core rule describes.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "dualAttack"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.tough",
+    "name": "Tough",
+    "text": "When this model would be boxed, a die roll can keep it in the fight at one box, as the core rule describes.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "tough"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.stealth",
+    "name": "Stealth",
+    "text": "Ranged attacks against this model from beyond a short distance cannot target it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "stealth"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.gunfighter",
+    "name": "Gunfighter",
+    "text": "This model may make ranged attacks while in melee with an enemy and ignores the usual penalty for it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "gunfighter"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.pathfinder",
+    "name": "Pathfinder",
+    "text": "This model ignores the movement cost of rough terrain and obstacles that can be crossed.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "pathfinder"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.advance-deployment",
+    "name": "Advance Deployment",
+    "text": "After normal deployment this model may be placed up to the scenario advance distance further forward.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "advanceDeployment"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.ambush",
+    "name": "Ambush",
+    "text": "This model may start off the table and enter from a table edge from round 2.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "ambush"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.construct",
+    "name": "Construct",
+    "text": "This model is a constructed machine; it is not living.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "construct"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.headbutt",
+    "name": "Headbutt",
+    "text": "War-engine special melee action that hits a nearby enemy with its head or hull.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "headbutt"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.slam",
+    "name": "Slam",
+    "text": "War-engine special melee action that hurls a target away after a charge.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "slamPower"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.trample",
+    "name": "Trample",
+    "text": "War-engine special melee action that rolls over smaller bases when charging.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "trample"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.unstoppable",
+    "name": "Unstoppable",
+    "text": "This model does not forfeit its action when it breaks away from melee.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "unstoppable"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.reload-1",
+    "name": "Reload [1]",
+    "text": "Spend one focus to make an extra ranged attack with this weapon during the combat action.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "reload1"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.reload-inf",
+    "name": "Reload [infinity]",
+    "text": "Spend focus to repeat ranged attacks with this weapon, one focus per extra attack, without a set limit.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "reloadInf"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.resist-fire",
+    "name": "Resistance: Fire",
+    "text": "Fire damage this model takes is halved.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantResistance",
+        "damageType": "fire"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.resist-corrosion",
+    "name": "Resistance: Corrosion",
+    "text": "Corrosion damage this model takes is halved.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantResistance",
+        "damageType": "corrosion"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.power-field",
+    "name": "Power Field",
+    "text": "Once per damage instance a warcaster may spend one focus to reduce that damage by five.",
+    "kind": "triggered",
+    "trigger": "damage.beforeApply",
+    "effect": [
+      {
+        "op": "preventDamage",
+        "value": 5
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true,
+    "cost": {
+      "focus": 1
+    }
+  },
+  {
+    "id": "core.a.reposition",
+    "name": "Reposition [3\"]",
+    "text": "At the end of its activation this model may advance up to 3 inches, unless it ran or failed a charge.",
+    "kind": "triggered",
+    "trigger": "activation.end",
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 3,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "core.a.prowl",
+    "name": "Prowl",
+    "text": "While concealed this model counts as having Stealth.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": {
+      "test": "concealed"
+    },
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "core.a.stealth"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.true-sight",
+    "name": "True Sight",
+    "text": "This model sees through clouds and ignores Stealth when picking targets.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "clouds"
+      },
+      {
+        "op": "ignore",
+        "ignore": "stealth"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.beat-back",
+    "name": "Beat Back",
+    "text": "After a hit, the target is pushed 1 inch away and the attacker may then advance 1 inch toward it.",
+    "kind": "specialAttack",
+    "trigger": "attack.resolved",
+    "when": {
+      "test": "hit"
+    },
+    "effect": [
+      {
+        "op": "push",
+        "dist": 1,
+        "direction": "away"
+      },
+      {
+        "op": "advance",
+        "dist": 1,
+        "direction": "toward"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "core.a.brutal-damage",
+    "name": "Brutal Damage",
+    "text": "On a direct hit, roll one extra damage die.",
+    "kind": "specialAttack",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "op": "addDie",
+        "roll": "damage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "core.a.decrepitation",
+    "name": "Decrepitation",
+    "text": "Roll one extra damage die against constructs and undead.",
+    "kind": "specialAttack",
+    "trigger": "damage.beforeRoll",
+    "when": {
+      "any": [
+        {
+          "test": "keyword",
+          "subject": "target",
+          "value": "construct"
+        },
+        {
+          "test": "keyword",
+          "subject": "target",
+          "value": "undead"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "addDie",
+        "roll": "damage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "core.a.critical-knockdown",
+    "name": "Critical Knockdown",
+    "text": "A critical hit also knocks the target down before damage is rolled.",
+    "kind": "specialAttack",
+    "trigger": "attack.crit",
+    "effect": [
+      {
+        "op": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "core.a.black-penny",
+    "name": "Black Penny",
+    "text": "This shot may target an enemy engaged in melee without the usual risk to nearby friends.",
+    "kind": "specialAttack",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "targetInMelee"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "core.a.arcing-fire",
+    "name": "Arcing Fire",
+    "text": "Shots with this weapon ignore intervening models when aiming.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "interveningModels"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.critical-shred",
+    "name": "Critical Shred",
+    "text": "When this attack crits, the attacker makes another attack with the same weapon at no focus cost.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "test": "crit"
+    },
+    "effect": [
+      {
+        "op": "makeAttack",
+        "target": "target",
+        "weaponFilter": "same"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  }
+]

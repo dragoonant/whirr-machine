@@ -1,0 +1,67 @@
+{
+  "id": "kha.razor",
+  "name": "Razor",
+  "faction": "kha",
+  "type": "warEngine",
+  "engineClass": "heavy",
+  "character": true,
+  "keywords": [
+    "construct"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 5,
+    "MAT": 6,
+    "RAT": 6,
+    "DEF": 11,
+    "ARM": 19
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "---L",
+      "--LLM",
+      "----MM",
+      "----CC",
+      "--RRC",
+      "---R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "kha.w.grenade-launcher",
+      "location": "L"
+    },
+    {
+      "weapon": "kha.w.grenade-launcher",
+      "location": "R"
+    },
+    {
+      "weapon": "kha.w.slug-cannon",
+      "location": "R"
+    },
+    {
+      "weapon": "kha.w.ripper-shield",
+      "location": "L"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "core.a.pathfinder",
+    "core.a.resist-corrosion",
+    "core.a.resist-fire",
+    "core.a.reposition",
+    "kha.a.anchor",
+    "kha.a.swift-hunter"
+  ],
+  "cost": 17,
+  "fa": "C",
+  "figure": {
+    "archetype": "heavyEngine"
+  },
+  "verify": "Grid verified QS p41. MAT community data."
+}

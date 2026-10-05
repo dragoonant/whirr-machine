@@ -1,0 +1,45 @@
+{
+  "id": "kha.lazarenko",
+  "name": "Sergeant Goran Lazarenko",
+  "faction": "kha",
+  "type": "solo",
+  "character": true,
+  "keywords": [
+    "jackal"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 7,
+    "DEF": 14,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "kha.w.jack-buster"
+    },
+    {
+      "weapon": "kha.w.lazarenko-knife"
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.pathfinder",
+    "core.a.resist-fire",
+    "core.a.resist-corrosion",
+    "core.a.prowl",
+    "kha.a.alchemical-mask",
+    "kha.a.marksman"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": {
+    "archetype": "solo"
+  },
+  "verify": "Fifth advantage icon unidentified (open app check)."
+}

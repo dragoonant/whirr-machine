@@ -1,0 +1,60 @@
+{
+  "id": "kha.vilkul",
+  "name": "Kapitan Zahara Vilkul",
+  "faction": "kha",
+  "type": "leader",
+  "character": true,
+  "keywords": [
+    "warcaster"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 7,
+    "AAT": 6,
+    "MAT": 7,
+    "RAT": 7,
+    "DEF": 16,
+    "ARM": 15,
+    "ARC": 6,
+    "CTRL": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 17
+  },
+  "weapons": [
+    {
+      "weapon": "kha.w.thrown-axe"
+    },
+    {
+      "weapon": "kha.w.mechanika-axe"
+    },
+    {
+      "weapon": "kha.w.combat-knife"
+    }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "core.a.resist-corrosion",
+    "core.a.resist-fire",
+    "core.a.unstoppable",
+    "core.a.tough",
+    "core.a.power-field",
+    "core.a.prowl",
+    "kha.a.field-marshal-prowl",
+    "kha.a.rise",
+    "kha.a.take-down",
+    "kha.a.enhanced-alchemical-mask"
+  ],
+  "spells": [
+    "kha.s.superiority",
+    "kha.s.avenging-force"
+  ],
+  "feat": "kha.f.pall-of-ashes",
+  "cost": 0,
+  "figure": {
+    "archetype": "caster"
+  },
+  "verify": "AAT, RAT community data."
+}

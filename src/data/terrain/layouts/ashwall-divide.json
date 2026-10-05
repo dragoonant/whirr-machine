@@ -1,0 +1,46 @@
+{
+  "id": "layout.ashwall-divide",
+  "name": "Ashwall Divide",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.low-wall",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.low-wall",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "p1",
+      "terrain": "terrain.pond",
+      "pos": {
+        "x": 3.25,
+        "z": -2
+      },
+      "rot": -0.7853981633974483
+    },
+    {
+      "id": "p2",
+      "terrain": "terrain.pond",
+      "pos": {
+        "x": -3.25,
+        "z": 2
+      },
+      "rot": -0.7853981633974483
+    }
+  ]
+}

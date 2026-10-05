@@ -1,0 +1,23 @@
+{
+  "id": "kha",
+  "name": "Khador",
+  "short": "Khador",
+  "appVersion": "qs-2025+community",
+  "source": "Quick Start Jul 2025 verified values plus community card data; see docs/spec/factions/khador.md.",
+  "keywords": [
+    "hounds",
+    "jackal"
+  ],
+  "palette": {
+    "primary": "#9b1c1c",
+    "secondary": "#c8c8c8",
+    "metal": "#8a8a8a",
+    "base": "#3a3030",
+    "ui": "#d24545"
+  },
+  "sourceHues": [
+    0,
+    30
+  ],
+  "marking": "iron-wolf"
+}

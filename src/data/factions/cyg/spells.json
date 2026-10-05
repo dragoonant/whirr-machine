@@ -1,0 +1,27 @@
+[
+  {
+    "id": "cyg.s.deflection",
+    "name": "Deflection",
+    "text": "Friendly models in Caine's CTRL get +2 DEF against ranged and arcane attacks until the end of the round.",
+    "cost": 3,
+    "rng": "CTRL",
+    "dur": "RND",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "DEF",
+        "value": 2
+      }
+    ],
+    "when": {
+      "test": "attackKind",
+      "value": "ranged"
+    },
+    "scope": {
+      "who": "friendly",
+      "range": "CTRL"
+    },
+    "verify": "QS shows only this spell; the rest of the list is unknown (open app check). Arcane attacks are not distinguished from ranged in the descriptor."
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "id": "cyg.black13-glover",
+  "name": "Glover (Black 13th)",
+  "faction": "cyg",
+  "type": "trooper",
+  "character": true,
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 5,
+    "RAT": 7,
+    "DEF": 15,
+    "ARM": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.dual-magelock-pistol"
+    },
+    {
+      "weapon": "cyg.w.trench-knife"
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.gunfighter",
+    "core.a.pathfinder",
+    "core.a.prowl",
+    "core.a.reposition",
+    "cyg.a.granted-true-sight"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Box count assumed 5."
+}

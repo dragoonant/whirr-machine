@@ -1,0 +1,176 @@
+[
+  {
+    "id": "kha.w.thrown-axe",
+    "name": "Thrown Axe",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 13,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol",
+      "core.q.weapon-master"
+    ],
+    "abilities": [
+      "kha.a.ward-breaker",
+      "kha.a.eruption-of-ash",
+      "core.a.reload-1"
+    ]
+  },
+  {
+    "id": "kha.w.mechanika-axe",
+    "name": "Mechanika Axe",
+    "type": "melee",
+    "rng": 1,
+    "pow": 13,
+    "qualities": [
+      "core.q.magical",
+      "core.q.weapon-master"
+    ],
+    "abilities": [
+      "kha.a.ward-breaker",
+      "kha.a.eruption-of-ash"
+    ]
+  },
+  {
+    "id": "kha.w.combat-knife",
+    "name": "Combat Knife",
+    "type": "melee",
+    "rng": 1,
+    "pow": 10,
+    "qualities": [
+      "core.q.magical",
+      "core.q.weapon-master"
+    ]
+  },
+  {
+    "id": "kha.w.grenade-launcher",
+    "name": "Grenade Launcher",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 10,
+    "blastPow": 5,
+    "damageTypes": [
+      "blast"
+    ],
+    "abilities": [
+      "core.a.arcing-fire",
+      "kha.a.targeting-flare"
+    ]
+  },
+  {
+    "id": "kha.w.slug-cannon",
+    "name": "Slug Cannon",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 16,
+    "location": "R",
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "kha.a.momentum",
+      "kha.a.momentum-large",
+      "kha.a.siege-weapon",
+      "core.a.reload-1"
+    ]
+  },
+  {
+    "id": "kha.w.ripper-shield",
+    "name": "Ripper Shield",
+    "type": "melee",
+    "rng": 1,
+    "pow": 18,
+    "location": "L",
+    "qualities": [
+      "core.q.shield"
+    ],
+    "abilities": [
+      "core.a.critical-shred",
+      "core.a.beat-back"
+    ]
+  },
+  {
+    "id": "kha.w.jack-buster",
+    "name": "'Jack Buster",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 14,
+    "blastPow": 7,
+    "damageTypes": [
+      "blast"
+    ],
+    "abilities": [
+      "core.a.brutal-damage",
+      "core.a.critical-knockdown"
+    ]
+  },
+  {
+    "id": "kha.w.lazarenko-knife",
+    "name": "Combat Knife",
+    "type": "melee",
+    "rng": 1,
+    "pow": 9
+  },
+  {
+    "id": "kha.w.death-whisper-carbine",
+    "name": "Death Whisper Carbine",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 6,
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "kha.a.armor-piercing"
+    ]
+  },
+  {
+    "id": "kha.w.hound-grenade-launcher",
+    "name": "Grenade Launcher",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 12,
+    "blastPow": 8,
+    "damageTypes": [
+      "blast"
+    ],
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "core.a.arcing-fire"
+    ]
+  },
+  {
+    "id": "kha.w.assault-cannon",
+    "name": "Assault Cannon",
+    "type": "ranged",
+    "rng": 12,
+    "rof": "d3+1",
+    "pow": 12,
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "kha.a.volume-fire-small",
+      "kha.a.volume-fire-large",
+      "core.a.critical-knockdown"
+    ]
+  },
+  {
+    "id": "kha.w.battle-shield",
+    "name": "Battle Shield",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12
+  }
+]

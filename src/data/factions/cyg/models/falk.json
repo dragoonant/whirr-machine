@@ -1,0 +1,46 @@
+{
+  "id": "cyg.falk",
+  "name": "Captain Bastian Falk",
+  "faction": "cyg",
+  "type": "solo",
+  "character": true,
+  "keywords": [
+    "gun-mage",
+    "hellslinger-cadre"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 7,
+    "DEF": 15,
+    "ARM": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.magelock-scattergun"
+    },
+    {
+      "weapon": "cyg.w.sword"
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.ambush",
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "core.a.prowl",
+    "cyg.a.leadership-gun-mages",
+    "cyg.a.reciprocate",
+    "cyg.a.run-and-gun"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": {
+    "archetype": "solo"
+  }
+}

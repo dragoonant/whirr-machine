@@ -1,0 +1,81 @@
+{
+  "id": "scn-qs-demo",
+  "name": "Quick Start Demo",
+  "text": "Ashwall Divide with the Quick Start fixed setup: Khador goes first, no command cards. Used by the tutorial and golden tests.",
+  "levels": [
+    "recon"
+  ],
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 1,
+    "fromPlayer": "first",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10
+  },
+  "elements": [
+    {
+      "id": "el-w1",
+      "kind": "scenarioTerrain",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "terrain": "w1",
+      "hold": {
+        "within": 2,
+        "models": 2,
+        "eligible": [
+          "any"
+        ]
+      },
+      "contest": {
+        "within": 2,
+        "excludes": [
+          "inert",
+          "disabled"
+        ]
+      },
+      "vp": {
+        "control": 1
+      }
+    },
+    {
+      "id": "el-w2",
+      "kind": "scenarioTerrain",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "terrain": "w2",
+      "hold": {
+        "within": 2,
+        "models": 2,
+        "eligible": [
+          "any"
+        ]
+      },
+      "contest": {
+        "within": 2,
+        "excludes": [
+          "inert",
+          "disabled"
+        ]
+      },
+      "vp": {
+        "control": 1
+      }
+    }
+  ],
+  "terrainLayout": "layout.ashwall-divide"
+}

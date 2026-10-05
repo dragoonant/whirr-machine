@@ -1,0 +1,29 @@
+{
+  "L": {
+    "name": "Left arm",
+    "effect": "crippleLocation",
+    "location": "L"
+  },
+  "R": {
+    "name": "Right arm",
+    "effect": "crippleLocation",
+    "location": "R"
+  },
+  "H": {
+    "name": "Head",
+    "effect": "crippleLocation",
+    "location": "H"
+  },
+  "M": {
+    "name": "Movement",
+    "effect": "crippleMovement"
+  },
+  "C": {
+    "name": "Cortex",
+    "effect": "crippleCortex"
+  },
+  "A": {
+    "name": "Arc node",
+    "effect": "crippleArcNode"
+  }
+}
