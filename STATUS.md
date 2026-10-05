@@ -17,6 +17,7 @@
 | `src/engine/decider.ts` | `Decider`, random and replay deciders | implemented |
 | `src/engine/index.ts` | `createGame step legalActions validate replay save load view query.* describe.*` | stubs (throw) |
 
+- Specs reconciled with the official rulebook and Quick Start (M1 commit); rulings logged in `docs/needs-rules-check.md`.
 - Data schemas: `src/data/schema/*.schema.json` (11 files, kept identical to `docs/spec/schemas`).
 
 ## Spec status
@@ -27,7 +28,8 @@
 | `10-rules-core`, `11-scenarios`, `12-rules-test-checklist` | done; checked against the rulebook, QS and SR (2026-10-04). Open points are `(unsourced)`/`(app)` in `docs/needs-rules-check.md` |
 | `20-data-schema` + `schemas/` | done |
 | `30-figures`, `40-ai`, `50-client`, `60-testing` | done |
-| `factions/cygnar.md`, `factions/khador.md` | QS-2025 values marked; ability → descriptor/hook map with test IDs. Open: app version, spell lists and stats, trooper box counts |
+| `13-golden-first-turn` | done; QS worked turn 1:1 with scripted positions and dice (RULINGs in needs-rules-check) |
+| `factions/cygnar.md`, `factions/khador.md` | QS-2025 values marked (Lazarenko MAT 6, 40 mm; base sizes from QS p35; Razor grid per QS); ability → descriptor/hook map with test IDs. Open: app version, spell lists and stats, trooper box counts |
 
 Scenario decision: S1 Ashwall Divide uses Quick Start rules (hold 2+ within 2", contest within 2", scoring
 from round 1). GOLD-001 runs on `scn-qs-demo` with a pinned `qs-2025` bundle.
