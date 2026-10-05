@@ -100,7 +100,8 @@ function spellRowFor(g: ActionGroups, spellId: Id): SpellRow {
 }
 
 function attackRow(state: GameState, o: NonNullable<PendingDecision['options']>[number], a: Extract<Action, { type: 'chooseAttack' }>, legal: readonly Action[]): AttackRow {
-  const pv = queryAttackPreview(a.modelId, a.weaponId, a.targetId, { additional: a.additional })
+  // the engine previews the chosen shot mode and spots a charge attack itself, so these odds are the attack's own
+  const pv = queryAttackPreview(a.modelId, a.weaponId, a.targetId, { additional: a.additional, ...(a.attackType ? { attackType: a.attackType } : {}) })
   const detail: string[] = []
   let note = ''
   if (pv && !pv.legal) {
@@ -111,10 +112,10 @@ function attackRow(state: GameState, o: NonNullable<PendingDecision['options']>[
   }
   const d = queryDistance(a.modelId, a.targetId)
   if (Number.isFinite(d)) detail.push(`${d.toFixed(1)}" away`)
-  // A weapon with shot modes (e.g. a blast shot): the engine preview covers the standard shot only, so say so.
+  // A weapon with shot modes (e.g. a blast shot): name the mode; the odds above are already for that mode.
   const modeId = a.attackType ? weaponRec(a.weaponId)?.abilities?.find((x) => x === a.attackType || x.endsWith('.' + a.attackType)) ?? a.attackType : ''
   const mode = modeId ? niceName(modeId) : ''
-  if (mode) { const t = dataText(modeId); detail.unshift(`${mode}${t ? ': ' + t : ''}`); if (pv && !pv.legal) detail.push('odds are for a standard shot') }
+  if (mode) { const t = dataText(modeId); detail.unshift(`${mode}${t ? ': ' + t : ''}`) }
   return {
     id: o.id, label: `${niceName(a.weaponId)}${mode ? ` (${mode})` : ''} → ${modelName(state, a.targetId)}${a.additional ? ' (additional)' : ''}`,
     ...(o.cost?.focus ? { cost: `${o.cost.focus} focus` } : {}), ...(note ? { note } : {}), tone: 'primary', action: a,

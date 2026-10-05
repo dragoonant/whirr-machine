@@ -234,6 +234,7 @@ export function lookups(state: GameState, b: DataBundle): HitLookups {
     arm: (id) => armOf(state, b, id),
     layouts: (id) => (state.models[id] ? layoutsOf(b, state.models[id]!) : undefined),
     tough: (id) => hasFlag(state, b, id, 'tough'),
+    noKnockdown: (id) => cannotKnockDown(state, b, id),
   }
 }
 
@@ -375,7 +376,7 @@ export function setAtk(s: GameState, a: AtkCtx): GameState { return { ...s, atta
 // ---------- activation scratch (lives in state.activation.x; JSON-safe) ----------
 export interface MoveReq { modelId: ModelId; dist: number; mode: 'advance' | 'place'; toward?: ModelId; abilityId: Id; endsActivation?: boolean; owner: 'A' | 'B'; optional?: boolean }
 export interface ActX {
-  stage: 'start' | 'movement' | 'move' | 'chargeTarget' | 'chargeMove' | 'place' | 'combat' | 'endMove' | 'done'
+  stage: 'start' | 'movement' | 'move' | 'chargeTarget' | 'chargeMove' | 'slamTarget' | 'slamMove' | 'trampleMove' | 'place' | 'combat' | 'endMove' | 'done'
   queue: ModelId[] // troopers still to take their Combat Action
   cur: ModelId | null
   forfeit: ModelId[] // Combat Action forfeited
@@ -395,6 +396,7 @@ export interface ActX {
   chargeTo?: ModelId // declared charge target while the charge move is pending
   star?: { modelId: ModelId; abilityId: Id; weaponId: Id }
   powerKind?: import('./types').PowerAttackKind
+  slam?: { targetId: ModelId; moved: number } // R7.12: the declared slam target and the inches moved toward it
   endMoved: ModelId[]
 }
 export type ActCtx = import('./types').ActivationContext & { x: ActX }

@@ -25,10 +25,10 @@ import { defModifiers, engagedWith, hasLos, losReport } from '../los'
 import { modelDistance, within } from '../measure'
 import {
   addKnockdown, engagedBy, movementOptions, push as pushModel, placeUnit, relocate, resolveAdvance, resolveCharge, resolveChargeTo,
-  slideAway, type MoverInfo,
+  resolveTrampleMove, slideAway, type MoverInfo,
 } from '../movement'
 import { raise, reject, type FlowOut, type FlowResult } from '../pending'
-import { resolvePowerAttack } from '../power-attacks'
+import { resolvePowerAttack, resolveTrampleAttacks } from '../power-attacks'
 import { afterDeaths } from '../scenario'
 import { anytimeOptions, castSpell, channel, heal, isAnytimeAction, useFeat } from '../spells'
 import { raiseChooseActivation } from '../turnflow'
@@ -89,8 +89,18 @@ export function moverInfo(state: GameState, b: B, id: ModelId): MoverInfo {
     meleeRange: wi.reduce((r, w) => Math.max(r, (w.w.rng as number) ?? 1), 1),
     pathfinder: hasFlag(state, b, id, 'pathfinder') || pall,
     unstoppable: hasFlag(state, b, id, 'unstoppable'),
+    slam: hasFlag(state, b, id, 'slamPower'),
+    trample: hasFlag(state, b, id, 'trample'),
     rangeOf: (x) => meleeReach(state, b, x),
   }
+}
+/** R7.12: slam range is 1" (2" for a 120 mm base). */
+export const slamRange = (m: ModelState): number => (m.base === 120 ? 2 : 1)
+/** Damage from power attacks arms Avenging Force like any other damage (khador.noteDamaged). */
+function noteDamage(state: GameState, events: GameEvent[]): GameState {
+  let s = state
+  for (const e of events) if (e.type === 'DamageApplied' && (e as { points?: number }).points! > 0) s = khadorNoteDamaged(s, (e as { targetId: ModelId }).targetId)
+  return s
 }
 
 // ---------- activation start ----------
@@ -201,8 +211,9 @@ function movementOptionList(state: GameState, b: B, lead: ModelId, decisionId: s
   const seeEnemy = enemiesOf(state, player).some((e) => hasLos(state, lead, e.id))
   for (const o of opts) {
     if (!o.allowed) continue
-    if (o.option === 'slam' || o.option === 'trample') continue // see issues: needs the power-attack flow
-    if (o.option === 'charge' && !seeEnemy) continue
+    // slam and trample (R7.12, R7.14) are offered to single models (no starter unit has them); a slam needs an enemy in LOS
+    if ((o.option === 'slam' || o.option === 'trample') && a.modelIds.length !== 1) continue
+    if ((o.option === 'charge' || o.option === 'slam') && !seeEnemy) continue
     out.push({ id: o.option, label: o.option, action: { type: 'chooseMovement', decisionId, player, option: o.option, modelId: lead }, ...(o.focusCost ? { cost: { focus: o.focusCost } } : {}) })
   }
   if (kd(state, m)) {
@@ -265,7 +276,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
     state = setAct(state, { ...act(state), movement: 'standUp' })
     return startCombatFrom(patchX(state, { standUpUsed: true }), b, events)
   }
-  if (a.option === 'slam' || a.option === 'trample') return reject('E_NOT_AN_OPTION', 'slam and trample are not wired in this build')
+  if ((a.option === 'slam' || a.option === 'trample') && ac.modelIds.length !== 1) return reject('E_NOT_AN_OPTION', `${a.option} is only offered to a model activating on its own`)
   // standing up and advancing forfeits the Combat Action
   let standing = false
   if (kd(state, m)) {
@@ -282,7 +293,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
       return reject(code, `${a.option}: ${reason}`)
     }
     if (o.focusCost > 0) {
-      const f = spendFocus(state, lead, o.focusCost, a.option === 'run' ? 'run' : 'charge')
+      const f = spendFocus(state, lead, o.focusCost, a.option === 'run' ? 'run' : a.option === 'charge' ? 'charge' : 'powerAttack')
       if (isRejection(f)) return reject(f.rejection.code, f.rejection.message)
       state = f.state; events.push(...f.events)
     }
@@ -295,6 +306,30 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
     if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to charge')
     state = setAct(patchX(state, { stage: 'chargeTarget' }), { ...act(patchX(state, { stage: 'chargeTarget' })), movement: 'charge', movedModelId: lead })
     const r = raise({ ...state, window: 'movement.charge' }, { player: m.owner, kind: 'chargeTarget', window: 'movement.charge', context: { modelId: lead }, options: opts, canPass: false })
+    return ok(r.state, events)
+  }
+  if (a.option === 'slam') {
+    // R7.12: declare a target that is in LOS now (the start of Normal Movement)
+    const id = nextId(state)
+    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hasLos(state, lead, e.id))
+      .map((e) => ({ id: e.id, label: `Slam ${e.id}`, action: { type: 'chargeTarget', decisionId: id, player: m.owner, targetId: e.id } as Action }))
+    if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to slam')
+    state = setAct(patchX(state, { stage: 'slamTarget' }), { ...act(patchX(state, { stage: 'slamTarget' })), movement: 'slam', movedModelId: lead })
+    const r = raise({ ...state, window: 'movement.charge' }, { player: m.owner, kind: 'chargeTarget', window: 'movement.charge', context: { modelId: lead, data: { mode: 'slam' } }, options: opts, canPass: false })
+    return ok(r.state, events)
+  }
+  if (a.option === 'trample') {
+    // R7.14: declare the direction at the start of Normal Movement, then advance up to SPD+3" in a straight line
+    state = setAct(patchX(state, { stage: 'trampleMove' }), { ...act(patchX(state, { stage: 'trampleMove' })), movement: 'trample', movedModelId: lead })
+    const id = nextId(state)
+    const options: DecisionOption[] = trampleSamples(state, b, lead).map((p, i) => ({
+      id: `tr${i}`, label: i === 0 ? 'Trample 0" (stay put)' : `Trample to ${p.x.toFixed(1)},${p.z.toFixed(1)}`,
+      action: { type: 'moveModel', decisionId: id, player: m.owner, modelId: lead, path: [p] } as Action,
+    }))
+    const r = raise({ ...state, window: 'movement.move' }, {
+      player: m.owner, kind: 'moveModel', window: 'movement.move', context: { modelId: lead, data: { mode: 'trample' } },
+      constraints: { modelId: lead, from: m.pos, maxDist: info.spd + 3, straightLine: true }, options, canPass: false,
+    })
     return ok(r.state, events)
   }
   const kind = a.option === 'run' ? 'run' : 'advance'
@@ -335,6 +370,8 @@ function moveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
   if (pd.context.data?.trigger) return triggerMoveAnswer(state, b, a)
   const ac = act(state)
   if (ac.x.stage === 'chargeMove') return chargeMoveAnswer(state, b, a)
+  if (ac.x.stage === 'slamMove') return slamMoveAnswer(state, b, a)
+  if (ac.x.stage === 'trampleMove') return trampleMoveAnswer(state, b, a)
   const pend = ac.x.pendingMove
   if (!pend || ac.x.stage !== 'move') return reject('E_WRONG_DECISION', 'not moving')
   const lead = pd.constraints?.modelId ?? leadOf(state)
@@ -465,6 +502,7 @@ function hasLosFromAnchor(state: GameState, anchorId: ModelId, pos: Vec2): boole
 
 function chargeTargetAnswer(state0: GameState, b: B, a: ChargeTargetAction): Result {
   const state = state0
+  if (act(state).x.stage === 'slamTarget') return slamTargetAnswer(state, b, a)
   const lead = state.pending.context.modelId ?? leadOf(state)
   const t = state.models[a.targetId]
   const m = state.models[lead]!
@@ -515,6 +553,134 @@ function chargeMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
   }
   if (u && othersToPlace(s1, u.id, lead).length > 0) return raisePlaceTroopers(s1, b, [...r.events], cont)
   return afterPlacement(s1, b, [...r.events], cont, [])
+}
+
+// ---------- slam and trample (R7.12, R7.14): power attacks that use Normal Movement and the Combat Action ----------
+const STRAIGHT_TOL = 0.02 // inches off the line toward the slam target's centre that still count as "directly toward"
+
+/** Trample end points: staying put, then as far as each line goes toward the nearest enemies and in eight compass directions. */
+function trampleSamples(state: GameState, b: B, lead: ModelId): Vec2[] {
+  const m = state.models[lead]!
+  const info = moverInfo(state, b, lead)
+  const out: Vec2[] = [m.pos]
+  const dirs: Vec2[] = enemiesOf(state, m.owner).sort((x, y) => dist(x.pos, m.pos) - dist(y.pos, m.pos)).slice(0, 4).map((e) => sub(e.pos, m.pos))
+  for (let i = 0; i < 8; i++) dirs.push({ x: Math.cos((i * Math.PI) / 4), z: Math.sin((i * Math.PI) / 4) })
+  for (const d of dirs) {
+    if (Math.hypot(d.x, d.z) < 1e-9) continue
+    const full = resolveTrampleMove(state, { modelId: lead, dir: d, info })
+    if (full.ok && full.distance > 1e-6) { out.push(full.state.models[lead]!.pos); if (out.length >= 10) break; continue }
+    // the full line ends overlapping a base: try shorter moves along it
+    for (const f of [0.75, 0.5, 0.25]) {
+      const r = resolveTrampleMove(state, { modelId: lead, dir: d, info, dist: (info.spd + 3) * f })
+      if (r.ok && r.distance > 1e-6) { out.push(r.state.models[lead]!.pos); break }
+    }
+    if (out.length >= 10) break
+  }
+  return out
+}
+
+function slamTargetAnswer(state: GameState, b: B, a: ChargeTargetAction): Result {
+  const lead = state.pending.context.modelId ?? leadOf(state)
+  const t = state.models[a.targetId]
+  const m = state.models[lead]!
+  if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'slam an enemy model')
+  if (!hasLos(state, lead, a.targetId)) return reject('E_NO_LOS', 'the slam target must be in line of sight at the start of Normal Movement')
+  const info = moverInfo(state, b, lead)
+  const range = slamRange(m)
+  // the default answer: straight at the target's centre until contact, the slam range, or SPD+3"
+  const full = resolveCharge(state, { modelId: lead, targetId: a.targetId, info, kind: 'slam', range })
+  if (!full.ok) return reject(full.code, full.message)
+  const s1 = patchX({ ...state, window: 'movement.charge' }, { stage: 'slamMove', slam: { targetId: a.targetId, moved: 0 } })
+  const did = nextId(s1)
+  const options: DecisionOption[] = [{ id: 'full', label: 'Slam straight in', action: { type: 'moveModel', decisionId: did, player: m.owner, modelId: lead, path: [full.state.models[lead]!.pos] } as Action }]
+  const r = raise(s1, {
+    player: m.owner, kind: 'moveModel', window: 'movement.charge', context: { modelId: lead, targetId: a.targetId, data: { mode: 'slam' } },
+    constraints: { modelId: lead, from: m.pos, maxDist: info.spd + 3, straightLine: true, toward: a.targetId, mustEndInRange: { targetId: a.targetId, range } },
+    options, canPass: false,
+  })
+  return ok(r.state, [{ type: 'CombatActionChosen', modelId: lead, choice: 'powerAttack', powerAttack: 'slam' }])
+}
+
+function slamMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
+  let state = state0
+  const ac = act(state)
+  const sl = ac.x.slam
+  const lead = state.pending.constraints?.modelId ?? leadOf(state)
+  if (!sl) return reject('E_WRONG_DECISION', 'no slam in progress')
+  if (a.modelId !== lead) return reject('E_TARGET_INVALID', `the slamming model is ${lead}`)
+  const m = state.models[lead]!
+  const t = state.models[sl.targetId]!
+  const to = a.path?.length ? a.path[a.path.length - 1]! : m.pos
+  if (!to || !Number.isFinite(to.x) || !Number.isFinite(to.z)) return reject('E_BAD_PAYLOAD', 'bad end point')
+  // R7.12: the slam advances directly toward the target (its centre), unlike a charge's free choice of line
+  if (dist(m.pos, to) > 1e-6) {
+    const along = sub(t.pos, m.pos)
+    const L = Math.hypot(along.x, along.z)
+    const v = sub(to, m.pos)
+    const off = L < 1e-9 ? 0 : Math.abs(v.x * along.z - v.z * along.x) / L
+    if (off > STRAIGHT_TOL || v.x * along.x + v.z * along.z <= 0) return reject('E_NOT_STRAIGHT', 'a slam moves directly toward its target')
+  }
+  const info = moverInfo(state, b, lead)
+  const r = resolveChargeTo(state, { modelId: lead, targetId: sl.targetId, info, to, kind: 'slam', range: slamRange(m) })
+  if (!r.ok) return reject(r.code, r.message)
+  const events = r.events.filter((e) => e.type !== 'ChargeDeclared')
+  state = setAct(r.state, { ...act(r.state), movement: 'slam', moved: r.distance })
+  state = { ...state, window: 'movement.end' }
+  if (!r.success) {
+    // R7.12: the target is not in slam range: the slam fails and the activation ends
+    return finishActivation(patchX(state, { slam: undefined }), b, events, 'failedSlam')
+  }
+  state = patchX(state, { stage: 'combat', queue: [], cur: lead, powerKind: 'slam', slam: { targetId: sl.targetId, moved: r.distance } })
+  state = setPm(state, lead, { combat: 'powerAttack' })
+  return raiseChooseAttack(state, b, events)
+}
+
+function trampleMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
+  let state = state0
+  const lead = state.pending.constraints?.modelId ?? leadOf(state)
+  if (a.modelId !== lead) return reject('E_TARGET_INVALID', `the trampling model is ${lead}`)
+  const m = state.models[lead]!
+  const to = a.path?.length ? a.path[a.path.length - 1]! : m.pos
+  if (!to || !Number.isFinite(to.x) || !Number.isFinite(to.z)) return reject('E_BAD_PAYLOAD', 'bad end point')
+  // every waypoint must sit on the one straight line
+  const v = sub(to, m.pos)
+  const L = Math.hypot(v.x, v.z)
+  for (const p of (a.path ?? []).slice(0, -1)) {
+    const w = sub(p, m.pos)
+    if (L > 1e-9 && (Math.abs(w.x * v.z - w.z * v.x) / L > STRAIGHT_TOL || w.x * v.x + w.z * v.z < 0)) return reject('E_NOT_STRAIGHT', 'a trample moves in a straight line')
+  }
+  const info = moverInfo(state, b, lead)
+  const events: GameEvent[] = [{ type: 'CombatActionChosen', modelId: lead, choice: 'powerAttack', powerAttack: 'trample' }]
+  let trampled: ModelId[] = []
+  if (L > 1e-6) {
+    const r = resolveTrampleMove(state, { modelId: lead, dir: v, info, dist: L })
+    if (!r.ok) return reject(r.code, r.message)
+    state = r.state; events.push(...r.events); trampled = r.trampled
+  }
+  state = setAct(state, { ...act(state), movement: 'trample', moved: L })
+  state = patchX({ ...state, window: 'movement.end' }, { stage: 'combat', queue: [], cur: lead, powerKind: 'trample' })
+  state = setPm(state, lead, { combat: 'powerAttack', powerAttackMade: true })
+  // one melee attack roll against each small enemy model moved through; hits take power-attack damage (R7.14)
+  const s0 = state
+  const mover = s0.models[lead]!
+  const seq = s0.attackSeq
+  const ta = resolveTrampleAttacks(s0, {
+    attackerId: lead, move: { ok: true, state: s0, events: [], forfeitCombat: false, endsActivation: false, distance: L, trampled, sweep: undefined as never },
+    mat: statOf(s0, b, lead, 'MAT'),
+    def: (id) => defFor(s0, b, null, mover, s0.models[id]!, 'melee').def,
+    autoHit: (id) => defFor(s0, b, null, mover, s0.models[id]!, 'melee').autoHit,
+    look: lookups(s0, b), attackId: (n) => `a:${seq + 1 + n}`,
+  })
+  const declared = ta.events.filter((e) => e.type === 'AttackDeclared').length
+  state = { ...ta.state, attackSeq: seq + declared }
+  events.push(...ta.events)
+  state = noteDamage(state, ta.events)
+  state = sweepDead(state)
+  if (ta.events.some((e) => e.type === 'ModelRemoved')) state = patchX(state, { killedAny: true })
+  const end = afterDeaths(state, b)
+  state = end.state; events.push(...end.events)
+  if (end.ended || state.phase === 'ended') return { state, events, pending: state.pending }
+  return raiseChooseAttack(state, b, events)
 }
 
 // ---------- Combat Action ----------
@@ -774,15 +940,24 @@ function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
   if (pmx.combat === 'powerAttack' && !pmx.powerAttackMade && a.x.powerKind) {
     const kind = a.x.powerKind
     const opts: DecisionOption[] = []
-    for (const t of enemiesOf(state, m.owner)) {
-      const wpn = weaponsOf(b, m).find((w) => isMelee(w.w) && (kind !== 'throw' || ((w.w.qualities ?? []) as Id[]).includes('core.q.throw')))
-      if (!wpn) continue
-      const rng = kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn.w.rng ?? 1)
-      if (!within(m, t, rng) || !losReport(state, id, t.id).visible) continue
-      if (t.base > m.base) continue
-      opts.push({ id: `pa:${kind}:${t.id}`, label: `${kind} ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id, weaponId: wpn.weaponId } as Action, ...(m.type === 'warEngine' ? { cost: { focus: 1 } } : {}) })
+    if (kind === 'slam') {
+      // R7.12: the slam attack goes at the declared target (focus was paid when the slam was declared)
+      const t = a.x.slam ? state.models[a.x.slam.targetId] : undefined
+      if (t && alive(t) && within(m, t, slamRange(m)) && losReport(state, id, t.id).visible) {
+        opts.push({ id: `pa:slam:${t.id}`, label: `Slam ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id } as Action })
+      }
+    } else {
+      for (const t of enemiesOf(state, m.owner)) {
+        const wpn = weaponsOf(b, m).find((w) => isMelee(w.w) && (kind !== 'throw' || ((w.w.qualities ?? []) as Id[]).includes('core.q.throw')))
+        if (!wpn) continue
+        const rng = kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn.w.rng ?? 1)
+        if (!within(m, t, rng) || !losReport(state, id, t.id).visible) continue
+        if (t.base > m.base) continue
+        opts.push({ id: `pa:${kind}:${t.id}`, label: `${kind} ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id, weaponId: wpn.weaponId } as Action, ...(m.type === 'warEngine' ? { cost: { focus: 1 } } : {}) })
+      }
     }
-    opts.push({ id: 'endAttacks', label: 'End attacks', action: { type: 'endAttacks', decisionId: did, player: m.owner, modelId: id } as Action })
+    // a slam that reached its target must be made (neither part of it may be forfeited); otherwise the attacks may end
+    if (kind !== 'slam' || !opts.length) opts.push({ id: 'endAttacks', label: 'End attacks', action: { type: 'endAttacks', decisionId: did, player: m.owner, modelId: id } as Action })
     const r = raise(state, { player: m.owner, kind: 'chooseAttack', window: 'combat.chooseAttack', context: { modelId: id }, options: opts, canPass: false })
     return ok(r.state, events)
   }
@@ -845,7 +1020,7 @@ function chooseAttackAnswer(state0: GameState, b: B, a: ChooseAttackAction): Res
   let chargeAttack = false
   const lock = chargeLock(state, cur, inst)
   if (lock && a.targetId !== lock) return reject('E_TARGET_INVALID', 'the first attack after a charge must target the charge target')
-  if (melee && ac.x.chargeAttackFor === cur && !pmx.meleeMade && ac.charge?.success && a.targetId === ac.charge.targetId) chargeAttack = true
+  if (isChargeAttack(state, b, cur, a.weaponId, a.targetId)) chargeAttack = true
   const dec = declareAttack(state, b, {
     attackerId: cur, targetId: a.targetId, weaponId: a.weaponId, additional: a.additional, attackType: a.attackType, star: star?.abilityId,
     noFocus: false, chargeAttack, basic: !star,
@@ -879,19 +1054,25 @@ function powerAttackAnswer(state0: GameState, b: B, a: import('../actions').Powe
   const t = state.models[a.targetId]
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'power attacks target enemies')
   if (!losReport(state, cur, a.targetId).visible) return reject('E_NO_LOS', 'no line of sight')
-  const wpn = weaponsOf(b, m).find((w) => w.weaponId === a.weaponId) ?? weaponsOf(b, m).find((w) => isMelee(w.w))
-  if (!wpn) return reject('E_POWER_ATTACK', 'no melee weapon')
-  if (a.kind === 'throw' && !((wpn.w.qualities ?? []) as Id[]).includes('core.q.throw')) return reject('E_POWER_ATTACK', 'that weapon cannot throw')
-  const rng = a.kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn.w.rng ?? 1)
+  if (a.kind === 'trample') return reject('E_POWER_ATTACK', 'a trample attacks as part of its move')
+  const slam = a.kind === 'slam' ? ac.x.slam : undefined
+  if (a.kind === 'slam' && (!slam || slam.targetId !== a.targetId)) return reject('E_TARGET_INVALID', 'the slam attack goes at the declared slam target')
+  const wpn = weaponsOf(b, m).find((w) => w.weaponId === a.weaponId && isMelee(w.w)) ?? weaponsOf(b, m).find((w) => isMelee(w.w))
+  if (a.kind === 'throw' && !wpn) return reject('E_POWER_ATTACK', 'no melee weapon')
+  if (a.kind === 'throw' && !((wpn!.w.qualities ?? []) as Id[]).includes('core.q.throw')) return reject('E_POWER_ATTACK', 'that weapon cannot throw')
+  if (a.kind === 'throw' && weaponCrippled(m, wpn!.loc)) return reject('E_CRIPPLED', 'the throwing weapon is crippled')
+  const rng = a.kind === 'headbutt' || a.kind === 'slam' ? slamRange(m) : (wpn!.w.rng ?? 1)
   const df = defFor(state, b, null, m, t, 'melee', { ignoreTIM: false })
   const attackId = `a:${state.attackSeq + 1}`
   const r = resolvePowerAttack(state, {
-    kind: a.kind as 'headbutt' | 'throw', attackerId: cur, targetId: a.targetId, mat: statOf(state, b, cur, 'MAT'), def: df.autoHit ? 0 : df.def, look: lookups(state, b),
-    warEngine: m.type === 'warEngine', range: rng, attackId,
+    kind: a.kind, attackerId: cur, targetId: a.targetId, mat: statOf(state, b, cur, 'MAT'), def: df.def, autoHit: df.autoHit, look: lookups(state, b),
+    // a slam's focus was paid when it was declared at the start of Normal Movement
+    warEngine: m.type === 'warEngine' && a.kind !== 'slam', range: rng, attackId, movedDistance: slam?.moved,
   })
   if (!r.ok) return reject((r.code ?? 'E_POWER_ATTACK') as Rejection['code'], r.message ?? 'power attack failed')
   state = { ...r.state, attackSeq: state.attackSeq + 1 }
   const events = [...r.events]
+  state = noteDamage(state, events)
   state = setPm(state, cur, { powerAttackMade: true })
   state = sweepDead(state)
   const killedAny = events.some((e) => e.type === 'ModelRemoved')
@@ -1613,18 +1794,14 @@ function blastSet(state0: GameState, b: B, atk: AtkCtx, N: number): { state: Gam
 }
 
 // ---------- damage jobs ----------
-function nextJob(state0: GameState, b: B): { state: GameState; events: GameEvent[]; wait: boolean } {
+/** damage.beforeRoll for one damage job (A1 08A): additional dice, flat bonuses, discard-lowest and Armor-Piercing land in atk.x.cur. */
+function prepareJob(state0: GameState, b: B, job: DmgJob): { state: GameState; events: GameEvent[] } {
   let state = state0
-  const events: GameEvent[] = []
   const atk = atkOf(state)!
-  if (atk.x.jobIdx >= atk.x.jobs.length) { state = patchAtk(state, { stage: 'resolved', cur: undefined }); return { state, events, wait: false } }
-  const job = atk.x.jobs[atk.x.jobIdx]!
-  const tgt = state.models[job.targetId]
-  if (!tgt || tgt.life === 'destroyed') { state = patchAtk(state, { jobIdx: atk.x.jobIdx + 1 }); return { state, events, wait: false } }
   state = patchAtk(state, { cur: { addDice: 0, flat: 0, boost: false, dropLowest: false, armorPiercing: false }, flags: { ...atk.x.flags, column: undefined } })
   const r = runSpecs(state, b, 'damage.beforeRoll', job.targetId, job)
-  state = r.state; events.push(...r.events)
-  let a = atkOf(state)!
+  state = r.state
+  const a = atkOf(state)!
   let flat = a.x.cur!.flat
   if (job.kind === 'direct') {
     flat += a.x.starFlat
@@ -1634,7 +1811,67 @@ function nextJob(state0: GameState, b: B): { state: GameState; events: GameEvent
     for (const p of plugins()) if (p.damageFlat) flat += p.damageFlat(state, b, a, job)
   }
   state = patchAtk(state, { cur: { ...a.x.cur!, flat } })
-  a = atkOf(state)!
+  return { state, events: r.events }
+}
+
+/** The damage types an attack's damage rolls carry (weapon types, plus Magical for magical weapons and spells). */
+function attackDamageTypes(b: B, atk: AtkCtx): DamageType[] {
+  const spell = atk.spellId ? rec(b, atk.spellId) : undefined
+  const w = spell ?? rec(b, atk.weaponId!)
+  const types: DamageType[] = [...((w.damageTypes ?? []) as DamageType[])]
+  const magical = ((w.qualities ?? []) as Id[]).includes('core.q.magical') || !!spell
+  if (magical && !types.includes('magical')) types.push('magical')
+  return types
+}
+
+/** Everything one damage roll of the declared attack would use, for query.attackPreview (no dice are rolled). */
+export interface DamagePreview { pow: number; armor: number; added: number; removed: number; resist: boolean; flat: number; dropLowest: boolean; unboostable: boolean }
+export function previewDamage(state0: GameState, b: B, kind: 'direct' | 'blast'): DamagePreview {
+  const atk = atkOf(state0)!
+  const at = state0.models[atk.attackerId]!
+  const types = attackDamageTypes(b, atk)
+  const blastTypes: DamageType[] = ['blast', ...types.filter((t) => t !== 'blast')]
+  const job: DmgJob = kind === 'direct'
+    ? { id: 'preview', targetId: atk.targetId, kind, pow: atk.powDirect, types }
+    : { id: 'preview', targetId: atk.targetId, kind, pow: atk.powBlast ?? atk.x.blastPow ?? 0, types: blastTypes, unboostable: true }
+  const { state } = prepareJob(state0, b, job)
+  const a = atkOf(state)!
+  const cur = a.x.cur!
+  const inst = atk.spellId ? undefined : weaponsOf(b, at).find((x) => x.weaponId === atk.weaponId && x.loc === atk.x.wloc)
+  return {
+    pow: job.pow, armor: armOf(state, b, job.targetId, { armorPiercing: cur.armorPiercing, blessed: a.x.blessed }), added: cur.addDice,
+    removed: inst && weaponCrippled(at, inst.loc) ? 1 : 0, resist: resistsDamageType(state, b, job.targetId, job.types), flat: cur.flat,
+    dropLowest: cur.dropLowest, unboostable: !!job.unboostable,
+  }
+}
+
+/** R5.3/R7.17: the attack is the charge attack (its damage roll is boosted for free). The same test the attack itself runs. */
+export function isChargeAttack(state: GameState, b: B, attackerId: ModelId, weaponId: Id, targetId: ModelId): boolean {
+  const ac = actOf(state)
+  const m = state.models[attackerId]
+  if (!ac || !m || !ac.charge?.success || ac.x.chargeAttackFor !== attackerId) return false
+  const w = weaponsOf(b, m).find((x) => x.weaponId === weaponId)
+  return !!w && isMelee(w.w) && !ac.perModel[attackerId]?.meleeMade && targetId === ac.charge.targetId
+}
+
+/** The ★Attack the attacker's Combat Action is using, if any (its damage bonus applies to the attack). */
+export function activeStar(state: GameState, attackerId: ModelId): Id | undefined {
+  const ac = actOf(state)
+  return ac?.x.star?.modelId === attackerId ? ac.x.star.abilityId : undefined
+}
+
+function nextJob(state0: GameState, b: B): { state: GameState; events: GameEvent[]; wait: boolean } {
+  let state = state0
+  const events: GameEvent[] = []
+  const atk = atkOf(state)!
+  if (atk.x.jobIdx >= atk.x.jobs.length) { state = patchAtk(state, { stage: 'resolved', cur: undefined }); return { state, events, wait: false } }
+  const job = atk.x.jobs[atk.x.jobIdx]!
+  const tgt = state.models[job.targetId]
+  if (!tgt || tgt.life === 'destroyed') { state = patchAtk(state, { jobIdx: atk.x.jobIdx + 1 }); return { state, events, wait: false } }
+  const pj = prepareJob(state, b, job)
+  state = pj.state; events.push(...pj.events)
+  let a = atkOf(state)!
+  const flat = a.x.cur!.flat
   if (job.autoBoost) {
     state = patchAtk(state, { cur: { ...a.x.cur!, boost: true }, stage: 'dmgRoll' })
     events.push({ type: 'RollBoosted', attackId: a.attackId, instanceId: job.id, roll: 'damage', modelId: a.attackerId, source: a.x.powerful ? 'effect' : 'charge' })

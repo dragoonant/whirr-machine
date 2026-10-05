@@ -18,11 +18,28 @@ export function rollDamage(state: GameState, inp: DamageRollInput): { state: Gam
   return { state: r.state, events: [r.event], points: Math.max(0, r.total - inp.armor), rollId: r.event.rollId, dice: r.dice }
 }
 
-/** Exact distribution of damage points: result[k] = P(points = k). */
-export function damageDistribution(inp: { pow: number; armor: number; dice?: DiceCount; resist?: boolean; flat?: number }): number[] {
+/** P(sum of the n d6 kept after dropping the lowest one), indexed by sum (R1.11). n <= 6. */
+const dropCache = new Map<number, number[]>()
+function sumDistributionDropLowest(n: number): number[] {
+  if (n <= 1) return [1]
+  const hit = dropCache.get(n)
+  if (hit) return hit
+  const out = new Array<number>(6 * (n - 1) + 1).fill(0)
+  const total = 6 ** n
+  for (let i = 0; i < total; i++) {
+    let x = i, sum = 0, low = 7
+    for (let k = 0; k < n; k++) { const d = (x % 6) + 1; x = Math.floor(x / 6); sum += d; if (d < low) low = d }
+    out[sum - low]! += 1 / total
+  }
+  dropCache.set(n, out)
+  return out
+}
+
+/** Exact distribution of damage points: result[k] = P(points = k). `dropLowest` discards the lowest die (Heart Seeker). */
+export function damageDistribution(inp: { pow: number; armor: number; dice?: DiceCount; resist?: boolean; flat?: number; dropLowest?: boolean }): number[] {
   const n = diceCount({ ...inp.dice, removed: (inp.dice?.removed ?? 0) + (inp.resist ? 1 : 0) })
   const out: number[] = []
-  sumDistribution(n).forEach((p, s) => {
+  ;(inp.dropLowest && n >= 2 ? sumDistributionDropLowest(n) : sumDistribution(n)).forEach((p, s) => {
     if (!p) return
     const k = Math.max(0, s + inp.pow + (inp.flat ?? 0) - inp.armor)
     out[k] = (out[k] ?? 0) + p

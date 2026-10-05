@@ -4,7 +4,7 @@ import { applyDamage, resolveDeath, rollDamage } from './damage'
 import type { GameEvent } from './events'
 import { EPS, edgeDistance, isOnTable } from './geometry'
 import {
-  addKnockdown, slideAway, spendFocus, type HitLookups, type InvoluntaryResult, type TrampleResult,
+  knockDownUnless, slideAway, spendFocus, type HitLookups, type InvoluntaryResult, type TrampleResult,
 } from './movement'
 import { rollNd6 } from './dice'
 import type { GameState, Mod, ModelId, PowerAttackKind } from './types'
@@ -23,6 +23,7 @@ export interface PowerAttackInput {
   boostDamage?: boolean
   mods?: Mod[]
   attackId?: string
+  autoHit?: boolean // knocked-down / stationary target in melee (R7.18 step 4)
 }
 export interface PowerAttackResult {
   ok: boolean
@@ -78,7 +79,7 @@ export function resolvePowerAttack(state: GameState, inp: PowerAttackInput): Pow
   const mods: Mod[] = [...(inp.mods ?? [])]
   if (inp.kind === 'slam' && fullSlam && t.base > a.base) mods.push({ source: 'slam', label: 'Slam vs larger base', value: -2 })
   events.push({ type: 'AttackDeclared', attackId: inp.attackId ?? 'a:pa', attackerId: a.id, originId: a.id, targetId: t.id, kind: 'power', powerKind: inp.kind, additional: false } as GameEvent)
-  const roll = rollAttack(s, { stat: inp.mat, mods, dice: { boost: inp.boostAttack }, target: inp.def, ownerId: a.id })
+  const roll = rollAttack(s, { stat: inp.mat, mods, dice: { boost: inp.boostAttack }, target: inp.def, autoHit: inp.autoHit, ownerId: a.id })
   s = roll.state; events.push(...roll.events)
   events.push({ type: 'AttackResolved', attackId: inp.attackId ?? 'a:pa', rollId: roll.rollId, hit: roll.hit, crit: roll.crit, auto: roll.auto } as GameEvent)
   if (!roll.hit) return { ok: true, state: s, events, hit: false }
@@ -87,7 +88,7 @@ export function resolvePowerAttack(state: GameState, inp: PowerAttackInput): Pow
   let moved: InvoluntaryResult | undefined
   let extra = 0
   if (inp.kind === 'headbutt') {
-    const kd = addKnockdown(s, t.id, 'headbutt'); s = kd.state; events.push(...kd.events)
+    const kd = knockDownUnless(s, t.id, inp.look, 'headbutt'); s = kd.state; events.push(...kd.events)
   } else if (inp.kind === 'throw' || fullSlam) {
     const d = rollNd6(s, 1, inp.kind === 'throw' ? 'throwDist' : 'slamDist', { ownerId: a.id })
     s = d.state; events.push(d.event)
@@ -95,7 +96,7 @@ export function resolvePowerAttack(state: GameState, inp: PowerAttackInput): Pow
     moved = slideAway(s, t.id, a.pos, x, inp.kind === 'throw' ? 'throw' : 'slam', inp.look)
     s = moved.state; events.push(...moved.events)
     if (moved.stoppedAgainst) extra = 1
-    const kd = addKnockdown(s, t.id, inp.kind); s = kd.state; events.push(...kd.events)
+    const kd = knockDownUnless(s, t.id, inp.look, inp.kind); s = kd.state; events.push(...kd.events)
   }
   if (s.models[t.id]!.life === 'active' || s.models[t.id]!.life === 'disabled') s = damageStep(s, inp, pow, extra, events)
   return { ok: true, state: s, events, hit: true, moved }
@@ -109,6 +110,9 @@ export interface TrampleAttackInput {
   def: (id: ModelId) => number
   look: HitLookups
   boost?: boolean
+  autoHit?: (id: ModelId) => boolean
+  /** attack ids for the AttackDeclared/AttackResolved events, one per roll (default a:tr.<n>) */
+  attackId?: (n: number) => string
 }
 /** One melee attack roll against each small enemy model moved through; hits take power-attack damage. */
 export function resolveTrampleAttacks(state: GameState, inp: TrampleAttackInput): { state: GameState; events: GameEvent[]; hits: ModelId[] } {
@@ -116,11 +120,15 @@ export function resolveTrampleAttacks(state: GameState, inp: TrampleAttackInput)
   let s = state
   const events: GameEvent[] = []
   const hits: ModelId[] = []
+  let n = 0
   for (const id of inp.move.trampled) {
     const t = s.models[id]
     if (!t || t.owner === a.owner || !isOnTable(t)) continue
-    const roll = rollAttack(s, { stat: inp.mat, dice: { boost: inp.boost }, target: inp.def(id), ownerId: a.id })
+    const attackId = inp.attackId?.(n++) ?? `a:tr.${id}`
+    events.push({ type: 'AttackDeclared', attackId, attackerId: a.id, originId: a.id, targetId: id, kind: 'trample', powerKind: 'trample', additional: false } as GameEvent)
+    const roll = rollAttack(s, { stat: inp.mat, dice: { boost: inp.boost }, target: inp.def(id), autoHit: inp.autoHit?.(id), ownerId: a.id })
     s = roll.state; events.push(...roll.events)
+    events.push({ type: 'AttackResolved', attackId, rollId: roll.rollId, hit: roll.hit, crit: roll.crit, auto: roll.auto } as GameEvent)
     if (!roll.hit) continue
     hits.push(id)
     const d = rollDamage(s, { pow: powerPow(a.base, t.base), armor: inp.look.arm(id), ownerId: id })

@@ -3,7 +3,7 @@
 import type { GameEvent, MoveKind } from './events'
 import {
   EPS, baseRadius, dist, edgeDistance, isOnTable, norm, sub, surfaceElevation, segPointDist,
-  sweepFrom, validateAdvancePath, placeWithin, leastDisturbance, type SweepResult,
+  sweepFrom, validateAdvancePath, placeWithin, leastDisturbance, isLegalPlacement, type SweepResult,
 } from './geometry'
 import { circleInsideShape, terrainPieces } from './terrain'
 import { rollDamage, applyDamage, resolveDeath, type GridLayout } from './damage'
@@ -17,6 +17,8 @@ export interface MoverInfo {
   pathfinder?: boolean
   flying?: boolean
   unstoppable?: boolean // waives the disengage forfeit (R5.7, R5.10)
+  slam?: boolean // has the Slam power attack (R7.12); undefined = not checked here
+  trample?: boolean // has the Trample power attack (R7.14); undefined = not checked here
   /** an enemy model's melee range, for engagement; default 1 */
   rangeOf?: (id: ModelId) => number
 }
@@ -67,8 +69,11 @@ export function movementOptions(
     mk('run', info.spd + 5, fc, !blocked && !engaged && !noMove && canPay && !standing, why(!canPay ? 'no focus' : 'standing up')),
     mk('charge', info.spd + 3, fc, !blocked && !engaged && !noMove && canPay && !!info.hasMelee && !opts.combatForfeited && !standing,
       why(!info.hasMelee ? 'no melee weapon' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
-    mk('slam', info.spd + 3, 0, !blocked && !engaged && !noMove && !opts.combatForfeited && !standing, why('cannot slam')),
-    mk('trample', info.spd + 3, 0, !blocked && !noMove && !opts.combatForfeited && !standing, why('cannot trample')),
+    // R7.10-R7.14: slam and trample are power attacks that use Normal Movement and the Combat Action; a war-engine pays 1 focus
+    mk('slam', info.spd + 3, fc, info.slam !== false && !blocked && !engaged && !noMove && !opts.combatForfeited && !standing && canPay,
+      why(info.slam === false ? 'no Slam power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
+    mk('trample', info.spd + 3, fc, info.trample !== false && !blocked && !noMove && !opts.combatForfeited && !standing && canPay,
+      blocked ?? (noMove ? 'movement crippled' : info.trample === false ? 'no Trample power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
   ]
 }
 
@@ -193,19 +198,32 @@ export function resolveChargeTo(state: GameState, a: ChargeArgs & { to: Vec2 }):
 
 // ---------- trample move (R7.14) ----------
 export interface TrampleResult extends MoveOk { distance: number; trampled: ModelId[]; sweep: SweepResult }
-export function resolveTrampleMove(state: GameState, a: { modelId: ModelId; dir: Vec2; info: MoverInfo }): TrampleResult | Rejected {
+/**
+ * R7.14: a straight advance of up to SPD+3" along `dir` that passes through small (30 mm) bases and stops on contacting a
+ * medium-or-larger base, an obstacle (not with Pathfinder) or an obstruction. `dist` picks a shorter move (default: as far
+ * as it goes). The end point needs room for the base. Leaving melee ranges forfeits nothing.
+ */
+export function resolveTrampleMove(state: GameState, a: { modelId: ModelId; dir: Vec2; info: MoverInfo; dist?: number }): TrampleResult | Rejected {
   const m = state.models[a.modelId]!
   if (len2(a.dir) < 1e-12) return rej('E_BAD_PAYLOAD', 'trample needs a direction')
+  const max = a.info.spd + 3
+  if (a.dist !== undefined && a.dist > max + EPS) return rej('E_TOO_FAR', `a trample moves at most ${max}"`)
   const small = Object.values(state.models).filter((o) => o.id !== m.id && isOnTable(o) && o.base === 30 && m.base > 30).map((o) => o.id)
-  const sw = sweepWithRough(state, m, norm(a.dir), a.info.spd + 3, a.info, small)
+  const dir = norm(a.dir)
+  const sw = sweepWithRough(state, m, dir, max, a.info, small)
+  if (a.dist !== undefined && a.dist > sw.travelled + EPS) return rej('E_PATH_BLOCKED', `the trample stops after ${sw.travelled.toFixed(2)}"`)
+  const go = a.dist === undefined ? sw.travelled : Math.min(a.dist, sw.travelled)
+  const end = go >= sw.travelled - EPS ? sw.end : { x: m.pos.x + dir.x * go, z: m.pos.z + dir.z * go }
+  const room = isLegalPlacement(state, a.modelId, end, m.base)
+  if (!room.ok) return rej(room.code ?? 'E_BASE_OVERLAP', `no room for the base at the end of the trample (${room.message ?? 'blocked'})`)
   const r = baseRadius(m.base)
   const trampled = small.filter((id) => {
     const o = state.models[id]!
-    return segPointDist(m.pos, sw.end, o.pos).d <= r + baseRadius(o.base) - EPS
+    return segPointDist(m.pos, end, o.pos).d <= r + baseRadius(o.base) - EPS
   })
-  const s = relocate(state, a.modelId, sw.end)
-  const events: GameEvent[] = [movedEvent(a.modelId, 'trample', m.pos, sw.end, [sw.end], s.models[a.modelId]!.elev, stopId(sw))]
-  return { ok: true, state: s, events, forfeitCombat: false, endsActivation: false, distance: sw.travelled, trampled, sweep: sw }
+  const s = relocate(state, a.modelId, end)
+  const events: GameEvent[] = [movedEvent(a.modelId, 'trample', m.pos, end, [end], s.models[a.modelId]!.elev, go >= sw.travelled - EPS ? stopId(sw) : undefined)]
+  return { ok: true, state: s, events, forfeitCombat: false, endsActivation: false, distance: go, trampled, sweep: sw }
 }
 
 // ---------- unit movement (R5.8-R5.10) ----------
@@ -269,7 +287,18 @@ export interface InvoluntaryResult {
   stoppedAgainst: boolean // an obstacle, obstruction or equal-or-larger base (the +1 die case)
   contacted: ModelId[] // models given collateral
 }
-export interface HitLookups { arm: (id: ModelId) => number; layouts?: (id: ModelId) => GridLayout[] | undefined; tough?: (id: ModelId) => boolean }
+export interface HitLookups {
+  arm: (id: ModelId) => number
+  layouts?: (id: ModelId) => GridLayout[] | undefined
+  tough?: (id: ModelId) => boolean
+  /** true when a rule stops the model being knocked down (Shield Wall); it is still moved and damaged */
+  noKnockdown?: (id: ModelId) => boolean
+}
+/** Knock a model down unless a rule forbids it. */
+export function knockDownUnless(state: GameState, id: ModelId, look: HitLookups, sourceId?: string): { state: GameState; events: GameEvent[] } {
+  if (look.noKnockdown?.(id)) return { state, events: [] }
+  return addKnockdown(state, id, sourceId)
+}
 
 /** Collateral POW by base comparison (R5.18). `sourceMm` is the base of the model doing the hitting. */
 export const collateralPow = (sourceMm: number, hitMm: number): 12 | 14 => (sourceMm <= hitMm ? 12 : 14)
@@ -338,7 +367,7 @@ export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, 
   }
   const contacted = [...hit]
   for (const cid of contacted) {
-    const kd = addKnockdown(s, cid, 'collateral')
+    const kd = knockDownUnless(s, cid, look, 'collateral')
     s = kd.state; events.push(...kd.events)
     const d = plainDamage(s, cid, collateralPow(m.base, s.models[cid]!.base), 2, 'collateral', look)
     s = d.state; events.push(...d.events)

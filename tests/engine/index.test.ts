@@ -105,7 +105,17 @@ describe('engine API', () => {
       expect(near.expectedDamage).toBeGreaterThanOrEqual(0)
       expect(describeNums.percent(near.pHit)).toMatch(/%$/)
     }
-    expect(describeNums.decision(s, r.pending).title).toContain('chooseActivation')
+    // every decision kind has a short human title in our own words (the client's fallback heading), never the raw kind id
+    const kinds = ['chooseTurnOrder', 'chooseEdge', 'deploy', 'advanceDeploy', 'maintenanceOrder', 'allocateFocus', 'payUpkeep', 'shake', 'chooseActivation',
+      'chooseMovement', 'moveModel', 'chargeTarget', 'placeTroopers', 'chooseCombatAction', 'chooseAttack', 'combinedAttack', 'channel', 'castSpell', 'useFeat',
+      'boostAttack', 'rollAnyway', 'reroll', 'boostDamage', 'chooseGrid', 'powerField', 'chooseBoxes', 'triggerWindow', 'abilityChoice', 'gameOver'] as const
+    for (const kind of kinds) {
+      const title = describeNums.decision(s, { ...r.pending, kind, context: {} }).title
+      expect(title.endsWith(`: ${kind}`)).toBe(false)
+      expect(title.length).toBeGreaterThan(4)
+    }
+    expect(describeNums.decision(s, { ...r.pending, kind: 'chooseActivation', context: {} }).title).toBe(`Player ${r.pending.player}: pick a model or unit to activate`)
+    expect(describeNums.decision(s, { ...r.pending, kind: 'chargeTarget', context: { modelId: 'A:e0', data: { mode: 'slam' } } }).title).toMatch(/slam target/)
   })
 
   it('SIM a short headless batch ends every game with no invariant violations', () => {

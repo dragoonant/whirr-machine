@@ -8,7 +8,7 @@ import type {
 import { EngineInvariantError } from './types'
 import type { DiceRolled, GameEvent } from './events'
 import { loadBundle } from '../data/index'
-import { abilitiesOf, armOf, meleeReach, prof, statOf, weaponRange, weaponsOf, isMelee } from './code-hooks'
+import { abilitiesOf, meleeReach, prof, statOf, weaponRange, weaponsOf, isMelee } from './code-hooks'
 import { damageDistribution, expectedDamage as expDamage, pKill as pKillOf } from './damage'
 import { pAttackHit } from './dice'
 import { effectsOn } from './effects'
@@ -17,7 +17,7 @@ import { defModifiers, losReport } from './los'
 import { modelDistance, modelToPoint } from './measure'
 import { resolveAdvance } from './movement'
 import { raiseGameOver, type FlowResult } from './pending'
-import { activationLegalActions, declareAttack, handleActivationAction, moverInfo } from './phases/activation'
+import { activationLegalActions, activeStar, declareAttack, handleActivationAction, isChargeAttack, moverInfo, previewDamage, type DamagePreview } from './phases/activation'
 import { controlReport } from './scenario'
 import { answerSetup, createInitialState, isSetupDecision, setupLegalActions } from './setup'
 import { answerControlDecision, answerMaintenanceDecision, endTurn, flowLegalActions, isControlDecision, isMaintenanceDecision } from './turnflow'
@@ -169,7 +169,11 @@ export interface LosResult {
   blockers: Id[]
   mods: { concealment: boolean; cover: boolean; elevation: boolean; inMelee: boolean; stealth: boolean }
 }
-export interface AttackPreviewOpts { additional?: boolean; boostAttack?: boolean; boostDamage?: boolean; chargeAttack?: boolean; fromPos?: Vec2; spellId?: Id }
+/**
+ * attackType: the weapon's Attack Type (shot mode) chosen at declaration, as in ChooseAttackAction.attackType (00 §14).
+ * chargeAttack: omitted = inferred from the activation (the charger's first melee attack at its charge target after a 3"+ charge).
+ */
+export interface AttackPreviewOpts { additional?: boolean; boostAttack?: boolean; boostDamage?: boolean; chargeAttack?: boolean; fromPos?: Vec2; spellId?: Id; attackType?: string }
 export interface AttackPreview {
   legal: Rejection | null
   hitTarget: number
@@ -237,10 +241,13 @@ export const query = {
     let state = state0
     if (opts.fromPos && state.models[attackerId]) state = { ...state, models: { ...state.models, [attackerId]: { ...state.models[attackerId]!, pos: opts.fromPos } } }
     let dec
+    const weapon = !opts.spellId
+    const chargeAttack = opts.chargeAttack ?? (weapon && !opts.additional && isChargeAttack(state, b, attackerId, weaponId, targetId))
+    const star = weapon ? activeStar(state, attackerId) : undefined
     try {
       dec = declareAttack(state, b, {
-        attackerId, targetId, weaponId: opts.spellId ? undefined : weaponId, spellId: opts.spellId, additional: !!opts.additional,
-        noFocus: false, chargeAttack: !!opts.chargeAttack,
+        attackerId, targetId, weaponId: weapon ? weaponId : undefined, spellId: opts.spellId, additional: !!opts.additional,
+        attackType: weapon ? opts.attackType : undefined, star, noFocus: false, chargeAttack, basic: !star,
       })
     } catch (e) {
       return emptyPreview({ code: 'E_TARGET_INVALID', message: e instanceof Error ? e.message : String(e) })
@@ -253,17 +260,27 @@ export const query = {
     const bonus = statv + sumMods(atk.mods)
     const diceN = atk.dice + (opts.boostAttack ? 1 : 0)
     const roll = atk.autoMiss ? { pHit: 0, pCrit: 0 } : atk.autoHit ? { pHit: 1, pCrit: 0 } : pAttackHit(diceN, bonus, atk.hitTarget)
-    const arm = armOf(dec.state, b, targetId)
-    const boostDmg = !!opts.boostDamage || !!opts.chargeAttack
-    const pow = atk.kind === 'aoe' && atk.losVerdict.inRange === false ? (atk.powBlast ?? 0) : atk.powDirect
-    const dd = damageDistribution({ pow, armor: arm, dice: { boost: boostDmg } })
-    const exp = expDamage(dd)
-    const pk = pKillOf(dd, remainingBoxes(dec.state, targetId))
+    // damage: the same damage.beforeRoll step the attack runs (additional dice, flat bonuses, Armor-Piercing, Resistance)
+    const boostDmg = !!opts.boostDamage || chargeAttack
+    const distOf = (d: DamagePreview, boost: boolean) => damageDistribution({
+      pow: d.pow, armor: d.armor, dice: { added: d.added, removed: d.removed, boost: boost && !d.unboostable }, resist: d.resist, flat: d.flat, dropLowest: d.dropLowest,
+    })
+    const boxes = remainingBoxes(dec.state, targetId)
+    const direct = previewDamage(dec.state, b, 'direct')
+    const dd = distOf(direct, boostDmg)
+    let exp = expDamage(dd) * roll.pHit
+    let pk = pKillOf(dd, boxes) * roll.pHit
+    if (atk.kind === 'aoe' && atk.losVerdict.inRange) {
+      // R7.9: a miss with the target in range still hits it (not directly) with the blast POW
+      const bl = distOf(previewDamage(dec.state, b, 'blast'), false)
+      exp += expDamage(bl) * (1 - roll.pHit)
+      pk += pKillOf(bl, boxes) * (1 - roll.pHit)
+    }
     void at
     return {
       legal: null, hitTarget: atk.hitTarget, dice: diceN, mods: atk.mods, pHit: roll.pHit, pHitBoosted: atk.pHitBoosted, pCrit: roll.pCrit,
-      damageTarget: arm, damageDice: 2 + (boostDmg ? 1 : 0), expectedDamage: exp * roll.pHit, pKill: pk * roll.pHit,
-      autoHit: !!atk.autoHit, autoMiss: !!atk.autoMiss,
+      damageTarget: direct.armor, damageDice: Math.max(0, 2 + direct.added - direct.removed - (direct.resist ? 1 : 0) + (boostDmg ? 1 : 0)),
+      expectedDamage: exp, pKill: pk, autoHit: !!atk.autoHit, autoMiss: !!atk.autoMiss,
     }
   },
 
@@ -339,6 +356,62 @@ const nameOf = (state: GameState, id: Id | undefined): string => {
   return p.name ?? id
 }
 
+/** Decision kinds whose short title already names the target. */
+const TITLE_NAMES_TARGET = new Set<PendingDecision['kind']>(['moveModel'])
+
+/** A short title for each decision kind, in our own words (the client's fallback heading). */
+function decisionTitle(state: GameState, pd: PendingDecision): string {
+  const data = pd.context.data ?? {}
+  const mode = data.mode as string | undefined
+  const target = pd.context.targetId ? nameOf(state, pd.context.targetId) : ''
+  switch (pd.kind) {
+    case 'rollOff': return 'roll off for the first turn'
+    case 'chooseTurnOrder': return 'go first or second'
+    case 'chooseEdge': return 'pick your table edge'
+    case 'deploy': return 'deploy your army'
+    case 'advanceDeploy': return 'place your advance-deploying models'
+    case 'maintenanceOrder': return 'order the start-of-turn effects'
+    case 'allocateFocus': return 'hand out focus to the battlegroup'
+    case 'payUpkeep': return 'keep or drop upkeep spells'
+    case 'shake': return 'shake off conditions'
+    case 'chooseActivation': return 'pick a model or unit to activate'
+    case 'chooseMovement': return 'pick a Normal Movement option'
+    case 'moveModel':
+      if (data.code === 'avengingForce') return 'Avenging Force advance'
+      if (data.trigger) return 'optional move'
+      if (mode === 'slam') return `slam toward ${target || 'the target'}`
+      if (mode === 'trample') return 'trample in a straight line'
+      if (pd.constraints?.toward) return `charge toward ${target || 'the target'}`
+      return 'move'
+    case 'chargeTarget': return mode === 'slam' ? 'pick a slam target' : 'pick a charge target'
+    case 'placeTroopers': return 'place the rest of the unit'
+    case 'chooseCombatAction': return 'pick a Combat Action'
+    case 'chooseAttack': return data.code === 'avengingForce' ? 'Avenging Force attack' : 'pick an attack'
+    case 'combinedAttack': return 'set up a combined attack'
+    case 'channel': return 'cast directly or through a channeller'
+    case 'castSpell': return 'cast a spell'
+    case 'useFeat': return 'use the feat'
+    case 'boostAttack': return 'boost the attack roll?'
+    case 'rollAnyway': return 'roll for the automatic hit?'
+    case 'reroll': return 'reroll the dice?'
+    case 'boostDamage': return 'boost the damage roll?'
+    case 'chooseGrid': return 'pick a damage grid'
+    case 'powerField': return 'spend focus on Power Field?'
+    case 'chooseBoxes': return 'pick the damage column'
+    case 'triggerWindow': {
+      const id = (data.triggerId as string | undefined) ?? ''
+      const rec = id ? (bundleFor(state).byId[id] as { name?: string } | undefined) : undefined
+      return rec?.name ? `use ${rec.name}?` : 'use the triggered ability?'
+    }
+    case 'abilityChoice':
+      if (data.code === 'powerfulAttack') return 'use Powerful Attack?'
+      if (data.code === 'prey') return 'pick the prey'
+      return 'make a choice'
+    case 'gameOver': return 'game over'
+    default: return String(pd.kind)
+  }
+}
+
 export const describe = {
   percent(p: number): string { return `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%` },
   mods(mods: readonly Mod[]): DescribedLine[] {
@@ -368,7 +441,8 @@ export const describe = {
       detail: o.odds?.pHit !== undefined ? `hit ${describe.percent(o.odds.pHit)}` : o.odds?.expectedDamage !== undefined ? `avg ${o.odds.expectedDamage.toFixed(1)}` : undefined,
     }))
     if (state.attack && ['boostAttack', 'boostDamage', 'powerField', 'rollAnyway', 'reroll'].includes(pending.kind)) lines.push(...describe.attack(state.attack))
-    return { title: `${who}: ${pending.kind}${pending.context.targetId ? ` → ${nameOf(state, pending.context.targetId)}` : ''}`, lines }
+    const target = pending.context.targetId ? nameOf(state, pending.context.targetId) : ''
+    return { title: `${who}: ${decisionTitle(state, pending)}${target && !TITLE_NAMES_TARGET.has(pending.kind) ? ` → ${target}` : ''}`, lines }
   },
   event(state: GameState, ev: GameEvent): string {
     const e = ev as GameEvent & Record<string, unknown>
