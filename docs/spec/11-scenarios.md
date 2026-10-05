@@ -52,33 +52,41 @@ the fixture `scn-test-sr`.
 
 ## S1 First scenario: **Ashwall Divide** (`scn-ashwall-divide`)
 
-Quick Start rules (QS p35, p39) on our own layout. Recon 30, 36"×36". Two ruined walls across the middle
-are the scenario terrain. The name and layout are ours.
+The Quick Start demo scenario (QS pp34–36): its table, deployment depths, terrain layout and scoring,
+under our own name and ids. Recon 30, 36"×36". Each side has a low stone wall a little way in front of
+its deployment zone, and those two walls are the scenario terrain; two shallow ponds sit between the
+walls on each player's right.
 
 | Setting | Value |
 |---|---|
-| Table | 36"×36" |
-| Rounds | 7 |
-| Turn order | R11.4 (roll-off; the winner chooses first/second; the **second** player picks the edge) |
-| First player deployment zone | z ∈ [−18, −12]. Advance Deployment: z ≤ −9 |
-| Second player deployment zone | z ∈ [7, 18]. Advance Deployment: z ≥ 4 |
+| Table | 36"×36" (QS p35) |
+| Rounds | 7 (ours; QS sets none) |
+| Turn order | R11.4 (roll-off; the winner chooses first/second; the **second** player picks the edge). The QS fixes Khador first; S2 does the same |
+| First player deployment zone | completely within 6" of their back edge: z ∈ [−18, −12] (QS p35) |
+| Second player deployment zone | completely within 11" of their back edge: z ∈ [7, 18] (QS p35) |
+| Advance Deployment | 3" deeper: first z ≤ −9, second z ≥ 4 (QS p35) |
+| Deployment order | P1 normal, P2 normal, P1 Advance Deployment, P2 Advance Deployment, then Prey (QS p35, p43) |
 | Ambush entry | R11.6: from round 2, completely within 3" of the left, right or own edge |
-| Scoring | `{fromRound: 1, fromPlayer: 'first', winMargin: 3, winOnOpponentTurnOnly: true}` |
+| Scoring | `{fromRound: 1, fromPlayer: 'first', winMargin: 3, winOnOpponentTurnOnly: true}` (QS p36, p39) |
 | Kill Box | none (QS has none) |
 
-**Layout** (centre points; point-symmetric about the origin)
+**Layout** (centre points in inches, `{x, z}`, origin = table centre, +z toward the second player;
+point-symmetric about the origin). Sizes come from the QS template page (the unnumbered page after p47, printed at 1:1).
+Positions come from the QS text (p35) and its layout diagram, measured against the 36" table.
 
-| ID | Element | Type | Centre (x, z) | Size | Notes |
+| ID | Element | Type | Centre (x, z) | Size and orientation | Source |
 |---|---|---|---|---|---|
-| W1 | West wall | Scenario terrain + obstacle | (−9, 0) | 5"×1", long axis along x, 1" tall | Gives cover. Held by ≥2 models within 2"; contested by 1 enemy within 2" |
-| W2 | East wall | Scenario terrain + obstacle | (9, 0) | 5"×1", long axis along x, 1" tall | As W1 |
-| B1 | Pumphouse | Obstruction (blocks LOS) | (0, 0) | 3"×3", 3" tall | Impassable; cover within 1" |
-| F1 | Copse | Forest (rough, concealment) | (11, −9) | ellipse 6"×4", long axis along x | Point-symmetric to F2 |
-| F2 | Copse | Forest | (−11, 9) | ellipse 6"×4" | — |
-| R1 | Rubble | Rough terrain, cover inside | (−5, −7) | 3"×2" | Point-symmetric to R2 |
-| R2 | Rubble | Rough terrain, cover inside | (5, 7) | 3"×2" | — |
+| W1 | First player's wall | Scenario terrain + obstacle (linear, gives cover) | (−6, −4) | 4"×0.75" box, long axis along x; 0.75" tall (height ASSUMED: an obstacle, below 1") | QS p35: ≈14" from the first player's back edge and 12" from their left, measured to the centre (the diagram agrees to 0.1") |
+| W2 | Second player's wall | as W1 | (6, 4) | as W1 | the same distances from the second player's view |
+| P1 | First player's pond | Shallow water (rough terrain, R5.12) | (3.25, −2) | capsule 3.5" long, 2" wide (end radius 1"); long axis along the direction (1, 1) | QS diagram: 16" from the first player's back edge, ≈14¾" from their right edge |
+| P2 | Second player's pond | as P1 | (−3.25, 2) | as P1; long axis along (1, 1) (point symmetry) | the same from the second player's view |
 
-**Wall control (QS p35):** a player holds a wall with ≥2 of their models (any kind, Leaders
+Note on the ponds: the QS text says "14" from the left", but its diagram puts each pond on the
+player's *right*, 16" from their back edge, and the worked turns depend on the diagram (Falk walks
+through the second player's pond toward the centre, QS p42). We follow the diagram. The diagram draws
+P2's long axis the other way; we mirror it so the layout stays point-symmetric (SCN-024).
+
+**Wall control (QS p36, p39):** a player holds a wall with ≥2 of their models (any kind, Leaders
 included) within 2" of it; one eligible enemy model within 2" contests it. Leaders **may** contest in
 S1 (QS: "one of their models"; unsourced). Inert, disabled and off-table models never count.
 
@@ -87,26 +95,33 @@ S1 (QS: "one of their models"; unsourced). Inert, disabled and off-table models 
 | You hold W1 | 1 |
 | You hold W2 | 1 |
 
-**Victory:** assassination (V1.1), lead-by-3 (V1.3), or the most VP after round 7, then V1.5–V1.6.
+Both players score at the end of every player turn from the first player's round-1 turn (V1.2).
+
+**Victory:** assassination (V1.1), lead-by-3 (V1.3: a player who leads by 3 or more right after scoring
+at the end of their *opponent's* turn wins; QS p36), or the most VP after round 7, then V1.5–V1.6.
 
 **Default armies (Part G):** Cygnar — Caine, Deuce, Falk, The Black 13th. Khador — Vilkul, Razor,
 Lazarenko, The Hounds. Each list is 30 points.
 
 **Element data (20 §7):** `{kind:'scenarioTerrain', terrain:'w1', hold:{within:2, models:2, eligible:['any']},
-contest:{within:2, excludes:['inert','disabled']}, vp:{control:1}}`.
+contest:{within:2, excludes:['inert','disabled']}, vp:{control:1}}`, and the same for `w2`.
+
+**Terrain data (20 §8):** walls `{rulesType:'obstacle', footprint:{rect:{w:4, d:0.75}}, height:0.75}`, placed with
+`rot: 0`. Ponds `{rulesType:'shallowWater', footprint:{polygon:[...]}, height:0}`, where the polygon is the capsule in
+local coordinates (long axis along local x): (0.75, −1), (1.457, −0.707), (1.75, 0), (1.457, 0.707), (0.75, 1),
+(−0.75, 1), (−1.457, 0.707), (−1.75, 0), (−1.457, −0.707), (−0.75, −1). Each pond is placed so that local +x points
+along (1, 1) in `{x, z}`; with the right-handed, y-up rotation that is `rot: −π/4`.
 
 ## S2 Quick Start demo (`scn-qs-demo`, tests and tutorial only)
 
-Reproduces the QS demo table (QS p34–35) for GOLD-001. Not in the skirmish menu.
+S1 with the QS's fixed setup, for GOLD-001 (`13-golden-first-turn.md`). Not in the skirmish menu.
 
 | Setting | Value |
 |---|---|
-| Table | 36"×36"; Khador = first player = player A, edge z = −18 |
-| Deployment | first 6", second 11"; Advance Deployment +3" (QS p35) |
-| Walls (objective terrain) | two; each ≈14" from a back edge and 12" from that player's left: A's at (−6, −4), B's at (6, 4); 5"×1", 1" tall (template size unsourced) |
-| Ponds (shallow water) | two; ≈16" from a back edge and 14" from that player's left: A's at (−4, −2), B's at (4, 2); 3" circles (unsourced) |
-| Scoring | S1 wall rules, from round 1 |
-| Data | pinned bundle `qs-2025` (faction values marked QS-2025 in `factions/*.md`) |
+| Layout, deployment, scoring | as S1 |
+| Players | Khador = player A = first player, back edge z = −18; Cygnar = player B = second, back edge z = +18. No roll-off and no edge choice |
+| Command cards | none (the QS skips them, p35) |
+| Data | pinned bundle `qs-2025` (the values marked verified in `factions/*.md`, plus the community values the turns rely on) |
 
 ## Test fixture `scn-test-sr`
 

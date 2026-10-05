@@ -1,11 +1,13 @@
 # Faction: Cygnar (Storm Legion, Hellslinger cadre) — Recon starter
 
-- **Sources:** the official Quick Start guide (Jul 2025, `docs/sources/`, worked turns QS pp36–46) and
+- **Sources:** the official Quick Start guide (Jul 2025, `docs/sources/`, printed pages 34–47 plus the template page) and
   community MK4 card data (`isorna/wardice-warmachine-data`, fetched 2026-10-04). The app version of the
-  community data is unknown. **Open app check:** record the app version and confirm every non-QS value
-  before data entry.
+  community data is unknown.
+- **The Quick Start prints no stat cards.** It gives values only where the worked turns use them
+  (pp36–47), the layout diagram (p35: base sizes) and the Razor damage grid (p41). Everything else
+  stays community data until the **open app check** (record the app version, confirm every non-QS value).
 - **Confidence key** (QS beats community data on any conflict):
-  - `QS-2025`: printed in the Quick Start worked turns; data entry may use it;
+  - `verified (QS pN)`: printed in the Quick Start on page N (or read from its diagram); data entry may use it;
   - `V-cd`: community data and handoff G agree, not contradicted by the QS;
   - `U-cd`: community data only;
   - `U-guess`: no source; data entry must not trust it.
@@ -15,38 +17,46 @@
 
 | id | Source model | shipName | Type | Pts | Base | Boxes | conf |
 |---|---|---|---|---|---|---|---|
-| cyg.caine | Major Allister Caine | Caine | Leader (warcaster) | 0 | 30 | 15 | V-cd (base U-hg) |
-| cyg.deuce | Deuce | Deuce | Heavy war-engine, character | 17 | 50 | grid 30 | V-cd; QS-2025 columns consistent |
-| cyg.falk | Captain Bastian Falk | Falk | Solo, character | 4 | 30 | 8 | QS-2025 (8 boxes); base U-guess |
-| cyg.black13 | The Black 13th | Black 13th | Unit, 3 character troopers (Ryan, Glover, Watts) | 9 | 30 | several each: Ryan ≥5 (survives 4), Glover ≥2; use 5 until the app check | QS-2025 (lower bounds); count U-guess |
+| cyg.caine | Major Allister Caine | Caine | Leader (warcaster) | 0 | 30 | 15 | base verified (QS p35); pts, boxes V-cd |
+| cyg.deuce | Deuce | Deuce | Heavy war-engine (warjack), character | 17 | 50 | grid 30 | base verified (QS p35); grid see below |
+| cyg.falk | Captain Bastian Falk | Falk | Solo, character | 4 | 30 | 8 | base verified (QS p35); boxes verified (QS p47) |
+| cyg.black13 | The Black 13th | Black 13th | Unit, 3 character troopers (Ryan, Glover, Watts) | 9 | 30 | per trooper; use 5 each until the app check (Ryan survives 4, so ≥5; Glover survives 1) | base verified (QS p35); boxes U-guess |
 
 ## Stat lines
 
 | id | SPD | AAT | MAT | RAT | DEF | ARM | ARC | CTRL | conf |
 |---|---|---|---|---|---|---|---|---|---|
-| cyg.caine | 7 | 6 | — | 9 | 17 | 13 | 6 | 12 | SPD/ARC/CTRL QS-2025; rest V-cd |
-| cyg.deuce | 6 | — | 6 | 7 | 13 | 18 | — | — | SPD/RAT/DEF/ARM QS-2025; MAT V-cd |
-| cyg.falk | 6 | — | 6 | 7 | 15 | 12 | — | — | QS-2025 (MAT V-cd) |
-| cyg.black13 (all) | 6 | — | 5 | 7 | 15 | 12 | — | — | QS-2025 (MAT V-cd) |
+| cyg.caine | 7 | 6 | — | 9 | 17 | 13 | 6 | 12 | SPD verified (QS p42); ARC, CTRL verified (QS p40); rest V-cd |
+| cyg.deuce | 6 | — | 6 | 7 | 13 | 18 | — | — | SPD verified (QS p40); RAT verified (QS p41); DEF, ARM verified (QS p39); MAT V-cd |
+| cyg.falk | 6 | — | 6 | 7 | 15 | 12 | — | — | SPD verified (QS p42); RAT verified (QS p43); DEF, ARM verified (QS p47); MAT V-cd |
+| cyg.black13 Ryan | 6 | — | 5 | 7 | 15 | 12 | — | — | SPD, RAT, DEF verified (QS p43); ARM verified (QS p46); MAT V-cd |
+| cyg.black13 Glover | 6 | — | 5 | 7 | 15 | 12 | — | — | SPD verified (QS p43); RAT verified (QS p44); ARM verified (QS p46); MAT, DEF V-cd |
+| cyg.black13 Watts | 6 | — | 5 | 7 | 15 | 12 | — | — | SPD verified (QS p43); RAT verified (QS p44); ARM verified (QS p46); MAT, DEF V-cd |
 
 - Caine has no melee weapon in the data, so his MAT is empty.
-- Deuce's effective ARM is 19 while the Crescent Blade's system (Buckler) works (QS p39).
+- Deuce's ARM is 19 while the Crescent Blade's system works: its **Buckler** quality adds +1 ARM
+  (verified QS p39, p46; it still applies while Deuce is knocked down, QS p46).
+- Warcaster and warjack basics the QS shows for this army: Caine refills focus to ARC 6 (Focus
+  Manipulation), Deuce gains 1 focus from Power Up while in Caine's CTRL, and a warjack holds at most
+  3 focus (QS p40).
 
 ## Advantages and abilities (our summaries)
 
 | id | Advantages | Abilities | conf |
 |---|---|---|---|
-| cyg.caine | Gunfighter, Pathfinder | **Evasive**; **Field Marshal [Evasive]**; **Gatecrasher**; **Head Shot**; **Leadership [Gun Mage]** (see the hook map) | U-cd |
-| cyg.deuce | Construct, Dual Attack, Headbutt, Slam, Trample | **Accumulator [Gun Mage]**; **Reposition [3"]**; **True Sight** | QS-2025 (Accumulator, True Sight); rest U-cd |
-| cyg.falk | Advance Deployment, Ambush, Dual Attack, Pathfinder | **Leadership [Gun Mages]** (grants Reciprocate); **Prowl**; **Reciprocate**; **Run & Gun** | Pathfinder and Advance Deployment QS-2025; rest U-cd |
-| cyg.black13 | Advance Deployment, Gunfighter, Pathfinder | **Granted: Prey** (from Ryan); **Granted: True Sight** (from Glover); Prowl; Reposition [3"] | Granted rules QS-2025; rest U-cd |
+| cyg.caine | Gunfighter, Pathfinder | **Evasive**; **Field Marshal [Evasive]**; **Gatecrasher**; **Head Shot**; **Leadership [Gun Mage]** (see the hook map) | Gun Mage keyword verified (QS p40); rest U-cd |
+| cyg.deuce | Construct, Dual Attack, Headbutt, Slam, Trample | **Accumulator [Gun Mage]**: starting its activation within 3" of a friendly Gun Mage gives it 1 focus (cap 3). **True Sight**: it sees through clouds. **Reposition [3"]** | Accumulator verified (QS p40); True Sight verified (QS p40); Construct verified (QS p42, warjacks are constructs); rest U-cd |
+| cyg.falk | Advance Deployment, Ambush, Dual Attack, Pathfinder | **Leadership [Gun Mages]** (grants Reciprocate); **Prowl**; **Reciprocate**; **Run & Gun** | Advance Deployment verified (QS p35); Pathfinder verified (QS p42: shallow water costs him nothing); living (QS p42); rest U-cd |
+| cyg.black13 | Advance Deployment, Gunfighter, Pathfinder | **Granted: Prey** (from Ryan); **Granted: True Sight** (from Glover); Prowl; Reposition [3"] | Granted rules verified (QS p43); rest U-cd |
 
-Keywords: every model is Gun Mage and Hellslinger Cadre except Deuce. Leadership [Gun Mage] reaches
-Caine, Falk and the Black 13th, and Accumulator triggers off any of them.
+Keywords: every model is Gun Mage and Hellslinger Cadre except Deuce (the QS calls all of Deuce's allies
+Gun Mages, p40). Leadership [Gun Mage] reaches Caine, Falk and the Black 13th, and Accumulator
+triggers off any of them.
 
-**Granted rules (QS p42):** a trooper with a Granted rule gives it to its whole unit while it is in play.
-Ryan grants **Prey**: after deployment (R11.5) the unit picks an enemy model; its attack and damage rolls
-against it get +2; when the prey is destroyed, the unit picks a new one. Glover grants **True Sight**.
+**Granted rules (verified QS p43):** while the granting trooper is in play, its whole unit has the
+rule. Ryan grants **Prey**: after deployment (R11.5) the unit picks one enemy model; the unit's attack
+and damage rolls against it get +2; when the prey is destroyed, the unit picks a new one. Glover grants
+**True Sight**.
 
 ## Ability → descriptor / code hook map
 
@@ -94,45 +104,61 @@ Ops and fields from `hooks.ts` (00 §14). `[A1:n]` = the "after the attack is re
 | id | Weapon | Qty | Type | Stat | RNG | ROF | AOE | POW | Loc | Qualities | Rules (summary) | conf |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | cyg.caine | Spellstorm Pistol | 2 | ranged | RAT 9 | 12 | 1 | — | 12 | — | Magical, Pistol | AT: Witch Mark / Thunderbolt / Heart Seeker. Reload [∞] | U-cd |
-| cyg.deuce | Spellstorm Cannon | 1 | ranged | RAT 7 | 12 | 1 | — | 14 | L | Magical, Pistol | AT: Beat Back / Decrepitation / Blast. Powerful Attack. Reload [1] | POW/ROF/rules QS-2025; RNG, loc U-cd |
-| cyg.deuce | Crescent Blade | 1 | melee | MAT 6 | 1 | — | — | 15 | R | Buckler, Magical, Throw PA | — | Buckler QS-2025; rest V-cd |
-| cyg.falk | Magelock Scattergun | 1 | ranged | RAT 7 | SP 8 | 1 | — | 12 | — | Magical, Pistol | AT: Decrepitation / Incendiary / Banish (Banish never moves a Leader) | ROF/POW/ATs QS-2025; RNG V-cd |
+| cyg.deuce | Spellstorm Cannon | 1 | ranged | RAT 7 | 12 | 1 | — | 14 | L | Magical, Pistol | AT: Beat Back (hit: push the target 1" away, then Deuce may advance 1" toward it) / Decrepitation (+1 damage die against constructs and undead) / Blast. Powerful Attack (1 focus boosts the attack roll and its damage roll). Reload [1] | ROF verified (QS p40); POW verified (QS p41); RNG 12 verified (QS p40: "within 12"" puts Razor under threat); Beat Back, Powerful Attack verified (QS p40); Decrepitation, Reload [1] verified (QS p41); Blast, loc U-cd |
+| cyg.deuce | Crescent Blade | 1 | melee | MAT 6 | 1 | — | — | 15 | R | Buckler (+1 ARM while its system works), Magical, Throw PA | — | Buckler verified (QS p39); RNG 1 verified (QS p46: both warjacks' melee RNG 1); rest V-cd |
+| cyg.falk | Magelock Scattergun | 1 | ranged | RAT 7 | SP 8 | 1 | — | 12 | — | Magical, Pistol | Spray. AT: Decrepitation / Incendiary (fire damage) / Banish (never moves a Leader) | Spray, ROF, POW, the three ATs verified (QS p43); spray length 8 V-cd |
 | cyg.falk | Sword | 1 | melee | MAT 6 | 1 | — | — | 10 | — | — | — | U-cd |
-| cyg.black13 Ryan | Magelock Pistol | 2 | ranged | RAT 7 | 10 | 1 | — | 10 | — | Magical, Pistol | AT: Shadow Fire / Thunderbolt / Brutal Damage. Chain Attack: Mage Storm | POW/ROF/Thunderbolt QS-2025; rest U-cd |
+| cyg.black13 Ryan | Magelock Pistol | 2 | ranged | RAT 7 | 10 | 1 | — | 10 | — | Magical, Pistol | AT: Shadow Fire / Thunderbolt (hit: push d3" away; crit: knockdown) / Brutal Damage. Chain Attack: Mage Storm | Qty, ROF, POW, Thunderbolt verified (QS p43–44); rest U-cd |
 | cyg.black13 Ryan | Gun Blade | 2 | melee | MAT 5 | 1 | — | — | 8 | — | — | — | U-cd |
-| cyg.black13 Watts | Magelock Rifle | 1 | ranged | RAT 7 | 14 | 1 | — | 10 | — | Magical | AT: Brutal Damage / Blast (AOE 2, POW 12/6) / Black Penny | POW/ROF/Brutal QS-2025; rest U-cd |
+| cyg.black13 Watts | Magelock Rifle | 1 | ranged | RAT 7 | 14 | 1 | — | 10 | — | Magical | AT: Brutal Damage (direct hit: +1 damage die) / Blast (AOE 2, POW 12/6) / Black Penny | ROF, POW, Brutal Damage verified (QS p44); range longer than the pistols' verified (QS p44); RNG value, rest U-cd |
 | cyg.black13 Watts | Rifle Butt | 1 | melee | MAT 5 | 1 | — | — | 6 | — | — | — | U-cd |
-| cyg.black13 Glover | Dual Magelock Pistol | 1 | ranged | RAT 7 | 10 | 2 | — | 10 | — | Magical, Pistol | AT: Black Penny / Momentum / Brutal Damage. ★Attack Both Barrels | POW/ROF/Both Barrels QS-2025; rest U-cd |
+| cyg.black13 Glover | Dual Magelock Pistol | 1 | ranged | RAT 7 | 10 | 2 | — | 10 | — | Magical, Pistol | AT: Black Penny / Momentum / Brutal Damage. ★Attack Both Barrels (replaces the initial attacks: one attack with +4 on its damage roll) | ROF, POW, Brutal Damage, Both Barrels verified (QS p44); rest U-cd |
 | cyg.black13 Glover | Trench Knife | 1 | melee | MAT 5 | 1 | — | — | 9 | — | — | — | U-cd |
 
-Handoff G lists "2× heavy pistol" for all three troopers; the QS and the data give each trooper its
-own weapons (above).
+Handoff G lists "2× heavy pistol" for all three troopers; the QS gives each trooper its own weapons
+(above).
 
 ## Deuce damage grid (heavy, 30 boxes)
 
-Rows count from the top (1); damage fills top-down (R3.4). `·` = a plain box, `x` = no box.
+The QS prints only Razor's grid (p41, p44). We assume Deuce uses the same heavy layout (**ASSUMED**,
+open app check). Rows 1–6 run top to bottom as printed. `·` = a hull box, a letter = a system box,
+`x` = no box.
 
 | Row | C1 | C2 | C3 | C4 | C5 | C6 |
 |---|---|---|---|---|---|---|
-| 1 | · | · | · | · | · | · |
+| 1 | x | x | · | · | x | x |
 | 2 | · | · | · | · | · | · |
-| 3 | · | L | · | · | R | · |
-| 4 | L | L | · | · | R | R |
-| 5 | x | M | M | C | C | x |
-| 6 | x | x | M | C | x | x |
+| 3 | · | · | · | · | · | · |
+| 4 | · | L | · | · | R | · |
+| 5 | L | L | M | C | R | R |
+| 6 | x | M | M | C | C | x |
 
-Column heights 4/5/6/6/5/4. Systems: L = 3 boxes (C1r4, C2r3, C2r4), M = 3 (C2r5, C3r5, C3r6),
-C = 3 (C4r5, C4r6, C5r5), R = 3 (C5r3, C5r4, C6r4). No H system. Conf U-cd (the QS's Razor grid,
-same layout, matches it).
+Column heights 4/5/6/6/5/4. Each column's boxes, top box first (this is the data the engine stores;
+damage fills a column from its top box down, then moves right, R3.4):
+
+| Column | Boxes (top → bottom) |
+|---|---|
+| 1 | · · · L |
+| 2 | · · L L M |
+| 3 | · · · · M M |
+| 4 | · · · · C C |
+| 5 | · · R R C |
+| 6 | · · · R |
+
+Systems: L = 3 (C1#4, C2#3, C2#4), M = 3 (C2#5, C3#5, C3#6), C = 3 (C4#5, C4#6, C5#5),
+R = 3 (C5#3, C5#4, C6#4). No H system. `#n` = the n-th box of the column from its top box.
+Cortex crippled: loses its focus and can't gain or spend any. Movement crippled: base DEF 5, can't run,
+charge, slam or trample. L/R crippled: one fewer die on attack and damage rolls with weapons in that
+location (QS p41).
 
 ## Spells (Caine)
 
-The QS confirms one spell. The rest of the list is community data; **open app check** for the
-current list and every stat.
+The QS shows one spell. The rest of the list is community data; **open app check** for the current
+list and every stat.
 
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Deflection | 3 | CTRL | — | — | RND | no | Friendly models in Caine's CTRL gain +2 DEF against ranged and arcane attacks | QS-2025 |
+| Deflection | 3 | CTRL | — | — | RND | no | Friendly models within Caine's CTRL get +2 DEF against ranged and arcane attacks for one round (it still works in the opponent's next turn) | verified (QS p42; still active in Khador's round-2 turn, QS p46) |
 | Blur | ? | ? | — | — | ? | no | Target friendly model or unit gains DEF vs ranged attacks | U-cd name; stats U-guess |
 | Calamity | ? | ? | — | — | ? | ? | Debuff on an enemy that helps friendly attacks against it | U-cd name; stats U-guess |
 | Heightened Reflexes | ? | ? | — | — | ? | no | Unknown | U-cd name |
@@ -148,7 +174,9 @@ Lasts one round:
   POW 10 magical blast damage roll, and then the boxed model is RFP'd (the D3 window).
 
 ## Data notes
-- Bases: Caine and the Black 13th are 30 mm and Deuce is 50 mm (handoff G). Falk is assumed 30 mm.
+- Bases (QS p35 layout diagram, model discs measured against the 36" table): Caine, Falk and each Black
+  13th trooper 30 mm; Deuce 50 mm.
 - Every Black 13th trooper is a named character with its own loadout and box count, so the data model
   needs per-trooper weapons and health.
-- The `qs-2025` bundle (GOLD-001) uses only QS-2025 values plus the community values the QS turns rely on.
+- The `qs-2025` bundle (GOLD-001, `13-golden-first-turn.md`) uses the verified values plus the community
+  values the QS turns rely on (pistol and rifle RNG, Scattergun spray length, trooper box counts).

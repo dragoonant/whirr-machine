@@ -1,12 +1,14 @@
 # Faction: Khador (Winter Korps, SKS-6 cadre) — Recon starter
 
-- **Sources:** the official Quick Start guide (Jul 2025, `docs/sources/`, worked turns QS pp36–46) and
+- **Sources:** the official Quick Start guide (Jul 2025, `docs/sources/`, printed pages 34–47 plus the template page) and
   community MK4 card data (`isorna/wardice-warmachine-data`, fetched 2026-10-04). The app version of the
-  community data is unknown. **Open app check:** record the app version and confirm every non-QS value
-  before data entry.
-- **Confidence key** (QS beats community data on any conflict): `QS-2025` printed in the QS turns;
-  `V-cd` community data and handoff G agree, not contradicted by the QS; `U-cd` community data only;
-  `U-guess` no source.
+  community data is unknown.
+- **The Quick Start prints no stat cards.** It gives values only where the worked turns use them
+  (pp36–47), one stat bar (Lazarenko, p35), the layout diagram (p35: base sizes) and Razor's damage grid
+  (p41, p44). Everything else stays community data until the **open app check**.
+- **Confidence key** (QS beats community data on any conflict): `verified (QS pN)` printed in the QS on
+  page N (or read from its diagram); `V-cd` community data and handoff G agree, not contradicted by the
+  QS; `U-cd` community data only; `U-guess` no source.
 - All prose is ours.
 
 The data also has a *solo* Vilkul (18 pts) and a *solo-companion* Razor. They are not used.
@@ -16,31 +18,35 @@ Recon uses the warcaster Vilkul (0 pts) and Razor (17 pts).
 
 | id | Source model | shipName | Type | Pts | Base | Boxes | conf |
 |---|---|---|---|---|---|---|---|
-| kha.vilkul | Kapitan Zahara Vilkul | Vilkul | Leader (warcaster) | 0 | 30 | 17 | V-cd (base U-guess) |
-| kha.razor | Razor | Razor | Heavy war-engine, character | 17 | 50 | grid 30 | V-cd; QS-2025 columns 5 = 5 and 6 = 4 boxes |
-| kha.lazarenko | Sergeant Goran Lazarenko, the Jackal | Lazarenko | Solo, character | 4 | 30 | 8 | U-cd, QS-consistent (survives 7) |
-| kha.hounds | The Hounds | Hounds | Unit, 3 character troopers (Tererya, Fedyniak, Skrobala) | 9 | 30 | unknown; use 5 until the app check (the Black 13th have several) | U-guess |
+| kha.vilkul | Kapitan Zahara Vilkul | Vilkul | Leader (warcaster) | 0 | 30 | 17 | base verified (QS p35); pts, boxes V-cd |
+| kha.razor | Razor | Razor | Heavy war-engine (warjack), character | 17 | 50 | grid 30 | base verified (QS p35); grid verified (QS p41) |
+| kha.lazarenko | Sergeant Goran Lazarenko, the Jackal | Lazarenko | Solo, character | 4 | **40** | 8 | base verified (QS p35 stat bar and diagram); boxes U-cd, QS-consistent (survives 7, p44) |
+| kha.hounds | The Hounds | Hounds | Unit, 3 character troopers (Tererya, Fedyniak, Skrobala) | 9 | 30 | unknown; use 5 each until the app check | base verified (QS p35); boxes U-guess |
 
 ## Stat lines
 
 | id | SPD | AAT | MAT | RAT | DEF | ARM | ARC | CTRL | conf |
 |---|---|---|---|---|---|---|---|---|---|
-| kha.vilkul | 7 | 6 | 7 | 7 | 16 | 15 | 6 | 12 | QS-2025 (AAT, RAT V-cd) |
-| kha.razor | 5 | — | 6 | 6 | 11 | 19 | — | — | QS-2025 (MAT V-cd) |
-| kha.lazarenko | 6 | — | 5 | 7 | 14 | **14** | — | — | QS-2025 (MAT V-cd); the community data's ARM 16 is wrong |
-| kha.hounds (all) | 6 | — | 6 | 6 | 14 | 15 | — | — | SPD QS-2025; rest V-cd |
+| kha.vilkul | 7 | 6 | 7 | 7 | 16 | 15 | 6 | 12 | SPD, CTRL verified (QS p37); ARC verified (QS p36); MAT verified (QS p47); DEF, ARM verified (QS p43); AAT, RAT V-cd |
+| kha.razor | 5 | — | 6 | 6 | 11 | 19 | — | — | SPD verified (QS p38); DEF, ARM verified (QS p41); RAT verified (QS p46); MAT V-cd |
+| kha.lazarenko | 6 | — | **6** | 7 | 14 | 14 | — | — | all verified (QS p35 stat bar; RAT, DEF also p39, ARM p44). The community data's MAT 5 and ARM 16 are wrong |
+| kha.hounds (all) | 6 | — | 6 | 6 | 14 | 15 | — | — | SPD verified (QS p38); rest V-cd |
 
-- Razor's effective ARM is 21 while his L system (Ripper Shield) works (QS p40).
-- A Hound that is B2B with another Hound gets +2 ARM from Shield Wall (QS p37).
+- Razor's ARM is 21 while the Ripper Shield's system works: its **Shield** quality adds +2 ARM
+  (verified QS p41, p44).
+- A Hound in base contact with another Hound gets +2 ARM and can't be knocked down (Shield Wall,
+  verified QS p38).
+- Vilkul refills focus to ARC 6; Razor gains 1 focus from Power Up while in her CTRL; a warjack holds at
+  most 3 focus (QS p36, p45).
 
 ## Advantages and abilities (our summaries)
 
 | id | Advantages | Abilities | conf |
 |---|---|---|---|
-| kha.vilkul | Dual Attack, Pathfinder, Resist Corrosion, Resist Fire, Unstoppable, Tough | **Field Marshal [Prowl]**; **Prowl**; **Rise**; **Take Down**; **Enhanced Alchemical Mask** | Pathfinder, Resist Fire QS-2025; rest U-cd |
-| kha.razor | Construct, Dual Attack, Headbutt, Slam, Trample, Pathfinder, Resist Corrosion, Resist Fire | **Anchor**; **Reposition [3"]**; **Swift Hunter** | Reposition QS-2025; rest U-cd |
-| kha.lazarenko | Advance Deployment, Ambush, Tough, Pathfinder, Resist Fire, Resist Corrosion, Unstoppable | **Alchemical Mask**; **Marksman**; **Prowl** | Advance Deployment, Alchemical Mask QS-2025; rest U-cd |
-| kha.hounds | Advance Deployment, Dual Attack, Pathfinder, Resist Corrosion, Resist Fire, Tough | Alchemical Mask; **Girded**; Prowl; Reposition [3"]; **Shield Wall** | Girded, Shield Wall QS-2025; rest U-cd |
+| kha.vilkul | Dual Attack, Pathfinder, Resist Corrosion, Resist Fire, Unstoppable, Tough | **Field Marshal [Prowl]**; **Prowl**; **Rise**; **Take Down**; **Enhanced Alchemical Mask**; Power Field (every warcaster: 1 focus cuts one damage instance by 5) | Pathfinder verified (QS p47: charges across the wall); Resistance: Fire verified (QS p43); Power Field verified (QS p43); rest U-cd |
+| kha.razor | Construct, Dual Attack, Headbutt, Slam, Trample, Pathfinder, Resist Corrosion, Resist Fire | **Anchor**; **Reposition [3"]**: at the end of its activation it may advance up to 3"; **Swift Hunter** | Reposition verified (QS p46); Construct verified (QS p41, p43); rest U-cd |
+| kha.lazarenko | Advance Deployment, Pathfinder, Resist Corrosion, Resist Fire, one more (unidentified icon); community data adds Ambush, Tough, Unstoppable | **Alchemical Mask**: ignores clouds (he sees through them); **Marksman**; **Prowl** | The QS stat bar (p35) shows exactly five advantage icons: Advance Deployment, Pathfinder, Resist Fire, Resist Corrosion verified; the fifth icon is not identified, so at most one of Ambush/Tough/Unstoppable is right (open app check). Alchemical Mask verified (QS p39); rest U-cd |
+| kha.hounds | Advance Deployment, Dual Attack, Pathfinder, Resist Corrosion, Resist Fire, Tough | Alchemical Mask; **Girded**: the model and friendly models in base contact with it gain Resistance: Blast; Prowl; Reposition [3"]; **Shield Wall**: +2 ARM and no knockdown while in base contact with another member of the unit | Girded, Shield Wall verified (QS p38); rest U-cd |
 
 Unstoppable (R2) only waives the disengage forfeit. Knockdown immunity comes from Shield Wall, Anchor
 and Superiority.
@@ -68,7 +74,7 @@ Ops and fields from `hooks.ts` (00 §14). `[A1:n]` = the "after the attack is re
 | Reload [1] | `combat.chooseAttack` | engine core | ATK-007 |
 | Arcing Fire | passive (weapon) | `{op:'ignore', ignore:'interveningModels'}` | AOE-009 |
 | Targeting Flare | `combat.choose` (attack option) | `{op:'cloud', area:'flare', placement:'point', aoe:3, blocksLos:false}`, completely within 10", centre in LOS ignoring intervening models; one turn | AOE-012 |
-| Momentum (Slug Cannon) | `attack.hit` | target ≤ 40 mm: `{op:'slam', dist:'d3', collateralPow:16}`; larger: `{op:'knockDown'}` (QS p45: Deuce knocked down) | FAC-KHA-005 |
+| Momentum (Slug Cannon) | `attack.hit` | target ≤ 40 mm: `{op:'slam', dist:'d3', collateralPow:16}`; larger: `{op:'knockDown'}` (QS p46: Deuce knocked down) | FAC-KHA-005 |
 | Siege Weapon | `damage.beforeRoll` | vs 120 mm or a building: `{op:'addDie', roll:'damage'}` | FAC-KHA-006 |
 | Critical Shred | `attack.crit` → `attack.resolved` [A1:13] | in its Combat Action: `{op:'makeAttack', target:'target', weaponFilter:'same'}`, no focus; `makesAttack: true`; R7.19 | ATK-012 |
 | Beat Back (Ripper Shield) | `attack.resolved` [A1:11] | as Cygnar Beat Back | FAC-CYG-009 |
@@ -76,22 +82,25 @@ Ops and fields from `hooks.ts` (00 §14). `[A1:n]` = the "after the attack is re
 | Critical Knockdown | `attack.crit` | `{op:'knockDown'}` (before damage; denies Tough) | ATK-013 DMG-018 |
 | Armor-Piercing | `damage.beforeRoll` | code `hook.armorPiercing` (halve the target's base ARM) | ATK-015 |
 | Volume Fire | `attack.beforeRoll` / `damage.beforeRoll` | target 40 mm: `{op:'modRoll', roll:'any', value:1}`; ≥ 50 mm: value 2 | FAC-KHA-007 |
+| Weapon Master | `damage.beforeRoll` | `{op:'addDie', roll:'damage'}` (QS p47) | FAC-KHA-010 |
 | Feat Pall of Ashes | `feat.used` | `{op:'cloud', area:'cloud', placement:'ctrl', count:'d3+3', aoe:3}` (one round); in a cloud: living non-gas-immune enemies `{op:'modStat', stat:'DEF', value:-2}`, `{op:'modRoll', roll:'attack', value:-2}`, `{op:'forbid', what:'tough'}` (gas); friendly Faction models code `hook.pallOfAshesMove` (Pathfinder, move through obstructions and models) | COND-011 COND-012 DMG-016 |
 | Spell Superiority | `spell.cast` | target war-engine in her battlegroup: `{op:'modStat', stat:'SPD', value:2}`, MAT +2, DEF +2, `{op:'forbid', what:'knockDown'}`; upkeep | FAC-KHA-008 SPL-013 |
 | Spell Avenging Force | `spell.cast` + `maintenance.effects` | code `hook.avengingForce`: if a friendly model was damaged in the enemy turn, in her next Maintenance Phase the affected war-engine `{op:'advance', dist:3}` then `{op:'makeAttack', basic:true}` (out of activation, no focus); upkeep | FAC-KHA-009 |
+
+`FAC-KHA-010` (Weapon Master) is new; the checklist owner adds the row.
 
 ## Weapons
 
 | id | Weapon | Qty | Type | Stat | RNG | ROF | AOE | POW | Loc | Qualities | Rules (summary) | conf |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | kha.vilkul | Thrown Axe | 1 | ranged | RAT 7 | 8 | 1 | — | 13 | — | Magical, Pistol, Weapon Master | AT: Ward Breaker / Eruption of Ash. Reload [1] | V-cd |
-| kha.vilkul | Mechanika Axe | 1 | melee | MAT 7 | 1 | — | — | 13 | — | Magical, Weapon Master | AT: Ward Breaker / Eruption of Ash | POW, RNG, Weapon Master QS-2025 |
+| kha.vilkul | Mechanika Axe | 1 | melee | MAT 7 | 1 | — | — | 13 | — | Magical, Weapon Master (+1 damage die) | AT: Ward Breaker / Eruption of Ash | RNG, POW, Weapon Master verified (QS p47); rest V-cd |
 | kha.vilkul | Combat Knife | 1 | melee | MAT 7 | 1 | — | — | 10 | — | Magical, Weapon Master | — | U-cd |
-| kha.razor | Grenade Launcher | 2 (one in L, one in R) | ranged | RAT 6 | 10 | 1 | 2 | 10/5 | L and R | — | Arcing Fire. Targeting Flare | locations, ROF, POW QS-2025 (R crippling hit one launcher, QS p42); rest V-cd |
-| kha.razor | Slug Cannon | 1 | ranged | RAT 6 | 8 | 1 | — | 16 | R | Pistol | Momentum; Siege Weapon; Reload [1] | POW, ROF, loc, Momentum QS-2025 |
-| kha.razor | Ripper Shield | 1 | melee | MAT 6 | 1 | — | — | 18 | L | Shield | Critical Shred; Beat Back | Shield QS-2025; rest V-cd |
-| kha.lazarenko | 'Jack Buster | 1 | ranged | RAT 7 | **12** | 1 | 2 | 14/7 | — | — | Brutal Damage; Critical Knockdown | RNG, ROF, AOE, blast POW QS-2025 (community data said RNG 10) |
-| kha.lazarenko | Combat Knife | 1 | melee | MAT 5 | 1 | — | — | 9 | — | — | — | U-cd |
+| kha.razor | Grenade Launcher | 2 (one in L, one in R) | ranged | RAT 6 | 10 | 1 | 2 | 10/5 | L and R | — | Arcing Fire. Targeting Flare | locations verified (QS p44, p46); ROF, POW 10/5 verified (QS p46); AOE 2 QS-consistent (p46: exactly two blast victims with a third model 1.2" away in our replay); RNG, rest V-cd |
+| kha.razor | Slug Cannon | 1 | ranged | RAT 6 | 8 | 1 | — | 16 | R | Pistol | Momentum (hit on a large or bigger base: knockdown; smaller: slam); Siege Weapon; Reload [1] | ROF, POW, R location, Momentum verified (QS p46); RNG, rest V-cd |
+| kha.razor | Ripper Shield | 1 | melee | MAT 6 | 1 | — | — | 18 | L | Shield (+2 ARM while its system works) | Critical Shred; Beat Back | Shield verified (QS p41); RNG 1 verified (QS p46); rest V-cd |
+| kha.lazarenko | 'Jack Buster | 1 | ranged | RAT 7 | 12 | 1 | 2 | 14/7 | — | — | Brutal Damage; Critical Knockdown | RNG, ROF, AOE, blast POW 7 verified (QS p39); direct POW 14 and rules V-cd |
+| kha.lazarenko | Combat Knife | 1 | melee | MAT 6 | 1 | — | — | 9 | — | — | — | MAT verified (QS p35); rest U-cd |
 | kha.hounds Tererya | Death Whisper Carbine | 1 | ranged | RAT 6 | 8 | 1 | — | 6 | — | Pistol | Armor-Piercing | V-cd |
 | kha.hounds Fedyniak | Grenade Launcher | 1 | ranged | RAT 6 | 12 | 1 | 2 | 12/8 | — | Pistol | Arcing Fire | U-cd |
 | kha.hounds Skrobala | Assault Cannon | 1 | ranged | RAT 6 | 12 | d3+1 | — | 12 | — | Pistol | Volume Fire; Critical Knockdown | U-cd |
@@ -99,47 +108,65 @@ Ops and fields from `hooks.ts` (00 §14). `[A1:n]` = the "after the attack is re
 
 Handoff G gives every Hound a carbine. The data gives a different gun to each trooper (above).
 
-## Razor damage grid (heavy, 30 boxes)
+## Razor damage grid (heavy, 30 boxes) — verified (QS p41, p44)
 
-Same layout as Deuce. Rows count from the top. `·` = a plain box, `x` = no box.
+Rows 1–6 run top to bottom as printed. `·` = a hull box, a letter = a system box, `x` = no box.
 
 | Row | C1 | C2 | C3 | C4 | C5 | C6 |
 |---|---|---|---|---|---|---|
-| 1 | · | · | · | · | · | · |
+| 1 | x | x | · | · | x | x |
 | 2 | · | · | · | · | · | · |
-| 3 | · | L | · | · | R | · |
-| 4 | L | L | · | · | R | R |
-| 5 | x | M | M | C | C | x |
-| 6 | x | x | M | C | x | x |
+| 3 | · | · | · | · | · | · |
+| 4 | · | L | · | · | R | · |
+| 5 | L | L | M | C | R | R |
+| 6 | x | M | M | C | C | x |
 
-Systems: L = 3 (Ripper Shield and the L launcher; crippling L also loses +2 ARM), M = 3, C = 3,
-R = 3 (Slug Cannon and the R launcher). No H system. QS check: 7 damage from column 5 fills C5 (5 boxes)
-and C6 r1–2; 4 more from column 6 fill C6 r3–4 and C1 r1–2, which cripples R (QS pp41–43). Conf U-cd,
-QS-consistent.
+Each column's boxes, top box first (the stored data; damage fills a column from its top box down,
+then moves right, R3.4):
+
+| Column | Boxes (top → bottom) |
+|---|---|
+| 1 | · · · L |
+| 2 | · · L L M |
+| 3 | · · · · M M |
+| 4 | · · · · C C |
+| 5 | · · R R C |
+| 6 | · · · R |
+
+Systems: L = 3 (C1#4, C2#3, C2#4: Ripper Shield and the L launcher; crippling L also loses the +2 ARM),
+M = 3 (C2#5, C3#5, C3#6), C = 3 (C4#5, C4#6, C5#5), R = 3 (C5#3, C5#4, C6#4: Slug Cannon and the R
+launcher). No H system. `#n` = the n-th box of the column from its top box.
+
+QS check: 7 damage from column 5 fills C5 (5 boxes) and C6#1–2, leaving R and C partly marked
+(p41). 4 more from column 6 fill C6#3–4 and C1#1–2, which cripples R (p44).
 
 ## Spells (Vilkul)
 
-The QS confirms two spells. The rest of the list is community data; **open app check** for the current
+The QS shows two spells. The rest of the list is community data; **open app check** for the current
 list and every stat.
 
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Superiority | 2 | ? | — | — | UP | no | Target war-engine in her battlegroup: +2 SPD, MAT and DEF; can't be knocked down | QS-2025 (RNG U-guess) |
-| Avenging Force | 2 | ? | — | — | UP | no | If a friendly model is damaged during the enemy turn, in her next Maintenance Phase the war-engine advances 3" and makes one basic attack | QS-2025 (RNG and target rules U-guess) |
+| Superiority | 2 | ? | — | — | UP | no | Target warjack in her battlegroup gets +2 SPD, MAT and DEF and can't be knocked down | COST, DUR, effect verified (QS p37, p45); RNG U-guess |
+| Avenging Force | 2 | ? | — | — | UP | no | Target warjack in her battlegroup: if any friendly model takes damage during the enemy turn, at her next Maintenance Phase the warjack advances 3" and makes one basic attack | COST, DUR, effect verified (QS p37, p45); RNG and target rules U-guess |
 | Cyclone | ? | ? | ? | ? | ? | ? | Unknown | U-cd name |
 | Cold Front | ? | ? | ? | ? | ? | ? | Unknown | U-cd name |
 | Fog of War | ? | CTRL? | — | — | ? | no | Friendly models in her CTRL gain concealment | U-cd name; stats U-guess |
 
-## Feat (Vilkul): Pall of Ashes (QS-2025 for the count, placement and duration)
+## Feat (Vilkul): Pall of Ashes
 
-Lasts one round:
-- Place d3+3 cloud areas (3") completely within Vilkul's CTRL (QS p36: d3 = 1 → 4 clouds).
+Lasts one round (its clouds are removed at the start of her next turn, before Maintenance; verified QS
+p37, p45):
+- Place d3+3 cloud areas (3" across, QS template page) completely within Vilkul's CTRL (verified QS
+  p37: d3 = 1 → 4 clouds).
+- Enemy models outside a cloud can't draw LOS through it (verified QS p37; the normal cloud rule, R6.5).
+- Living models suffer −2 on attack rolls they make from inside a cloud (verified QS p42 on Falk).
+- Living enemies in a cloud also suffer −2 DEF and lose Tough; it's gas, so models that ignore gas are
+  exempt (every Khador model here; Razor is a construct) (U-cd).
 - Friendly Faction models in a cloud gain Pathfinder and may move through obstructions and other
   models if they have enough movement to end completely clear (U-cd).
-- Living models in a cloud suffer −2 DEF and −2 to attack rolls (QS p42 for the attack penalty on
-  Falk), and they lose Tough. It's gas: models that ignore gas are exempt (every Khador model here;
-  Razor is a construct).
 
 ## Data notes
-- Vilkul and Lazarenko are assumed to be on 30 mm bases (U-guess; handoff G shows "30?").
+- Bases (QS p35 layout diagram, model discs measured against the 36" table; Lazarenko also from his stat
+  bar): Vilkul and each Hound 30 mm, Lazarenko 40 mm, Razor 50 mm.
 - Each Hound is a named character with a different gun, so the data model needs per-trooper weapons.
