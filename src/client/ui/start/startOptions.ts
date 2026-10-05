@@ -41,9 +41,26 @@ export function scenarioChoices(): ScenarioChoice[] {
     .map((r) => ({ id: r.id, name: r.name ?? r.id, text: r.text ?? '' }))
 }
 
-export const BOT_TIERS = [{ id: 'random', label: 'Random bot', note: 'Picks legal moves with a bias toward fighting. Good for learning.' }] as const
+/** Opponent strengths (40-ai §8). The first entry is the start screen's default. */
+export const BOT_TIERS = [
+  { id: 'normal', label: 'Normal bot', note: 'Plans every activation: scores moves and targets, plays the scenario, guards its warcaster and looks for assassinations.' },
+  { id: 'easy', label: 'Easy bot', note: 'The same planner with looser choices, simple boosts and no assassination search.' },
+  { id: 'random', label: 'Random bot', note: 'Picks legal moves with a bias toward fighting. Good for learning.' },
+] as const
+export type BotTierChoice = (typeof BOT_TIERS)[number]['id']
+export const DEFAULT_BOT_TIER: BotTierChoice = 'normal'
 
-export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string }
+/** The Opponent select's value (the select on the start screen is uncontrolled), else the default tier. */
+export function selectedBotTier(): BotTierChoice {
+  try {
+    const el = typeof document !== 'undefined' ? document.querySelector('[data-testid="start-opponent"]') as HTMLSelectElement | null : null
+    const v = el?.value
+    if (v && BOT_TIERS.some((b) => b.id === v)) return v as BotTierChoice
+  } catch { /* headless */ }
+  return DEFAULT_BOT_TIER
+}
+
+export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice }
 
 /** The side the player picked is A (human); the first other faction's list is B (bot). */
 export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewGameOptions | null {
@@ -54,7 +71,7 @@ export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewG
     scenario: choices.scenario,
     lists: { A: mine.listId, B: theirs.listId },
     controllers: { A: 'human', B: 'bot' },
-    bot: { tier: 'random' },
+    bot: { tier: choices.tier ?? selectedBotTier() },
     ...(choices.seed ? { seed: choices.seed } : {}),
   }
 }
