@@ -82,7 +82,7 @@
             "test": { "enum": ["modelType", "keyword", "baseAtLeast", "baseAtMost", "attackKind", "charged", "crit", "hit",
                                "withinInches", "inCtrl", "engaged", "hasCondition", "hasEffect", "focusAtLeast",
                                "weaponLocation", "weaponQuality", "damageType", "isFriendly", "isEnemy", "isCharacter",
-                               "systemCrippled", "lifeState", "inLos", "elevatedOver"] },
+                               "systemCrippled", "lifeState", "inLos", "elevatedOver", "concealed", "isPrey", "b2b"] },
             "subject": { "enum": ["self", "target", "attacker", "unit", "controller"] },
             "value": {},
             "of": { "enum": ["self", "target", "attacker", "controller", "point"] },
@@ -98,7 +98,9 @@
           "properties": {
             "op": { "enum": ["modStat", "addDie", "boost", "reroll", "autoHit", "autoMiss", "applyCondition", "removeCondition",
                              "damage", "heal", "push", "place", "knockDown", "gainFocus", "loseFocus", "grantAbility",
-                             "grantResistance", "grantImmunity", "preventDamage", "forbid", "cloud", "addAttack"] },
+                             "grantResistance", "grantImmunity", "preventDamage", "forbid", "cloud", "addAttack",
+                             "advance", "slam", "throw", "endActivation", "removeFromPlay", "removeAbility", "modRoll",
+                             "discardLowest", "makeAttack", "ignore"] },
             "stat": { "$ref": "#/$defs/Stat" },
             "mode": { "enum": ["add", "set", "double", "half"] },
             "value": { "type": "integer" },
@@ -110,11 +112,31 @@
             "direction": { "enum": ["away", "toward", "any"] },
             "ability": { "$ref": "#/$defs/Id" },
             "what": { "enum": ["run", "charge", "slam", "trample", "powerAttack", "cast", "advance", "attack", "beCharged",
-                               "beTargeted", "gainFocus"] },
+                               "beTargeted", "gainFocus", "tough", "knockDown", "weaponAttacks"] },
             "aoe": { "$ref": "#/$defs/Inches" },
-            "limit": { "type": "integer", "minimum": 1 }
+            "limit": { "type": "integer", "minimum": 1 },
+            "ignore": { "enum": ["clouds", "stealth", "concealment", "cover", "interveningModels", "targetInMelee", "gas"] },
+            "count": { "$ref": "#/$defs/DiceExpr" },
+            "placement": { "enum": ["ctrl", "centredOnTarget", "point"] },
+            "area": { "enum": ["cloud", "hazard", "flare"] },
+            "blocksLos": { "type": "boolean" },
+            "hazard": {
+              "type": "object", "additionalProperties": false, "required": ["pow", "on"],
+              "properties": {
+                "pow": { "type": "integer", "minimum": 0 },
+                "damageType": { "$ref": "#/$defs/DamageType" },
+                "on": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["enter", "endActivation"] } }
+              }
+            },
+            "collateralPow": { "type": "integer", "minimum": 0 },
+            "target": { "enum": ["self", "target", "attacker", "unit", "controller"] },
+            "weaponFilter": { "type": "string" },
+            "basic": { "type": "boolean" }
           },
           "allOf": [
+            { "if": { "properties": { "op": { "const": "ignore" } } }, "then": { "required": ["ignore"] } },
+            { "if": { "properties": { "op": { "const": "modRoll" } } }, "then": { "required": ["roll", "value"] } },
+            { "if": { "properties": { "op": { "enum": ["advance", "slam", "throw"] } } }, "then": { "required": ["dist"] } },
             { "if": { "properties": { "op": { "const": "modStat" } } }, "then": { "required": ["stat", "value"] } },
             { "if": { "properties": { "op": { "const": "damage" } } }, "then": { "required": ["pow"] } },
             { "if": { "properties": { "op": { "enum": ["applyCondition", "removeCondition"] } } }, "then": { "required": ["condition"] } },

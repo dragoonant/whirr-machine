@@ -47,8 +47,8 @@ Lean by default: ~10 focused tests per stage, plus the invariants below, which a
 ## 4. Golden replay
 
 M2: the Quick Start worked first turn as `tests/fixtures/qs-turn1.json` (setup, seed-independent forced dice via a test
-RNG override, action log, expected events and end state). Dice come from the PDF's printed rolls; if
-`docs/sources/` is absent, the fixture is marked `(verify)` and skipped with a reason, never faked.
+RNG override, action log, expected events and end state). Dice come from the QS PDF's printed rolls (now in
+`docs/sources/`); it runs on `scn-qs-demo` with the pinned `qs-2025` bundle and authored positions (12 GOLD-001).
 
 ## 5. Playwright
 

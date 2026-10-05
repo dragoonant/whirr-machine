@@ -27,7 +27,7 @@ On a conflict, `10` wins on what a rule does; this file wins on names and shapes
 
 | Function | Returns | Notes |
 |---|---|---|
-| `createGame(setup: GameSetup, seed: string, bundle: DataBundle)` | `StepResult` | validates lists against level rules; bad setup → `StepResult.rejection` (`E_BAD_SETUP`), never throws. First pending is `rollOff`→`chooseTurnOrder`. |
+| `createGame(setup: GameSetup, seed: string, bundle: DataBundle)` | `StepResult` | validates lists against level rules; bad setup → `StepResult.rejection` (`E_BAD_SETUP`), never throws. Resolves the roll-off itself (seeded d6s, ties reroll, emits `RollOffWon`); the first pending is `chooseTurnOrder` for the winner. |
 | `step(state, action)` | `StepResult` | pure reducer. RNG restored from `state.rng`. Illegal action → same `state` ref, `events=[ActionRejected]`, same `pending`, `rejection`. |
 | `legalActions(state)` | `Action[]` | answers to `state.pending`. **Never empty while a decision is open** (§5). Continuous decisions return a finite *sample* that always contains ≥1 fully validated answer. |
 | `validate(state, action)` | `Rejection \| null` | exactly the checks `step` runs; no mutation. Used by drag previews at ≤30 Hz. |
@@ -100,12 +100,13 @@ activated: boolean, controllerId? (war-engine → its caster), inert?: boolean }
 | `additionalAttack` | caster, war-engine | 1 each | `combat.chooseAttack` |
 | `spell` | caster | COST | any time in own activation, not mid-move/mid-attack |
 | `upkeep` | caster | 1 per spell | `control.upkeep` |
-| `shake` | caster (for self) or war-engine's caster pays for it (verify) | 1 | `control.shake` |
+| `shake` | the knocked-down/stationary model itself: caster or war-engine, own focus (p101–102) | 1 | `control.shake`, after allocation |
 | `heal` | caster, self | 1 per damage point | caster's activation |
-| `powerField` | caster (and anyone granted it) | ≤1 per damage instance, −5 each | `damage.beforeApply` |
-| `run` / `charge` | war-engine | 1 | `movement.choose` (waived by a 'jack marshal effect, verify) |
+| `powerField` | caster (and anyone granted it), own focus, also outside its activation | ≤1 per damage instance, −5 each; the model still counts as damaged at 0 (p101) | `damage.beforeApply` |
+| `run` / `charge` | war-engine | 1 | `movement.choose` (waived within 8" of its 'jack marshal, p112; not in Recon) |
 | `powerAttack` | war-engine | 1 | `combat.choose` |
 
+- **Focus is spent only in the model's own activation** unless a rule says otherwise (p100, p102). Outside it the engine offers no focus options (boost, additional attack, heal, spell); the exceptions are `upkeep`, `shake` and `powerField`.
 - Crippled Cortex: `focus` forced to 0, all gain/spend rejected `E_CRIPPLED`. Disruption: same for one round via an
   `EffectInstance`.
 
@@ -127,38 +128,60 @@ interface PendingDecision {
 }
 ```
 
-| Kind | Who | Raised at | Answer |
-|---|---|---|---|
-| `rollOff` | both, auto | setup | automatic d6 each; ties reroll |
-| `chooseTurnOrder` | roll-off winner | setup | `first` / `second` |
-| `chooseEdge` | other player | setup | edge id |
-| `deploy` | deploying player | deploy | model/unit positions (continuous) |
-| `advanceDeploy` | owner of Advance Deployment models | deploy | positions within zone +3" |
-| `maintenanceOrder` | active | maintenance | order of simultaneous maintenance effects (only if a choice exists) |
-| `allocateFocus` | active | `control.allocate` | `{modelId: n}` map; caster-to-war-engines in CTRL; cap 3 |
-| `payUpkeep` | active | `control.upkeep` | per upkept effect: keep (1 focus) / drop |
-| `shake` | active | `control.shake` | per shakeable model/effect: shake (1 focus) / keep |
-| `chooseActivation` | active | `activation.choose` | model/unit id, or `endTurn` when none left |
-| `chooseMovement` | active | `movement.choose` | `forfeit`/`aim`/`advance`/`run`/`charge`/`slam`/`trample`/`standUp` + caster extras (`castSpell`, `useFeat`, `heal`) |
-| `moveModel` | active | `movement.move` | path end point (straight or advance path); continuous |
-| `chargeTarget` | active | `movement.charge` | target id (LOS-checked), then `moveModel` with `straightLine` |
-| `placeTroopers` | active | `movement.place` | positions within 2" with LOS to the moved trooper |
-| `chooseCombatAction` | active | `combat.choose` | `melee`/`ranged`/`specialAttack`/`specialAction`/`powerAttack`/`forfeit` + caster extras |
-| `chooseAttack` | active | `combat.chooseAttack` | weapon + target; `additionalAttack` options carry `cost.focus=1`; `endAttacks` |
-| `combinedAttack` | active | `combat.chooseAttack` | contributing trooper ids |
-| `channel` | active | `spell.declare` | cast from caster or an eligible Arc Node |
-| `castSpell` | active | `spell.declare` | spell id + target/point |
-| `useFeat` | active | caster activation | feat id + any feat choices |
-| `boostAttack` | attacker's controller | `attack.beforeRoll` | boost (1 focus) / no; shows both odds |
-| `rollAnyway` | attacker | `attack.beforeRoll` | auto-hit target: `accept` / `roll` (fish for a crit) |
-| `reroll` | holder of a reroll | `*.rolled` | reroll (named source) / keep |
-| `boostDamage` | attacker's controller | `damage.beforeRoll` | boost / no (charge auto-boost skips this) |
-| `chooseGrid` | attacker | `damage.beforeApply` | colossal grid L/R |
-| `powerField` | defender's caster | `damage.beforeApply` | spend 0..1 focus (−5) per instance |
-| `chooseBoxes` | as the effect says | `damage.applied` / heal | box picks when a rule lets a player choose (else automatic) |
-| `triggerWindow` | trigger owner | any window incl. `death.disabled` (Tough), `death.boxed`, `death.destroyed` | resolve trigger X next / pass optional ones |
-| `abilityChoice` | any | any | generic finite choice raised by an ability or code hook; `context.data.code` names it |
-| `gameOver` | none | `ended` | no answer; `legalActions` = `[ack]` |
+Column **AT** = the decision also accepts the caster's any-time actions (`castSpell`, `useFeat`, `heal`, `channel`)
+for the active model (R4.10, A1); after the last attack (`combat.end`) they ride on the `chooseAttack` that offers `endAttacks`. Never inside an attack, the spellcasting sequence, a trigger window, between an
+attack and the attack it generated, before required forfeits are resolved, or after running.
+
+| Kind | Who | Raised at | Answer | AT |
+|---|---|---|---|---|
+| `rollOff` | — | — | **reserved, never raised**: `createGame` rolls it (§2) | — |
+| `chooseTurnOrder` | roll-off winner | setup | `first` / `second` | — |
+| `chooseEdge` | the **second** player (R11.4) | setup | edge id | — |
+| `deploy` | deploying player | deploy | model/unit positions (continuous) | — |
+| `advanceDeploy` | owner of Advance Deployment models | deploy | positions within zone +3" | — |
+| `maintenanceOrder` | active | maintenance | order of simultaneous maintenance effects (only if a choice exists) | — |
+| `allocateFocus` | active | `control.allocate` | `{modelId: n}` map; caster-to-war-engines in CTRL; cap 3 | — |
+| `payUpkeep` | active | `control.upkeep` | per upkept effect: keep (1 focus) / drop | — |
+| `shake` | active | `control.shake` | per shakeable model/effect: shake (1 of that model's focus) / keep | — |
+| `chooseActivation` | active | `activation.choose` | model/unit id; `endTurn` only when none is left | — |
+| `chooseMovement` | active | `movement.choose` | `forfeit`/`aim`/`advance`/`run`/`charge`/`slam`/`trample`/`standUp` | yes |
+| `moveModel` | active (or trigger owner) | `movement.move` | path end point (straight or advance path); continuous | — |
+| `chargeTarget` | active | `movement.charge` | target id (LOS-checked; for slam: LOS at the start of Normal Movement), then `moveModel` with `straightLine` + `toward` | — |
+| `placeTroopers` | active | `movement.place` | positions within 2" (base edge) with LOS to the moved trooper | — |
+| `chooseCombatAction` | active | `combat.choose` | `melee`/`ranged`/`dual`/`specialAttack`/`specialAction`/`powerAttack`/`forfeit`; after a successful charge only melee or a melee ★Attack | yes |
+| `chooseAttack` | active (or trigger owner) | `combat.chooseAttack` | weapon + target; `additionalAttack` options carry `cost.focus=1`; `endAttacks` | yes, before declaring |
+| `combinedAttack` | active | `combat.chooseAttack` | contributing trooper ids | — |
+| `channel` | active | `spell.declare` | cast from caster or an eligible Arc Node | — |
+| `castSpell` | active | `spell.declare` | spell id + target/point | — |
+| `useFeat` | active | caster activation | feat id + any feat choices | — |
+| `boostAttack` | attacker's controller | `attack.beforeRoll` | boost (1 focus) / no; Powerful Attack option boosts attack + damage for 1; shows both odds | — |
+| `rollAnyway` | attacker | `attack.beforeRoll` | auto-hit target: `accept` / `roll` (the roll then decides) | — |
+| `reroll` | holder of a reroll | `*.rolled` | reroll (named source) / keep | — |
+| `boostDamage` | attacker's controller | `damage.beforeRoll` | boost / no (charge and Powerful Attack skip this) | — |
+| `chooseGrid` | attacker | `damage.beforeApply` | colossal grid L/R | — |
+| `powerField` | the damaged model's controller | `damage.beforeApply` | spend 0..1 focus (−5) per instance | — |
+| `chooseBoxes` | as the effect says | `damage.applied` / heal | box picks when a rule lets a player choose (Marksman column, grid healing); else automatic | — |
+| `triggerWindow` | trigger owner | any window incl. `death.disabled` (Tough), `death.boxed`, `death.destroyed`, `attack.resolved` | resolve trigger X next / pass optional ones | — |
+| `abilityChoice` | any | any | generic finite choice raised by an ability or code hook; `context.data.code` names it (e.g. `prey`) | — |
+| `gameOver` | none | `ended` | no answer; `legalActions` = `[ack]` | — |
+
+**Out-of-activation movement and attacks** (Evasive, Beat Back, Swift Hunter, Banish, Reciprocate,
+Critical Shred, Avenging Force in Maintenance):
+1. The trigger opens a `triggerWindow` (window `attack.resolved` or `maintenance.effects`) for its owner; choosing
+   it resolves its effect list.
+2. An `advance` effect raises `moveModel` for that model with `maxDist` = the effect's distance and, for
+   `direction: 'toward'|'away'`, `straightLine` + `toward`. It is an advance (rough terrain applies) but never
+   Normal Movement (no disengage forfeit, R5.7).
+3. A `makeAttack` effect raises `chooseAttack` with `state.activation` unchanged (`null` in Maintenance) and
+   `AttackContext.outOfActivation = true`. No focus options are offered unless the rule grants them (§4). The
+   attack runs the full pipeline and may itself generate one attack (R7.19).
+4. "After the attack is resolved" windows are opened in the three A1 tiers (R7.18 step 16): active non-attack,
+   inactive, active attack-making (`TriggerDescriptor.makesAttack`, `afterResolveTier` in `hooks.ts`).
+
+**Power attacks that use movement:** slam = `chooseMovement 'slam'` → `chargeTarget` (target in LOS at the start of
+Normal Movement) → `moveModel {straightLine, toward, maxDist: SPD+3, mustEndInRange}`; the attack follows
+automatically. Trample = `chooseMovement 'trample'` → `moveModel {straightLine, maxDist: SPD+3}` (the path's
+direction is the declared direction) → simultaneous trample attacks.
 
 - `legalActions` invariant: for every open decision the list is non-empty and every member passes `validate`.
   Feasibility = "some candidate passes full validation", never "the planner's arrangement fits". `moveModel` always
@@ -172,7 +195,7 @@ interface PendingDecision {
 All durations (spells, feats, abilities, conditions with expiry, continuous effects) are `EffectInstance
 {id, sourceId, name, owner, targetIds, mods, duration: 'attack'|'activation'|'turn'|'round'|'upkeep'|'continuous'|
 'game', expires: {round, turn, player} , upkeep?: {casterId}}`. Same-named effects do not stack: re-applying the same
-`name` to a target keeps the instance with the later expiry (max, never overwrite). Stat resolution order: set → ×2 → ½
+`name` to a target keeps the instance with the later expiry (max, never overwrite). Stat resolution order: set (several sets: the lowest wins) → ×2 → ½
 → bonuses → penalties, floor 0 (`query.stat`).
 
 ### 6.2 Disabled → boxed → destroyed
@@ -180,14 +203,21 @@ All durations (spells, feats, abilities, conditions with expiry, continuous effe
   disabled" triggers). A trigger that heals sets `life: 'active'`.
 - Still disabled when the window closes → `life: 'boxed'`, window `death.boxed` ("when boxed" triggers, VP
   bookkeeping) → `life: 'destroyed'`, window `death.destroyed`, then removal from the table (`ModelRemoved`).
-- Exact MK4 semantics of each step are owned by `10-rules-core` (verify against the timing appendix).
+- MK4 semantics of each step are owned by `10-rules-core` R3.9 (checked against A1 damage application, p96).
 - One implementation (`src/engine/damage.ts: advanceLife`) for every model type and every cause (attack, collateral,
   continuous effect, falling, upkeep). Factions add triggers through ability data or `code-hooks.ts`, never new state.
-- Disabled models: no activation, no contest, no LOS blocking; they still occupy their base (verify).
+- Disabled models: no activation, no contest, no LOS blocking; they still occupy their base (unsourced ruling).
 
 ### 6.3 Conditions
 `knockedDown`, `stationary`, `disrupted`, `fire`, `corrosion`, `inert`, `engaged` (derived, never stored) are
 condition ids backed by `EffectInstance` where they expire. One shake path for every shakeable condition.
+
+### 6.4 Areas
+`state.clouds` holds every round area: `kind` `cloud` (blocks LOS through it, concealment; Pall of Ashes), `hazard`
+(a cloud that also deals `hazard` damage on `enter` (once per advance) and/or `endActivation`; Mage Storm, Eruption of
+Ash) and `flare` (no LOS block, no concealment; models in it lose Stealth and clouds don't block LOS to them;
+Targeting Flare). Expiry comes from the linked `EffectInstance` or `Cloud.expires`. Data calls them areas, never
+"templates" (MK3 lint).
 
 ## 7. Windows and the attack sequence
 
@@ -270,3 +300,11 @@ interface Decider { decide(view: PlayerView, pending: PendingDecision, legal: Ac
 | AI decision (normal) | ≤500 ms p95, 2 s hard cap in the worker |
 | JS | initial chunk ≤350 KB gz; engine+data ≤250 KB gz; ai ≤150 KB gz |
 | Frame | 60 fps at 1080p mid GPU; ≤200 draw calls; ≤400k triangles on board |
+
+## 14. Contract change log (additive only)
+
+| Date | File | Change | Why |
+|---|---|---|---|
+| 2026-10-04 | `hooks.ts` | `EffectOp` += `advance slam throw endActivation removeFromPlay removeAbility modRoll discardLowest makeAttack ignore`; `ForbidWhat` += `tough knockDown weaponAttacks`; `ConditionTest` += `concealed isPrey b2b`; new `IgnoreWhat`, `AreaKind`, `HazardSpec`; `EffectNode` optional `ignore count placement area blocksLos hazard collateralPow target weaponFilter basic`; `TriggerDescriptor.makesAttack?`; `OP_HOOK_POINTS` entries; `afterResolveTier()` | M0 review: ~15 starter abilities were not expressible; A1 three-tier after-resolution order |
+| 2026-10-04 | `common.schema.json` (both copies) | Mirrors the `hooks.ts` additions (ops, forbid values, tests, new effect fields) | Data must express the same vocabulary |
+| 2026-10-04 | `types.ts` | `Cloud` += optional `kind blocksLos concealment hazard expires`; `UnitState.preyId?`; `AttackContext` += `generatedBy? outOfActivation?`; `DecisionKind 'rollOff'` documented as reserved (never raised) | Targeting Flare and hazard clouds need state; Prey; R7.19 one generated attack; out-of-activation attacks; roll-off auto-resolved in `createGame` |

@@ -95,6 +95,7 @@ export interface UnitState {
   troopers: ModelId[] // remaining, in data order
   attachments: ModelId[]
   activated: boolean
+  preyId?: ModelId // added after the M0 review: Granted: Prey (Black 13th), chosen after deployment
 }
 
 // ---------- effects (00 §6.1) ----------
@@ -128,7 +129,15 @@ export interface TerrainInstance {
   height: number
   props: Record<string, unknown>
 }
-export interface Cloud { id: CloudId; pos: Vec2; diameter: number; owner: PlayerId; effectId?: EffectId }
+export interface Cloud {
+  id: CloudId; pos: Vec2; diameter: number; owner: PlayerId; effectId?: EffectId
+  // added after the M0 review (00 §14). Omitted = a plain cloud: blocks LOS through it (R6.5), concealment (R9.7).
+  kind?: 'cloud' | 'hazard' | 'flare' // flare = Targeting Flare: no LOS block; strips Stealth; clouds don't block LOS to models in it
+  blocksLos?: boolean // default: kind !== 'flare'
+  concealment?: boolean // default: kind !== 'flare'
+  hazard?: { pow: number; damageType?: DamageType; on: ('enter' | 'endActivation')[] } // R9.8
+  expires?: { round: number; turn: number; player: PlayerId } | null // when not tied to an EffectInstance
+}
 
 // ---------- scenario ----------
 export interface ElementControl { controller: PlayerId | null; contested: boolean; holders: ModelId[]; contesters: ModelId[]; reason: string }
@@ -195,6 +204,9 @@ export interface AttackContext {
   blastTargets?: ModelId[]
   damageQueue: DamageInstance[]
   step: WindowId
+  // added after the M0 review (00 §14)
+  generatedBy?: AttackId // set when another attack's rule made this one; an attack generates at most one (R7.19)
+  outOfActivation?: boolean // Reciprocate, Avenging Force, etc.: focus is locked unless the rule says otherwise
 }
 
 // ---------- activation ----------
@@ -229,6 +241,7 @@ export interface ActivationContext {
 }
 
 // ---------- decisions (00 §5) ----------
+// 'rollOff' is reserved and never raised: createGame resolves the roll-off itself and emits RollOffWon (00 §5).
 export type DecisionKind =
   | 'rollOff' | 'chooseTurnOrder' | 'chooseEdge' | 'deploy' | 'advanceDeploy' | 'maintenanceOrder'
   | 'allocateFocus' | 'payUpkeep' | 'shake' | 'chooseActivation' | 'chooseMovement' | 'moveModel' | 'chargeTarget'

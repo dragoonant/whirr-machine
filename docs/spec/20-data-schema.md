@@ -68,7 +68,7 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | `engineClass` | `light heavy superHeavy colossal` (warEngine only); `lesser: true` for lesser war-engines |
 | `base`, `losHeight` | mm; `losHeight` defaults by base (30mm 1.75", 40mm 2.25", 50mm 2.75", 80mm 3.25", 120mm 5") |
 | `stats` | `SPD MAT RAT DEF ARM` required; `AAT ARC CTRL` for casters; `FURY THR` reserved |
-| `damage` | `{track:'single', boxes}` (troopers 1, casters ~15–18 verify) \| `{track:'grid', columns:[6]}` \| `{track:'dualGrid', grids:{left,right}}` |
+| `damage` | `{track:'single', boxes}` (per card: models without boxes 1; Black 13th troopers several (QS); casters 15–17, factions/*.md) \| `{track:'grid', columns:[6]}` \| `{track:'dualGrid', grids:{left,right}}` |
 | grid column | string, top box first: `-` blank box, letter = system box. Index 0 = column 1. Fill top-down, spill right, wrap 6 → 1 |
 | `systems` | per-model override of `core/systems.json` (`effect: crippleLocation\|crippleMovement\|crippleCortex\|crippleHead\|crippleArcNode\|code`) |
 | `weapons` | `[{weapon, location?, count?, socket?}]`; `socket` names the figure attach point (`30-figures` §5) |
@@ -106,9 +106,17 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | `grantAbility` | `ability` |
 | `grantResistance` / `grantImmunity` | `damageType` |
 | `preventDamage` | `value` (Power Field-like reductions) |
-| `forbid` | `what: run charge slam trample powerAttack cast advance attack beCharged beTargeted gainFocus` |
-| `cloud` | `aoe` |
+| `forbid` | `what: run charge slam trample powerAttack cast advance attack beCharged beTargeted gainFocus tough knockDown weaponAttacks` |
+| `cloud` | `aoe` (diameter, default 3), `count?: DiceExpr`, `placement?: ctrl\|centredOnTarget\|point`, `area?: cloud\|hazard\|flare`, `blocksLos?`, `hazard?: {pow, damageType?, on: [enter\|endActivation]}` |
 | `addAttack` | `value` (extra initial attacks) |
+| `advance` | `dist: DiceExpr, direction?` (an advance outside Normal Movement: Evasive, Beat Back, Reposition) |
+| `slam` / `throw` | `dist: DiceExpr, collateralPow?` (Momentum) |
+| `endActivation`, `removeFromPlay` | — |
+| `removeAbility` | `ability` |
+| `modRoll` | `roll: attack\|damage\|any, value` (flat roll bonus that isn't a stat: Prey, Both Barrels, Volume Fire) |
+| `discardLowest` | `roll` (Heart Seeker) |
+| `makeAttack` | `target?: self\|target\|attacker, weaponFilter?: same\|any\|melee\|ranged\|<weapon id>, basic?` (Reciprocate, Critical Shred, Avenging Force; set the ability's `makesAttack`) |
+| `ignore` | `ignore: clouds stealth concealment cover interveningModels targetInMelee gas` |
 
 **Spell** `{id, name, text, cost, rng: n|SELF|CTRL, aoe?: n|CTRL, pow?, dur: -|TURN|RND|UP, offensive, when?, effect[], scope}`.
 **Feat** `{id, name, text, when?, effect[], scope, duration}`.
@@ -125,9 +133,9 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | Field | Meaning |
 |---|---|
 | `table` | `{w, d}`: 36×36 (Recon) or 48×48 |
-| `deployment` | `{first, second, advance=3, unitSpread=3}`: depth from own edge (QS 36": 6 / 11; 48": 7 / 10 verify) |
+| `deployment` | `{first, second, advance=3, unitSpread=3}`: depth from own edge (QS 36": 6 / 11; core default 48": 7 / 10, p117) |
 | `rounds` | 7 |
-| `scoring` | `{fromRound: 2, fromPlayer: 'second', winMargin: 3, winOnOpponentTurnOnly: true, leaderPresence: 10}` |
+| `scoring` | `{fromRound, fromPlayer, winMargin: 3, winOnOpponentTurnOnly: true, leaderPresence: 10}`; S1 (QS) `1/first`, SR scenarios `2/second` (11 V1.2) |
 | `killBox` | `{fromRound: 2, fromPlayer: 'first', depth: 12, vp: 2}` |
 | `zones[]` | `{id, pos, rot?, shape}` |
 | `elements[]` | `{id, kind: objective50\|objective40\|flag\|scenarioTerrain\|zone, pos, zone?, terrain?, owner?, hold:{within, models, eligible[]}, contest:{within, excludes[]}, vp:{control?, dominate?, destroy?}}` |
@@ -146,11 +154,11 @@ Piece `{id, name, rulesType, footprint, height, props?, mesh?}`; layout `{id, na
 
 | rulesType | blocksLos | cover/conceal | movement | other |
 |---|---|---|---|---|
-| `obstacle` (<1" tall wall) | no | cover | crossable if the move clears it | `meleeDefBonus: 2` |
+| `obstacle` (<1" tall wall) | by height vs volumes | cover (wall) or concealment (hedge, `props.concealment`), within 1" along a line | crossable if the move clears it; never stood on | `meleeDefBonus: 2` |
 | `obstruction` / `building` (≥1") | yes | cover | impassable (Flight/Incorporeal excepted) | |
-| `forest` | beyond `losThrough: 3` | concealment | rough | |
-| `shallowWater`, `rough`, `rubble` | no | rubble: cover; others none | rough (−2", min 1") | |
-| `hill` | by height | none | open | `elevation` |
+| `forest` | from inside: through ≤ `losThrough: 3`; outside→outside: blocks beyond; never vs 120 mm | concealment, completely inside only | rough | |
+| `shallowWater`, `rough`, `rubble` | no | rubble: cover, completely inside only; others none | rough (−2", min 1") | |
+| `hill` | by height | none (elevation +2 only) | open; leaving it is never a fall | `elevation` to models completely within |
 | `trench` (3×5) | no | cover | open | `resistance: [blast]` |
 | `hazard` | no | none | open | `hazard.effect` (burning earth, acid bath) |
 
@@ -177,7 +185,7 @@ Piece `{id, name, rulesType, footprint, height, props?, mesh?}`; layout `{id, na
 
 Grid read-out: columns 1–6 hold 4/5/6/6/5/4 = 30 boxes. Each string lists a column top box first; the card draws
 columns bottom-aligned, so short columns start lower (blank cell = no box). L spans columns 1–2, M 2–3, H 3–4, C 4–5,
-R 5–6 (verify per real model).
+R 5–6 (illustrative; the real starter grids are in `factions/*.md` and have no H).
 
 | Row | 1 | 2 | 3 | 4 | 5 | 6 |
 |---|---|---|---|---|---|---|

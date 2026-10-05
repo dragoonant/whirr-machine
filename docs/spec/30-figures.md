@@ -24,7 +24,7 @@ cylinder from data (`20-data-schema` §4). Pipeline detail is in handoff Part D.
 | 30mm | 1.181 | 1.75 | infantry, solo, caster | 1.15–1.3 |
 | 40mm | 1.575 | 2.25 | light war-engine, large solo | ~1.8 |
 | 50mm | 1.969 | 2.75 | heavy war-engine | 2.3–2.6 |
-| 80mm | 3.150 | 3.25 | super-heavy | ~3.2 (verify) |
+| 80mm | 3.150 | 3.25 | super-heavy | ~3.2 |
 | 120mm | 4.724 | 5.0 | colossal, battle engine | ~4.5 |
 
 - `model.figure.heightIn` overrides mesh height; `model.losHeight` overrides the LOS height (rare).
