@@ -113,7 +113,7 @@ const box: React.CSSProperties = { position: 'fixed', right: 12, top: 12, zIndex
 
 export default function Gallery(): ReactElement {
   const slugs = useMemo(() => enabledSlugs().filter((s) => glbSlugFor(profileForSlug(s) ?? '') === s), [])
-  const [t, setT] = useState<Toggles>({ rotate: true, baseRing: false, los: false, down: false, ice: false, grey: false, procedural: false })
+  const [t, setT] = useState<Toggles>({ rotate: !new URLSearchParams(location.search).has('still'), baseRing: false, los: false, down: false, ice: false, grey: false, procedural: false })
   const byFaction = usePaintStore((s) => s.byFaction)
   const factions = useMemo(() => [...new Set(slugs.map((s) => factionOf(profileForSlug(s) ?? '')))].filter(Boolean), [slugs])
   const paintFor = (f: string) => { const p = byFaction[f]; return p && paintKey(p) ? p : undefined }

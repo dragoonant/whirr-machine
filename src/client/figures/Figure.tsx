@@ -14,6 +14,8 @@ import { VfxHost } from '../vfx/VfxLayer'
 import { GLB_BASE_H, GlbBase, GlbBody, createFader, useGlbParts, type Fader } from './GlbBody'
 import { glbSlugFor } from './glbModels'
 import { usePaint } from './paintStore'
+import { facingYaw, turnToward } from './facing'
+import { usePresentedStore } from '../presentation/presentedStore'
 import { ProceduralBody } from './Procedural'
 import { dataArchetype, dataHeightIn, factionOf } from './profile'
 import { BASE_MATERIAL, GEO, HIT_MATERIAL, archetypeOf, baseRadiusOf, damageFraction, iceMaterial, lineMaterial, meshHeight, partMaterial, shellMaterial } from './kit'
@@ -44,6 +46,7 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
   const orbs = useRef<THREE.Group>(null)
   const tipNow = useRef<number | null>(null)
   const fadeAt = useRef<number | null>(null)
+  const yaw = useRef<number | null>(null)
 
   const side: PlayerId = m?.owner ?? 'A'
   const faction = factionOf(m?.profileId ?? '')
@@ -89,10 +92,18 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
   useFrame((_, delta) => {
     const g = root.current
     if (!g || !m) return
-    if (tween) {
-      const p = tweenPosition(tween, directorNow())
-      g.position.set(p.x, m.elev, p.z)
-    } else g.position.set(m.pos.x, m.elev, m.pos.z)
+    const here = tween ? tweenPosition(tween, directorNow()) : m.pos
+    g.position.set(here.x, m.elev, here.z)
+    // Cosmetic facing: look at the nearest enemy (else across the table). Down/destroyed figures keep their last yaw.
+    if (!down && !gone) {
+      const want = facingYaw(usePresentedStore.getState().state, id, here)
+      if (want !== null) {
+        if (yaw.current === null) yaw.current = want
+        const next = turnToward(yaw.current, want, delta * 6)
+        if (next !== yaw.current) { yaw.current = next; invalidate() }
+      }
+    }
+    if (yaw.current !== null) g.rotation.y = yaw.current
     const o = orbs.current
     if (o) {
       const t = performance.now()
@@ -142,7 +153,6 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
     <group
       ref={root}
       position={[m.pos.x, m.elev, m.pos.z]}
-      rotation={[0, side === 'A' ? 0 : Math.PI, 0]}
       onClick={(e) => {
         if (gone || e.nativeEvent.button !== 0 || e.delta > 4) return // camera drags and right/middle clicks never act
         e.stopPropagation()

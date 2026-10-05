@@ -13,10 +13,11 @@ export interface MatchStats {
 const fresh = (): MatchStats => ({ dealt: { A: 0, B: 0 }, lost: { A: 0, B: 0 } })
 let stats: MatchStats = fresh()
 let lastSeq = 0
+let counted = new Set<string>() // a model counts as lost once, whether it was boxed or destroyed
 let seed = ''
 
 export function getMatchStats(): MatchStats { return stats }
-export function resetMatchStats(): void { stats = fresh(); lastSeq = 0; seed = '' }
+export function resetMatchStats(): void { stats = fresh(); lastSeq = 0; seed = ''; counted = new Set() }
 
 const other = (p: PlayerId): PlayerId => (p === 'A' ? 'B' : 'A')
 
@@ -31,7 +32,8 @@ function sync(): void {
     if (ev.type === 'DamageApplied' && ev.points > 0) {
       const owner = state.models[ev.targetId]?.owner
       if (owner) { next ??= { dealt: { ...stats.dealt }, lost: { ...stats.lost } }; next.dealt[other(owner)] += ev.points }
-    } else if (ev.type === 'LifeStateChanged' && ev.to === 'destroyed') {
+    } else if (ev.type === 'LifeStateChanged' && (ev.to === 'destroyed' || ev.to === 'boxed') && !counted.has(ev.modelId)) {
+      counted.add(ev.modelId)
       const owner = state.models[ev.modelId]?.owner
       if (owner) { next ??= { dealt: { ...stats.dealt }, lost: { ...stats.lost } }; next.lost[owner] += 1 }
     }
