@@ -7,23 +7,23 @@ import { dataFigureSlug } from './profile'
 
 /** Slugs whose GLB file exists in public/assets/models/. */
 export const ENABLED_GLB_SLUGS: ReadonlySet<string> = new Set([
-  'wm-caine', 'wm-falk', 'wm-black13', 'wm-deuce',
-  'wm-vilkul', 'wm-lazarenko', 'wm-hounds', 'wm-razor',
+  'wm-caine', 'wm-falk', 'wm-glover', 'wm-ryan', 'wm-watts', 'wm-deuce',
+  'wm-vilkul', 'wm-lazarenko', 'wm-tererya', 'wm-fedyniak', 'wm-skrobala', 'wm-razor',
 ])
 
-/** Profile id -> GLB slug. One GLB serves every trooper of a unit (the three Black 13th profiles, the three Hounds). */
+/** Profile id -> GLB slug. Every trooper has its own figure (MGSD versions of the real sculpts). */
 export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'cyg.caine': 'wm-caine',
   'cyg.falk': 'wm-falk',
-  'cyg.black13-glover': 'wm-black13',
-  'cyg.black13-ryan': 'wm-black13',
-  'cyg.black13-watts': 'wm-black13',
+  'cyg.black13-glover': 'wm-glover',
+  'cyg.black13-ryan': 'wm-ryan',
+  'cyg.black13-watts': 'wm-watts',
   'cyg.deuce': 'wm-deuce',
   'kha.vilkul': 'wm-vilkul',
   'kha.lazarenko': 'wm-lazarenko',
-  'kha.hounds-fedyniak': 'wm-hounds',
-  'kha.hounds-skrobala': 'wm-hounds',
-  'kha.hounds-tererya': 'wm-hounds',
+  'kha.hounds-fedyniak': 'wm-fedyniak',
+  'kha.hounds-skrobala': 'wm-skrobala',
+  'kha.hounds-tererya': 'wm-tererya',
   'kha.razor': 'wm-razor',
 }
 

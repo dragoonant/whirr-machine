@@ -29,10 +29,10 @@ describe('GLB mapping (30 section 3)', () => {
       expect(ENABLED_GLB_SLUGS.has(slug), slug).toBe(true)
     }
   })
-  it('one GLB serves every trooper of a unit; unknown profiles stay procedural', () => {
-    expect(glbSlugFor('cyg.black13-glover')).toBe('wm-black13')
-    expect(glbSlugFor('cyg.black13-watts')).toBe('wm-black13')
-    expect(glbSlugFor('kha.hounds-tererya')).toBe('wm-hounds')
+  it('each trooper has its own GLB; unknown profiles stay procedural', () => {
+    expect(glbSlugFor('cyg.black13-glover')).toBe('wm-glover')
+    expect(glbSlugFor('cyg.black13-watts')).toBe('wm-watts')
+    expect(glbSlugFor('kha.hounds-tererya')).toBe('wm-tererya')
     expect(glbSlugFor('kha.razor')).toBe('wm-razor')
     expect(glbSlugFor('cyg.nobody')).toBeUndefined()
     for (const s of ENABLED_GLB_SLUGS) expect(profileForSlug(s), s).toBeDefined()

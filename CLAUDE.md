@@ -75,7 +75,8 @@ The original brief is `docs/WARMACHINE-HANDOFF.md`. Read a part of it only when 
 - Unit, weapon and ability names may match the real ones.
 - ALL prose is in our own words: ability text, lore, UI copy and docs. Never copy Steamforged card or
   rules text.
-- Never use SFG art, logos, icons or trade dress. Figures and markings are original SD designs.
+- Never use SFG art, logos, icons or trade dress in the repo. Figures are MGSD versions of the real sculpts (owner decision
+  2026-10-05). Reference photos stay outside the repo.
 - The UI and README state this is an unofficial fan project, not affiliated with Steamforged Games.
 - Never commit rules PDFs, community data files or secrets. `docs/sources/` and `*.token*` are
   gitignored.

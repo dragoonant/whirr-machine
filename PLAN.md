@@ -7,12 +7,13 @@ Settled 2026-10-04:
   https://dragoonant.github.io/whirr-machine/.
 - **IP posture:** Mallet posture. Real unit, weapon and ability names are allowed; all prose is ours;
   no SFG art or icons; markings are original.
+- **Figures (2026-10-05, replaces "original SD designs"):** MGSD versions of the real starter sculpts, one GLB per model including
+  each trooper. Concepts are made in Gemini from the official product photos, which are kept outside the repo and never committed.
 - **Music:** ElevenLabs Music. Check the credit cost on the first track, and confirm with the owner
   before spending more than ~5k credits.
 
 Carried over from Mallet:
 - Mechanics are ported 1:1.
-- Figures are original SD designs.
 - Player vs AI comes first; multiplayer comes later.
 - The repo is public.
 
