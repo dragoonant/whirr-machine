@@ -3,7 +3,7 @@
 // goal point pulls a model's move scoring toward it; the engine's control check still decides what scores.
 import type { GameState, ModelId, ModelState, PlayerId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
-import { baseRadius, dist, distToElement, elementsOf, forwardOf, modelsOf, type Element } from './world'
+import { baseRadius, distToElement, elementsOf, forwardOf, modelsOf, type Element } from './world'
 
 export interface Role { kind: 'hold' | 'contest' | 'free'; element?: Element; goal?: Vec2 }
 
@@ -77,4 +77,3 @@ export function edgeGap(s: GameState, p: Vec2, mm: number): number {
   return Math.min(hw - Math.abs(p.x), hd - Math.abs(p.z)) - r
 }
 
-export { dist }

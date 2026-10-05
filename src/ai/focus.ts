@@ -97,7 +97,7 @@ export function allocate(ctx: Ctx, s: GameState, player: PlayerId, tau: number, 
   for (const t of targets) byCaster.set(t.casterId, [...(byCaster.get(t.casterId) ?? []), t])
   for (const [cid, ts] of byCaster) {
     const c = s.models[cid]
-    if (!c) continue
+    if (!c || c.owner !== player) continue
     const F = c.focus
     const groups: Group[] = []
     for (const t of ts) {

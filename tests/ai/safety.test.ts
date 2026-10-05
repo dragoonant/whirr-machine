@@ -14,7 +14,6 @@ function scene(seed: string): { s: GameState; me: PlayerId; leader: string } {
   const me = s0.pending.player
   const them: PlayerId = me === 'A' ? 'B' : 'A'
   const f = fwd(s0, me)
-  const back = { x: -f.x, z: -f.z }
   const ML = s0.players[me].leaderId, EL = s0.players[them].leaderId
   const foes = Object.values(s0.models).filter((m) => m.owner === them && !m.offTable && m.life === 'active' && m.id !== EL)
   const at = { x: 10, z: 0 }

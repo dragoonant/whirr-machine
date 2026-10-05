@@ -21,8 +21,8 @@ export const modelsOf = (s: GameState, p: PlayerId): ModelState[] => Object.valu
 export const enemiesOf = (s: GameState, p: PlayerId): ModelState[] => modelsOf(s, other(p))
 export const leaderOf = (s: GameState, p: PlayerId): ModelState | undefined => s.models[s.players[p].leaderId]
 export const edgeDist = (s: GameState, a: ModelId, b: ModelId | Vec2): number => query.distance(s, a, b)
-/** Edge-to-edge distance if model `a` stood at `pa` and `b` at its own spot. */
-export function edgeDistAt(s: GameState, a: ModelState, pa: Vec2, b: ModelState, pb: Vec2 = b.pos): number {
+/** Edge-to-edge distance if model `a` stood at `pa` and `b` at `pb` (default: where it stands). */
+export function edgeDistAt(a: ModelState, pa: Vec2, b: ModelState, pb: Vec2 = b.pos): number {
   return Math.max(0, dist(pa, pb) - baseRadius(a.base) - baseRadius(b.base))
 }
 
@@ -159,6 +159,27 @@ export function withPositions(s: GameState, moves: Record<ModelId, Vec2>): GameS
   return { ...s, models }
 }
 export const withPos = (s: GameState, id: ModelId, pos: Vec2): GameState => withPositions(s, { [id]: pos })
+
+const threatViews = new WeakMap<GameState, Map<PlayerId, GameState>>()
+/**
+ * The board as the enemies of `victim` will see it on their turn: their knocked-down or stationary models will have
+ * stood up or shaken it off by then (a pessimistic view, used only to project threats).
+ */
+export function threatView(s: GameState, victim: PlayerId): GameState {
+  let byP = threatViews.get(s)
+  if (!byP) { byP = new Map(); threatViews.set(s, byP) }
+  const hit = byP.get(victim)
+  if (hit) return hit
+  let models: GameState['models'] | null = null
+  for (const m of Object.values(s.models)) {
+    if (m.owner === victim || !m.conditions.some((c) => c === 'knockedDown' || c === 'stationary')) continue
+    models ??= { ...s.models }
+    models[m.id] = { ...m, conditions: m.conditions.filter((c) => c !== 'knockedDown' && c !== 'stationary') }
+  }
+  const out = models ? { ...s, models } : s
+  byP.set(victim, out)
+  return out
+}
 
 /** Unit mates of a model (alive troopers, the model included). */
 export function unitMates(s: GameState, m: ModelState): ModelState[] {

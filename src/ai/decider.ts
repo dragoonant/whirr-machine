@@ -9,12 +9,12 @@ import { newCtx, planSequence, profileOf, type Ctx } from './damage'
 import { deployAction } from './deploy'
 import { allocate, reserveNeeded } from './focus'
 import { actKey, activationPriority, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, type ActPlan, type Env } from './plan'
-import { damageDist, expected, pKillSequence } from './prob'
+import { damageDist, expected } from './prob'
 import { pickSensible } from './random'
 import { TIERS, type AiTierId, type TierParams } from './tiers'
 import { legalMoveCandidates } from './moves'
 import {
-  baseRadius, boxesLeft, boxesTotal, dist, enemiesOf, hasAbility, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, rec, valueOf,
+  boxesLeft, boxesTotal, dist, enemiesOf, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, rec, valueOf,
 } from './world'
 
 // ---------- memory ----------
@@ -255,7 +255,7 @@ function combatValue(env: Env, m: ModelState, mode: 'melee' | 'ranged', focus: n
 
 function focusFor(env: Env, m: ModelState): number {
   if (m.type !== 'leader') return m.focus
-  if (leaderAllIn(env, m) || (env.committed && env.line && !env.line.useLeader && false)) return m.focus
+  if (leaderAllIn(env, m)) return m.focus
   return Math.max(0, m.focus - leaderReserve(env))
 }
 
@@ -563,5 +563,4 @@ export function createAiDecider(tier: AiTierId, seed = 'ai'): Decider & { brain:
   }
 }
 
-export { pKillSequence, baseRadius, hasAbility }
 export type { Ctx }

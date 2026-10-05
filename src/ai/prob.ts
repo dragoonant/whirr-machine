@@ -157,7 +157,7 @@ export function pKillSequence(attacks: readonly SeqAttack[], boxes: number, pf =
             if (!pv) continue
             let pts = v, f2 = f
             if (pts > 0 && f2 > 0) { pts = Math.max(0, pts - 5); f2-- }
-            let d2 = Math.min(H, d + pts)
+            const d2 = Math.min(H, d + pts)
             const q = pr * ph * pv
             if (d2 >= H && tough) {
               next[H * W + f2 * 2 + kd]! += q * (2 / 3)
@@ -165,7 +165,6 @@ export function pKillSequence(attacks: readonly SeqAttack[], boxes: number, pf =
               continue
             }
             next[d2 * W + f2 * 2 + kd]! += q
-            void d2
           }
         }
       }

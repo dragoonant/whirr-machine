@@ -5,7 +5,7 @@ import type { GameState, ModelState, PlayerId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
 import { contactPoint, killChance, planSequence, rangePoint, type Ctx } from './damage'
 import { expected, type SeqAttack } from './prob'
-import { baseRadius, dist, enemiesOf, hasAbility, leaderOf, meleeWeapons, rangedWeapons, rec, valueOf, boxesTotal, withPos } from './world'
+import { baseRadius, dist, enemiesOf, hasAbility, leaderOf, meleeWeapons, rangedWeapons, rec, valueOf, boxesTotal, threatView, withPos } from './world'
 
 export interface ThreatReport { exp: number; pKill: number; seqs: SeqAttack[]; attackers: number }
 
@@ -39,14 +39,15 @@ export interface ThreatOpts {
 
 /** Everything the enemies of `me` could do to it at `pos` next turn. */
 export function threatAt(ctx: Ctx, s0: GameState, me: ModelState, pos: Vec2, opts: ThreatOpts = {}): ThreatReport {
-  const s = dist(pos, me.pos) < 1e-6 ? s0 : withPos(s0, me.id, pos)
+  const sv = threatView(s0, me.owner)
+  const s = dist(pos, me.pos) < 1e-6 ? sv : withPos(sv, me.id, pos)
   const hypo = `${me.id}@${pos.x.toFixed(2)},${pos.z.toFixed(2)}`
   const target = s.models[me.id]!
   const seqs: SeqAttack[] = []
   let exp = 0, attackers = 0
   for (const e of enemiesOf(s, me.owner)) {
     if (opts.ignore?.has(e.id)) continue
-    if (e.inert || e.conditions.includes('stationary')) continue
+    if (e.inert) continue
     const th = query.threat(s, e.id)
     const d = Math.max(0, dist(e.pos, pos) - baseRadius(e.base) - baseRadius(me.base))
     const focus = nextTurnFocus(s, e)

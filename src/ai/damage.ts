@@ -3,7 +3,7 @@
 // combined exactly. Caches live on a per-decision Ctx so a state is never reused across decisions.
 import type { GameState, ModelId, ModelState, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
-import { attackDist, damageDist, expected, invertDamageOffset, pHit, pKillSequence, type Dist, type SeqAttack } from './prob'
+import { damageDist, expected, invertDamageOffset, pHit, pKillSequence, type Dist, type SeqAttack } from './prob'
 import { baseRadius, boxesLeft, dist, hasAbility, meleeWeapons, rangedWeapons, type WeaponInfo } from './world'
 
 export interface AttackProfile {
@@ -154,5 +154,4 @@ export function killChance(t: ModelState, seqs: SeqAttack[], pfOverride?: number
   return pKillSequence(seqs, boxesLeft(t), Math.min(8, pf), hasAbility(t, 'core.a.tough'))
 }
 
-export { attackDist }
 export type { SeqAttack, ModelId }

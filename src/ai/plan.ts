@@ -14,7 +14,7 @@ import { nearestOpenElement, scenarioValue } from './scenario'
 import { exposureValue, threatAt, type ThreatReport } from './threat'
 import type { TierParams } from './tiers'
 import {
-  baseRadius, boxesTotal, dist, distToElement, elementsOf, enemiesOf, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
+  baseRadius, boxesTotal, dist, distToElement, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
 } from './world'
 
 export interface ActPlan {
@@ -62,13 +62,14 @@ function fixedThreats(env: Env, me: ModelState): FixedThreat[] {
   const hit = m.get(me.id)
   if (hit) return hit
   const out: FixedThreat[] = []
-  for (const e of enemiesOf(env.s, me.owner)) {
-    if (e.inert || e.conditions.includes('stationary')) continue
-    const th = query.threat(env.s, e.id)
+  const sv = threatView(env.s, me.owner)
+  for (const e of enemiesOf(sv, me.owner)) {
+    if (e.inert) continue
+    const th = query.threat(sv, e.id)
     const f: FixedThreat = { e, melee: null, meleeExp: 0, meleeReach: th.charge, ranged: null, rangedExp: 0, rangedReach: (th.ranged ?? 0) }
     const focus = e.type === 'warEngine' ? 3 : e.type === 'leader' ? 6 : 0
     if (meleeWeapons(e).length) {
-      const ps = planSequence(env.ctx, env.s, e, me, 'melee', contactPoint(e, e.pos, me), { charge: true, focus: e.type === 'warEngine' ? 2 : focus })
+      const ps = planSequence(env.ctx, sv, e, me, 'melee', contactPoint(e, e.pos, me), { charge: true, focus: e.type === 'warEngine' ? 2 : focus })
       if (ps) { f.melee = ps.attacks; f.meleeExp = ps.exp }
     }
     const rws = rangedWeapons(e)
@@ -77,7 +78,7 @@ function fixedThreats(env: Env, me: ModelState): FixedThreat[] {
       let best: { attacks: SeqAttack[]; exp: number } | null = null
       for (const w of rws) {
         const from = contactPoint(e, e.pos, me, me.pos, 1.5)
-        const pr = profileOf(env.ctx, env.s, e, w, me, { fromPos: from })
+        const pr = profileOf(env.ctx, sv, e, w, me, { fromPos: from })
         if (!pr) continue
         const attacks: SeqAttack[] = Array.from({ length: Math.max(1, w.rof) }, () => ({ p: pr.p, onHit: pr.onHit }))
         const exp = attacks.reduce((a, x) => a + x.p * expectedOf(x.onHit), 0)
@@ -107,12 +108,23 @@ function otherTargets(env: Env, f: FixedThreat, me: ModelState): number {
 export function fastThreat(env: Env, me: ModelState, p: Vec2, ignore?: Set<string>): ThreatReport {
   const seqs: SeqAttack[] = [], focused: SeqAttack[] = []
   let exp = 0, attackers = 0
+  let hs: GameState | undefined
   for (const f of fixedThreats(env, me)) {
     if (ignore?.has(f.e.id)) continue
     const d = Math.max(0, dist(f.e.pos, p) - baseRadius(f.e.base) - baseRadius(me.base))
     let best: { a: SeqAttack[]; x: number } | null = null
     if (f.melee && d <= f.meleeReach + 0.25) best = { a: f.melee, x: f.meleeExp }
-    if (f.ranged && d <= f.rangedReach + 0.25 && (!best || f.rangedExp > best.x)) best = { a: f.ranged, x: f.rangedExp }
+    if (f.ranged && d <= f.rangedReach + 0.25 && (!best || f.rangedExp > best.x)) {
+      // terrain cover at p: the shooter's line from where it stands now (it may still step around: never below 35%)
+      hs ??= dist(p, me.pos) < 1e-6 ? env.s : withPositions(env.s, { [me.id]: p })
+      let k = 1
+      if (env.tier.cover) try {
+        const los = query.los(hs, f.e.id, me.id)
+        k = !los.visible ? 1 : los.mods.cover ? 0.6 : los.mods.concealment ? 0.8 : 1
+      } catch { k = 1 }
+      const x = f.rangedExp * k
+      if (!best || x > best.x) best = { a: k === 1 ? f.ranged : f.ranged.map((r) => ({ ...r, p: r.p * k })), x }
+    }
     if (!best) continue
     const n = otherTargets(env, f, me)
     const w = 1 / Math.pow(1 + n, 0.7)
