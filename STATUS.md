@@ -2,7 +2,16 @@
 
 ## What exists
 - Scaffold: Vite 8, TS 7, React 19, R3F and drei, zustand, Vitest, Playwright, Pages deploy workflow.
-- `src/client/App.tsx`: a 48"×48" board with a 6" grid and the title overlay (no game wiring yet).
+- **M3 playable client** (`src/client/`, live on Pages): start screen (side, scenario, animation speed, Continue,
+  How to Play with 9 tabs), then a lazy-loaded `GameScreen` (R3F battlefield + HUD). One zustand GameRunner
+  (`store/gameStore.ts`) is the only caller of `engine.step`; the bot (`bot/botDriver.ts`) answers through it when the
+  presentation is idle, with a 5 s watchdog. Every number shown comes from `query.*`, `pending` or events.
+  - Prompt dock for every decision kind: board decisions (deploy, advance deploy, trooper placement, moves) say what
+    to click and offer the engine's auto-place / charge-straight-in / suggested spots / stay put, plus Confirm and Reset.
+  - Activation panel (movement, combat, attacks with hit %, spells, feat), grid card, event feed, dice log and tray,
+    focus allocation steppers, upkeep and shake forms, game-over screen, first-time coach tips, Menu and ? buttons.
+  - Camera starts behind the human's own zone; ruler (M), LOS view (L), threat rings (T), camera presets (V).
+  - Autosave each turn in `localStorage` (Continue saved game on the start screen); `?seed=` makes a game repeatable.
 - Engine contracts, FROZEN (additive only, logged in `docs/spec/00-architecture.md` §14):
 
 | File | Holds | State |
@@ -27,8 +36,11 @@
 - `tools/sim.ts` (`npm run sim -- --games N --seed S [--scenario id] [--json]`): bot vs bot on the starter lists; checks
   60 §2 invariants after every step, a 5000-decision cap, a 200-decision stall detector, save/load mid-game and replay
   determinism. `npm run sim -- --games 50 --seed 1`: 50/50 games end, 0 violations, mean 4.4 rounds.
-- Tests: 127 in 16 files, including `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through
-  `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
+- E2E (`npm run e2e`, vite preview at /whirr-machine/): `tests/e2e/play.spec.ts` plays Cygnar vs the bot through UI
+  clicks to round 3 (How to Play tabs checked, screenshots in `e2e-out/`), and Khador on the Quick Start demo for a round
+  with attacks made by clicking the enemy. Shared click policy in `tests/e2e/policy.ts`.
+- Tests: 171 unit tests in 21 files (engine, data, client store/board/HUD/start/prompts), including
+  `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
 
 ## Spec status
@@ -48,4 +60,12 @@
 - Out-of-activation attacks other than Avenging Force (Reciprocate etc.) are not needed by the starter lists.
 - Additional attacks while initial attacks remain are accepted but not listed as options.
 
-Next: M3 playable client (see HANDOFF.md).
+## Known gaps (client)
+- Attack previews for weapons with shot modes (e.g. a blast shot) show the standard shot's odds:
+  `query.attackPreview` has no attackType option (engine change needed). Charge-attack previews do not pass
+  `chargeAttack` (the client cannot tell a charge attack apart; the engine could infer it).
+- Movement is click-to-place (single waypoint); multi-waypoint paths need Shift-click. No drag yet.
+- Side colours are fixed by seat (A blue, B orange), not by faction. Left activation panel repeats some card stats.
+- Game chunk is ~1.05 MB (three.js + board); the start chunk is ~0.47 MB.
+
+Next: owner playtest feedback on the Pages build, then M4 AI (see HANDOFF.md).

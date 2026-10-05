@@ -1,24 +1,66 @@
-import { Canvas } from '@react-three/fiber'
-import { Grid, OrbitControls } from '@react-three/drei'
+// Routes start screen <-> game. Hooks: ?test=1 (window.__game), ?scenario=&lists=&seed= (skip start).
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { bootClient, game, setupFromUrl, useHasGame } from './contract'
+import { CoachLine } from './ui/help/CoachLine'
+import { HelpButton, HelpOverlay } from './ui/help/HelpGuide'
+import { StartScreen } from './ui/start/StartScreen'
+import { useGameStore } from './store/gameStore'
 
-const BOARD = 48 // inches; Recon tables are 36
+// three.js and the board live in their own chunk; the start screen loads without them.
+const GameView = lazy(() => import('./GameScreen'))
+
+const params = () => new URLSearchParams(typeof location !== 'undefined' ? location.search : '')
 
 export function App() {
+  const hasGame = useHasGame()
+  const [screen, setScreen] = useState<'start' | 'game'>(() => (setupFromUrl() ? 'game' : 'start'))
+
+  useEffect(() => {
+    const off = bootClient({ testHooks: params().get('test') === '1' })
+    const url = setupFromUrl()
+    if (url) game.newGame(url)
+    return off
+  }, [])
+
+  const start = (opts: Parameters<typeof game.newGame>[0]): string | null => {
+    const rej = game.newGame(opts)
+    if (rej) return rej.text
+    setScreen('game')
+    return null
+  }
+
+  // Continue: the game still in memory (unless it ended), else the autosave from an earlier visit.
+  const ongoing = useGameStore((g) => !!g.state && g.state.phase !== 'ended')
+  const continueLabel = ongoing ? 'Continue game' : game.hasSave() ? 'Continue saved game' : null
+  const resume = (): string | null => {
+    if (!ongoing) { const rej = game.load(); if (rej) return rej.text }
+    setScreen('game')
+    return null
+  }
+
+  const playing = screen === 'game' && hasGame
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#14161a' }}>
-      <Canvas frameloop="demand" dpr={[1, 2]} camera={{ position: [0, 40, 42], fov: 45 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[20, 40, 10]} intensity={1.2} />
-        <mesh rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[BOARD, BOARD]} />
-          <meshStandardMaterial color="#3b3a33" />
-        </mesh>
-        <Grid args={[BOARD, BOARD]} position-y={0.01} cellSize={1} sectionSize={6} cellColor="#4a4840" sectionColor="#c9a227" fadeDistance={200} />
-        <OrbitControls makeDefault maxPolarAngle={Math.PI / 2.1} />
-      </Canvas>
-      <div data-testid="title" style={{ position: 'absolute', top: 12, left: 16, color: '#c9a227', font: '600 20px system-ui' }}>
-        Whirr Machine — M0
-      </div>
+    <>
+      {playing ? (
+        <div style={{ position: 'fixed', inset: 0, background: '#14161a' }}>
+          <Suspense fallback={<Loading />}><GameView onExit={() => setScreen('start')} /></Suspense>
+          <button type="button" className="menu-fab" data-testid="menu-button" title="Back to the start screen (the game is kept)" onClick={() => setScreen('start')}>Menu</button>
+          <HelpButton />
+          <CoachLine />
+        </div>
+      ) : (
+        <StartScreen onStart={start} onContinue={resume} continueLabel={continueLabel} />
+      )}
+      <HelpOverlay />
+    </>
+  )
+}
+
+function Loading() {
+  return (
+    <div style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center', color: '#c9a227', font: '600 18px system-ui' }}>
+      Setting up the table...
     </div>
   )
 }
+
