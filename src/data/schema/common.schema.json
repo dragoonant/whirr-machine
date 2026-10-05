@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/common.schema.json",
+  "title": "Shared primitives",
+  "$defs": {
+    "Id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9-]+)*$" },
+    "IdList": { "type": "array", "items": { "$ref": "#/$defs/Id" }, "uniqueItems": true },
+    "Name": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "Text": { "type": "string", "maxLength": 400, "description": "Our own words. Never copied card or rules text." },
+    "Hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+    "Keyword": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "Inches": { "type": "number", "minimum": 0 },
+    "DiceExpr": {
+      "description": "Integer, or a d3/d6 expression such as d3, d3+1, 2d6, d6-1.",
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string", "pattern": "^([1-9]\\d*)?d[36]([+-]\\d+)?$" }
+      ]
+    },
+    "BaseMm": { "enum": [30, 40, 50, 80, 120] },
+    "SystemLetter": { "type": "string", "pattern": "^[A-Z]$" },
+    "Location": { "enum": ["L", "R", "H", "S", "-"], "description": "Weapon location; '-' = none." },
+    "DamageType": { "enum": ["blast", "cold", "corrosion", "electricity", "fire", "magical"] },
+    "Stat": { "enum": ["SPD", "AAT", "MAT", "RAT", "DEF", "ARM", "ARC", "CTRL", "FURY", "THR", "POW", "RNG", "ROF", "AOE"] },
+    "Vec2": {
+      "type": "object", "additionalProperties": false, "required": ["x", "z"],
+      "properties": { "x": { "type": "number" }, "z": { "type": "number" } }
+    },
+    "Shape": {
+      "description": "Footprint in inches, local to the piece or element origin.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["circle"],
+          "properties": { "circle": { "type": "object", "additionalProperties": false, "required": ["r"],
+            "properties": { "r": { "$ref": "#/$defs/Inches" } } } } },
+        { "type": "object", "additionalProperties": false, "required": ["rect"],
+          "properties": { "rect": { "type": "object", "additionalProperties": false, "required": ["w", "d"],
+            "properties": { "w": { "$ref": "#/$defs/Inches" }, "d": { "$ref": "#/$defs/Inches" } } } } },
+        { "type": "object", "additionalProperties": false, "required": ["polygon"],
+          "properties": { "polygon": { "type": "array", "minItems": 3, "items": { "$ref": "#/$defs/Vec2" } } } }
+      ]
+    },
+    "WindowId": {
+      "enum": [
+        "passive",
+        "turn.start", "maintenance.start", "maintenance.effects", "control.refill", "control.powerUp", "control.allocate",
+        "control.upkeep", "control.shake", "activation.start", "activation.end", "turn.end", "round.end",
+        "movement.choose", "movement.start", "movement.move", "movement.charge", "movement.place", "movement.end",
+        "combat.choose", "combat.chooseAttack", "combat.end",
+        "attack.declared", "attack.beforeRoll", "attack.rolled", "attack.hit", "attack.crit", "attack.miss", "attack.resolved",
+        "damage.beforeRoll", "damage.rolled", "damage.beforeApply", "damage.applied", "damage.crippled",
+        "death.disabled", "death.boxed", "death.destroyed",
+        "spell.declare", "spell.cast", "feat.used", "scenario.score", "game.end"
+      ]
+    },
+    "Scope": {
+      "type": "object", "additionalProperties": false, "required": ["who"],
+      "properties": {
+        "who": { "enum": ["self", "target", "attacker", "unit", "controller", "warEngines", "friendly", "enemy", "any", "point"] },
+        "range": { "oneOf": [ { "$ref": "#/$defs/Inches" }, { "enum": ["CTRL", "melee"] } ] },
+        "filter": { "$ref": "#/$defs/Condition" },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Duration": { "enum": ["instant", "attack", "activation", "turn", "round", "upkeep", "continuous", "game", "while"] },
+    "HookName": {
+      "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$",
+      "description": "Registered in src/engine/code-hooks.ts; validate-data checks the registry."
+    },
+    "Condition": {
+      "description": "Predicate tree. Leaf = {test, ...params} or the {code} escape hatch.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["all"],
+          "properties": { "all": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Condition" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["any"],
+          "properties": { "any": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Condition" } } } },
+        { "type": "object", "additionalProperties": false, "required": ["not"],
+          "properties": { "not": { "$ref": "#/$defs/Condition" } } },
+        { "type": "object", "additionalProperties": false, "required": ["code"],
+          "properties": { "code": { "$ref": "#/$defs/HookName" }, "params": { "type": "object" } } },
+        { "type": "object", "additionalProperties": false, "required": ["test"],
+          "properties": {
+            "test": { "enum": ["modelType", "keyword", "baseAtLeast", "baseAtMost", "attackKind", "charged", "crit", "hit",
+                               "withinInches", "inCtrl", "engaged", "hasCondition", "hasEffect", "focusAtLeast",
+                               "weaponLocation", "weaponQuality", "damageType", "isFriendly", "isEnemy", "isCharacter",
+                               "systemCrippled", "lifeState", "inLos", "elevatedOver"] },
+            "subject": { "enum": ["self", "target", "attacker", "unit", "controller"] },
+            "value": {},
+            "of": { "enum": ["self", "target", "attacker", "controller", "point"] },
+            "dist": { "$ref": "#/$defs/Inches" }
+          } }
+      ]
+    },
+    "Effect": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["code"],
+          "properties": { "code": { "$ref": "#/$defs/HookName" }, "params": { "type": "object" } } },
+        { "type": "object", "additionalProperties": false, "required": ["op"],
+          "properties": {
+            "op": { "enum": ["modStat", "addDie", "boost", "reroll", "autoHit", "autoMiss", "applyCondition", "removeCondition",
+                             "damage", "heal", "push", "place", "knockDown", "gainFocus", "loseFocus", "grantAbility",
+                             "grantResistance", "grantImmunity", "preventDamage", "forbid", "cloud", "addAttack"] },
+            "stat": { "$ref": "#/$defs/Stat" },
+            "mode": { "enum": ["add", "set", "double", "half"] },
+            "value": { "type": "integer" },
+            "roll": { "enum": ["attack", "damage", "any"] },
+            "condition": { "enum": ["knockedDown", "stationary", "disrupted", "fire", "corrosion", "inert"] },
+            "pow": { "type": "integer", "minimum": 0 },
+            "damageType": { "$ref": "#/$defs/DamageType" },
+            "dist": { "$ref": "#/$defs/DiceExpr" },
+            "direction": { "enum": ["away", "toward", "any"] },
+            "ability": { "$ref": "#/$defs/Id" },
+            "what": { "enum": ["run", "charge", "slam", "trample", "powerAttack", "cast", "advance", "attack", "beCharged",
+                               "beTargeted", "gainFocus"] },
+            "aoe": { "$ref": "#/$defs/Inches" },
+            "limit": { "type": "integer", "minimum": 1 }
+          },
+          "allOf": [
+            { "if": { "properties": { "op": { "const": "modStat" } } }, "then": { "required": ["stat", "value"] } },
+            { "if": { "properties": { "op": { "const": "damage" } } }, "then": { "required": ["pow"] } },
+            { "if": { "properties": { "op": { "enum": ["applyCondition", "removeCondition"] } } }, "then": { "required": ["condition"] } },
+            { "if": { "properties": { "op": { "enum": ["addDie", "boost", "reroll"] } } }, "then": { "required": ["roll"] } }
+          ] }
+      ]
+    },
+    "EffectList": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Effect" } }
+  }
+}

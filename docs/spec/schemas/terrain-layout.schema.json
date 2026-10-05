@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/terrain-layout.schema.json",
+  "title": "Terrain layout (placed pieces; inches; origin = table centre)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "table", "pieces"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "table": {
+      "type": "object", "additionalProperties": false, "required": ["w", "d"],
+      "properties": { "w": { "$ref": "common.schema.json#/$defs/Inches" }, "d": { "$ref": "common.schema.json#/$defs/Inches" } }
+    },
+    "pieces": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "terrain", "pos"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/Id" },
+          "terrain": { "$ref": "common.schema.json#/$defs/Id" },
+          "pos": { "$ref": "common.schema.json#/$defs/Vec2" },
+          "rot": { "type": "number", "description": "Radians about +y." }
+        } }
+    }
+  }
+}

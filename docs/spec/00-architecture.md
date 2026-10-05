@@ -1,0 +1,272 @@
+# 00: Architecture
+
+Source of truth for module boundaries, the engine contract, the decision model and determinism.
+Rules semantics live in `10-rules-core` (IDs in `12-rules-test-checklist`); data shapes in `20`; figures `30`; AI `40`;
+client `50`; testing `60`. `src/engine/{types,actions,events,hooks,rng,decider,index}.ts` are the code form of §2–§9 and
+are FROZEN after M0: changes are additive only (new optional fields, new union members) and need a line in this file.
+On a conflict, `10` wins on what a rule does; this file wins on names and shapes. Log the mismatch as a `RULING:`.
+
+## 1. Modules
+
+| Module | Path | May import | Must not | Runtime |
+|---|---|---|---|---|
+| engine | `src/engine/` | itself; JSON *types* from `src/data/types.ts` | DOM, React, three, timers, `Math.random`, `Date`, data JSON | node, browser, worker |
+| data | `src/data/` | schemas (types only) | side effects | JSON, validated by `tools/validate-data.ts` |
+| ai | `src/ai/` | engine public API (read-only), data types | client, three, DOM | node, worker |
+| client | `src/client/` | engine, ai (via worker), data, assets | mutate `GameState`; compute rules numbers | browser |
+| tools | `tools/` | anything | be imported by `src/` | node (`tsx`) |
+| tests | `tests/` | everything | | vitest, playwright |
+
+- Dependency direction: `data ← engine ← ai ← client`. Alias `@/` → `src/` (no `baseUrl`).
+- Enforced by an import-boundary test (`tests/engine/boundaries.test.ts` greps imports per module).
+- Engine and ai run unchanged in `npm run sim`, `npm run bench:ai` and a Web Worker.
+- **Code split.** `client` loads `engine+data` and `ai` as separate dynamic chunks (`import()`); the title screen
+  renders before either arrives. Faction data is one chunk per faction. Budgets in §12.
+
+## 2. Engine API (`src/engine/index.ts`)
+
+| Function | Returns | Notes |
+|---|---|---|
+| `createGame(setup: GameSetup, seed: string, bundle: DataBundle)` | `StepResult` | validates lists against level rules; bad setup → `StepResult.rejection` (`E_BAD_SETUP`), never throws. First pending is `rollOff`→`chooseTurnOrder`. |
+| `step(state, action)` | `StepResult` | pure reducer. RNG restored from `state.rng`. Illegal action → same `state` ref, `events=[ActionRejected]`, same `pending`, `rejection`. |
+| `legalActions(state)` | `Action[]` | answers to `state.pending`. **Never empty while a decision is open** (§5). Continuous decisions return a finite *sample* that always contains ≥1 fully validated answer. |
+| `validate(state, action)` | `Rejection \| null` | exactly the checks `step` runs; no mutation. Used by drag previews at ≤30 Hz. |
+| `replay(setup, seed, bundle, actions)` | `StepResult` | folds `step` from `createGame`; asserts no rejections. |
+| `save(state)` / `load(file, bundle)` | `SaveFile` / `StepResult` | §10. |
+| `view(state, player)` | `PlayerView` | Deciders only ever see a view (no hidden info in the first release; the seam exists for multiplayer). |
+| `query.*` | read-only numbers | §8. The ONLY source of numbers the UI or AI displays. |
+
+```ts
+interface StepResult {
+  state: GameState;            // new state, or the SAME reference when rejected
+  events: GameEvent[];         // ordered; [ActionRejected] only, when rejected
+  pending: PendingDecision;    // exactly ONE; kind 'gameOver' when the game has ended
+  rejection?: Rejection;       // present iff the action was illegal
+}
+interface Rejection { code: RejectionCode; message: string; detail?: Record<string, unknown> }
+```
+
+Reducer rules:
+1. Immutable state; structural sharing via hand-written spreads. No I/O, clock or `Math.random`.
+2. One action → 0..n events → exactly one `pending`. Forced single-option decisions are auto-resolved inside the step
+   and emit `DecisionAutoResolved {kind, optionId}` so logs stay readable; dice are never "confirmed" by the player.
+3. Every rule effect emits an event. Client and AI rebuild what they show from `state` + events, never from diffs.
+4. **Read targets from state, not events.** The current roll's target and modifiers live in `state.attack` (§7) before
+   any reroll window opens; a test pins this ordering.
+5. `step` throws only `EngineInvariantError` (corrupt state = programmer error). The sim treats it as a failed game.
+
+## 3. Game state (shape, abridged)
+
+| Field | Type | Notes |
+|---|---|---|
+| `seed`, `rng` | `string`, `[u32,u32,u32,u32]` | sfc32 state (§9) |
+| `dataVersion` | string | hash of the bundle; replay/load refuse a mismatch (`E_DATA_VERSION`) |
+| `round`, `turn`, `activePlayer`, `firstPlayer` | int, int, `'A'\|'B'` | round 1..7 |
+| `phase` | `'setup'\|'deploy'\|'maintenance'\|'control'\|'activation'\|'ended'` | |
+| `models` | `Record<ModelId, ModelState>` | §3.1 |
+| `units` | `Record<UnitId, UnitState>` | troopers, attachments, `activated` |
+| `effects` | `EffectInstance[]` | continuous effects, spells, feats, ability durations (one list, §6) |
+| `upkeeps` | `Record<ModelOrUnitId, {friendly?: EffectId, enemy?: EffectId}>` | ≤1 per side |
+| `attack` | `AttackContext \| null` | the in-flight attack (§7) |
+| `activation` | `ActivationContext \| null` | who, movement used, combat action used, charge target, moved distance, attacks made, spells cast |
+| `scenario` | `ScenarioState` | element control, VP, kill-box flags, scoring log |
+| `pending` | `PendingDecision` | also returned in `StepResult` |
+| `decisionSeq` | int | ids `d:<n>` |
+| `log` | `Action[]` | full action log for save/replay |
+
+M0 code form (`types.ts`) also carries: `setup`, `players` (faction, list, leader, edge, ambush ids), `terrain`, `clouds`,
+`window` (current step), `rollSeq`/`attackSeq`/`effectSeq`; ModelState adds `type`, `offTable`; single track adds `boxes`.
+Action types beyond the §5 kinds: `pass`, `ack`, `endTurn`, `endAttacks`, `powerAttack`, `heal`. Coordinates: centre origin, `{x,z}`.
+
+### 3.1 ModelState
+`{ id, profileId, owner, unitId?, pos:{x,z}, elev, base: mm, focus: int, damage: DamageState, life: LifeState,
+conditions: ConditionId[], crippled: SystemLetter[], hardpoints: Record<slot, optionId>, featUsed?: boolean,
+activated: boolean, controllerId? (war-engine → its caster), inert?: boolean }`
+
+- `DamageState` = `{track:'single', filled:int}` | `{track:'grid', grids:[{id, cols: boolean[][]}]}` (`true` = filled).
+- `LifeState` = `'active' | 'disabled' | 'boxed' | 'destroyed'` (§6.2).
+
+## 4. Focus as a first-class resource
+
+- `ModelState.focus` is the only store. Caps: caster ≤ ARC after Control refill (may exceed via effects until trimmed in
+  Maintenance); war-engine ≤ 3 always (`E_FOCUS_CAP`).
+- Every change emits `FocusChanged {modelId, delta, after, reason}`; `reason` ∈ `refill | powerUp | allocate | trim |
+  maintenanceClear | spend | lose | gain`.
+- Every spend goes through one function `spendFocus(state, modelId, n, purpose)` and records `purpose`:
+
+| Purpose | Who | Cost | Window |
+|---|---|---|---|
+| `boostAttack` / `boostDamage` | caster, war-engine (own focus) | 1 per roll | `attack.beforeRoll` / `damage.beforeRoll` |
+| `additionalAttack` | caster, war-engine | 1 each | `combat.chooseAttack` |
+| `spell` | caster | COST | any time in own activation, not mid-move/mid-attack |
+| `upkeep` | caster | 1 per spell | `control.upkeep` |
+| `shake` | caster (for self) or war-engine's caster pays for it (verify) | 1 | `control.shake` |
+| `heal` | caster, self | 1 per damage point | caster's activation |
+| `powerField` | caster (and anyone granted it) | ≤1 per damage instance, −5 each | `damage.beforeApply` |
+| `run` / `charge` | war-engine | 1 | `movement.choose` (waived by a 'jack marshal effect, verify) |
+| `powerAttack` | war-engine | 1 | `combat.choose` |
+
+- Crippled Cortex: `focus` forced to 0, all gain/spend rejected `E_CRIPPLED`. Disruption: same for one round via an
+  `EffectInstance`.
+
+## 5. Decision model
+
+The engine never blocks; when the rules need a choice it returns a `PendingDecision`. The next `Action` must carry
+`decisionId === pending.id` and come from `pending.player`.
+
+```ts
+interface PendingDecision {
+  id: string;                    // "d:<n>"
+  player: 'A' | 'B';
+  kind: DecisionKind;
+  window: WindowId;              // §7
+  context: DecisionContext;      // ids + engine-computed numbers (odds, targets) for the prompt
+  options?: DecisionOption[];    // finite answers, each {id, label, action, cost?:{focus:number}, odds?}
+  constraints?: MoveConstraints; // continuous answers: maxDist, straightLine, mustEndInRange, zone, placeWithin
+  canPass: boolean;
+}
+```
+
+| Kind | Who | Raised at | Answer |
+|---|---|---|---|
+| `rollOff` | both, auto | setup | automatic d6 each; ties reroll |
+| `chooseTurnOrder` | roll-off winner | setup | `first` / `second` |
+| `chooseEdge` | other player | setup | edge id |
+| `deploy` | deploying player | deploy | model/unit positions (continuous) |
+| `advanceDeploy` | owner of Advance Deployment models | deploy | positions within zone +3" |
+| `maintenanceOrder` | active | maintenance | order of simultaneous maintenance effects (only if a choice exists) |
+| `allocateFocus` | active | `control.allocate` | `{modelId: n}` map; caster-to-war-engines in CTRL; cap 3 |
+| `payUpkeep` | active | `control.upkeep` | per upkept effect: keep (1 focus) / drop |
+| `shake` | active | `control.shake` | per shakeable model/effect: shake (1 focus) / keep |
+| `chooseActivation` | active | `activation.choose` | model/unit id, or `endTurn` when none left |
+| `chooseMovement` | active | `movement.choose` | `forfeit`/`aim`/`advance`/`run`/`charge`/`slam`/`trample`/`standUp` + caster extras (`castSpell`, `useFeat`, `heal`) |
+| `moveModel` | active | `movement.move` | path end point (straight or advance path); continuous |
+| `chargeTarget` | active | `movement.charge` | target id (LOS-checked), then `moveModel` with `straightLine` |
+| `placeTroopers` | active | `movement.place` | positions within 2" with LOS to the moved trooper |
+| `chooseCombatAction` | active | `combat.choose` | `melee`/`ranged`/`specialAttack`/`specialAction`/`powerAttack`/`forfeit` + caster extras |
+| `chooseAttack` | active | `combat.chooseAttack` | weapon + target; `additionalAttack` options carry `cost.focus=1`; `endAttacks` |
+| `combinedAttack` | active | `combat.chooseAttack` | contributing trooper ids |
+| `channel` | active | `spell.declare` | cast from caster or an eligible Arc Node |
+| `castSpell` | active | `spell.declare` | spell id + target/point |
+| `useFeat` | active | caster activation | feat id + any feat choices |
+| `boostAttack` | attacker's controller | `attack.beforeRoll` | boost (1 focus) / no; shows both odds |
+| `rollAnyway` | attacker | `attack.beforeRoll` | auto-hit target: `accept` / `roll` (fish for a crit) |
+| `reroll` | holder of a reroll | `*.rolled` | reroll (named source) / keep |
+| `boostDamage` | attacker's controller | `damage.beforeRoll` | boost / no (charge auto-boost skips this) |
+| `chooseGrid` | attacker | `damage.beforeApply` | colossal grid L/R |
+| `powerField` | defender's caster | `damage.beforeApply` | spend 0..1 focus (−5) per instance |
+| `chooseBoxes` | as the effect says | `damage.applied` / heal | box picks when a rule lets a player choose (else automatic) |
+| `triggerWindow` | trigger owner | any window incl. `death.disabled` (Tough), `death.boxed`, `death.destroyed` | resolve trigger X next / pass optional ones |
+| `abilityChoice` | any | any | generic finite choice raised by an ability or code hook; `context.data.code` names it |
+| `gameOver` | none | `ended` | no answer; `legalActions` = `[ack]` |
+
+- `legalActions` invariant: for every open decision the list is non-empty and every member passes `validate`.
+  Feasibility = "some candidate passes full validation", never "the planner's arrangement fits". `moveModel` always
+  includes the zero-length move (or `forfeit`) when legal; `placeTroopers` includes a validated chain placement or
+  the destroy-unplaceable fallback; `deploy` includes a chain-deploy fallback for shallow zones.
+- `pass` is legal iff `canPass`.
+
+## 6. One generic mechanism per concept
+
+### 6.1 Effects
+All durations (spells, feats, abilities, conditions with expiry, continuous effects) are `EffectInstance
+{id, sourceId, name, owner, targetIds, mods, duration: 'attack'|'activation'|'turn'|'round'|'upkeep'|'continuous'|
+'game', expires: {round, turn, player} , upkeep?: {casterId}}`. Same-named effects do not stack: re-applying the same
+`name` to a target keeps the instance with the later expiry (max, never overwrite). Stat resolution order: set → ×2 → ½
+→ bonuses → penalties, floor 0 (`query.stat`).
+
+### 6.2 Disabled → boxed → destroyed
+- `damage.applied`: when the last box fills, `life: 'disabled'` and window `death.disabled` opens (Tough, "when
+  disabled" triggers). A trigger that heals sets `life: 'active'`.
+- Still disabled when the window closes → `life: 'boxed'`, window `death.boxed` ("when boxed" triggers, VP
+  bookkeeping) → `life: 'destroyed'`, window `death.destroyed`, then removal from the table (`ModelRemoved`).
+- Exact MK4 semantics of each step are owned by `10-rules-core` (verify against the timing appendix).
+- One implementation (`src/engine/damage.ts: advanceLife`) for every model type and every cause (attack, collateral,
+  continuous effect, falling, upkeep). Factions add triggers through ability data or `code-hooks.ts`, never new state.
+- Disabled models: no activation, no contest, no LOS blocking; they still occupy their base (verify).
+
+### 6.3 Conditions
+`knockedDown`, `stationary`, `disrupted`, `fire`, `corrosion`, `inert`, `engaged` (derived, never stored) are
+condition ids backed by `EffectInstance` where they expire. One shake path for every shakeable condition.
+
+## 7. Windows and the attack sequence
+
+`WindowId` (frozen string union; data triggers use the same ids):
+
+| Group | Ids |
+|---|---|
+| turn | `turn.start` `maintenance.start` `maintenance.effects` `control.refill` `control.powerUp` `control.allocate` `control.upkeep` `control.shake` `activation.start` `activation.end` `turn.end` `round.end` |
+| movement | `movement.choose` `movement.start` `movement.move` `movement.charge` `movement.place` `movement.end` |
+| combat | `combat.choose` `combat.chooseAttack` `combat.end` |
+| attack | `attack.declared` `attack.beforeRoll` `attack.rolled` `attack.hit` `attack.crit` `attack.miss` `attack.resolved` |
+| damage | `damage.beforeRoll` `damage.rolled` `damage.beforeApply` `damage.applied` `damage.crippled` |
+| death | `death.disabled` `death.boxed` `death.destroyed` |
+| spell/feat | `spell.declare` `spell.cast` `feat.used` |
+| scenario | `scenario.score` `game.end` |
+
+Attack pipeline as events (one per step, in order; `10-rules-core` holds the rules for each step):
+`AttackDeclared` → (range/LOS verdict stored in `state.attack`) → `boostAttack`/`rollAnyway` decision →
+`DiceRolled{purpose:'attack'}` → `reroll` window → `AttackResolved{hit, crit, auto}` → `attack.hit|crit|miss` triggers →
+per damage instance (direct target, then blast/collateral targets as one simultaneous batch):
+`boostDamage` → `DiceRolled{purpose:'damage'}` → `reroll` → `powerField`/`chooseGrid` → `DamageApplied{boxes, crippled}`
+→ `death.*` windows → `attack.resolved` → next attack or `combat.chooseAttack`.
+
+`AttackContext` (in state, read by UI): `{attackerId, weaponId, targetId, kind, dice, mods[], hitTarget, pHit,
+pHitBoosted, damageTarget?, powDirect, powBlast?, autoHit?, autoMiss?, losVerdict, rollId?}`.
+
+## 8. The engine owns every displayed number (`query.*`)
+
+| Query | Returns |
+|---|---|
+| `query.distance(a, b)` | edge-to-edge inches |
+| `query.los(viewerId, targetId)` | `{visible, reasons: LosReason[], blockers: id[], mods: {concealment, cover, elevation, inMelee, stealth}}` |
+| `query.attackPreview(attacker, weapon, target, opts)` | hit target, dice, `pHit` (base/boosted), crit chance, damage target, expected damage, `pKill` |
+| `query.threat(modelId)` | advance, run, charge (SPD+3+reach), slam, ranged reach |
+| `query.control(state)` | per scenario element: `{controller, contesters, holders, reason}`; VP now; leader kill-box flags |
+| `query.stat(modelId, stat)` | resolved stat with the modifier trace |
+| `query.moveCheck(modelId, path)` | `{ok, stopAt, reason}` (collision, rough, obstacle) |
+
+The client never does rules arithmetic (Mallet bugs: control computed client-side, save numbers ignoring cover).
+
+## 9. Determinism, RNG, replay
+
+- `rng.ts`: sfc32 seeded by `cyrb128(seed)`. State lives in `state.rng`. Every roll goes through
+  `roll(state, spec: {count, sides:6, purpose, ownerId})` → `DiceRolled {rollId, purpose, dice, kept, total, target?}`.
+- `purpose` ∈ `rollOff attack damage column tough continuous slamDist throwDist fall rof d3 aoeTie collateral spell
+  maintenance scenario other`. Every purpose must reach the dice tray (`50-client`).
+- AI randomness uses its own seed (`hash(gameSeed, decisionId)`), never `state.rng`, so logs replay identically.
+
+## 10. Save, load, undo
+
+`SaveFile = {format: 1, engine: semver, dataVersion, setup, seed, actions: Action[], meta: {savedAt, label}}`.
+Load = `replay`. Undo = replay minus the trailing actions back to the human's previous decision (only vs bot or
+hotseat). Saves live in `localStorage` (`wm.save.<slot>`) and export as `.json`.
+
+## 11. Decider
+
+```ts
+interface Decider { decide(view: PlayerView, pending: PendingDecision, legal: Action[]): Promise<Action> }
+```
+- One interface for human (resolved by the interaction layer), AI (worker, `40-ai`), random bot, and replay.
+- `GameRunner` (`src/client/store/`) is the ONLY caller of `step`; the bot answers only when presentation is idle,
+  with a 5 s no-progress watchdog that force-answers bot-owned decisions with `legal[0]`.
+
+## 12. Rejection codes
+
+`E_WRONG_DECISION` `E_NOT_YOUR_DECISION` `E_NOT_AN_OPTION` `E_BAD_PAYLOAD` `E_BAD_SETUP` `E_DATA_VERSION` `E_GAME_OVER`
+`E_INSUFFICIENT_FOCUS` `E_FOCUS_CAP` `E_CRIPPLED` `E_OUT_OF_RANGE` `E_NO_LOS` `E_OUT_OF_CTRL` `E_ENGAGED`
+`E_KNOCKED_DOWN` `E_STATIONARY` `E_ALREADY_ACTIVATED` `E_ALREADY_USED` `E_TARGET_INVALID` `E_BASE_OVERLAP`
+`E_PATH_BLOCKED` `E_TOO_FAR` `E_NOT_STRAIGHT` `E_OUT_OF_ZONE` `E_PLACEMENT` `E_UPKEEP_LIMIT` `E_POWER_ATTACK`
+`E_NO_DUAL_ATTACK`. New codes are additive.
+
+## 13. Performance budgets
+
+| Item | Budget |
+|---|---|
+| `step` | ≤1 ms median, ≤5 ms p99 (node, M1 laptop class) |
+| `legalActions` | ≤10 ms p99; continuous samples ≤64 candidates |
+| `query.los` | ≤0.2 ms per pair with ≤40 terrain pieces |
+| `npm run sim` | random-vs-random 30-pt game ≤2 s; 200-game batch ≤3 min |
+| AI decision (normal) | ≤500 ms p95, 2 s hard cap in the worker |
+| JS | initial chunk ≤350 KB gz; engine+data ≤250 KB gz; ai ≤150 KB gz |
+| Frame | 60 fps at 1080p mid GPU; ≤200 draw calls; ≤400k triangles on board |

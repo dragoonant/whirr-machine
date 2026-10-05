@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/model.schema.json",
+  "title": "Model profile, or a unit composition",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "faction", "type", "cost"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "faction": { "$ref": "common.schema.json#/$defs/Id" },
+    "type": { "enum": ["leader", "warEngine", "solo", "trooper", "unit", "battleEngine", "structure"] },
+    "engineClass": { "enum": ["light", "heavy", "superHeavy", "colossal"], "description": "warEngine only." },
+    "lesser": { "type": "boolean", "default": false, "description": "Lesser war-engine (does not satisfy the Recon war-engine minimum)." },
+    "character": { "type": "boolean", "default": false },
+    "keywords": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/Keyword" } },
+    "base": { "$ref": "common.schema.json#/$defs/BaseMm" },
+    "losHeight": { "type": "number", "exclusiveMinimum": 0, "description": "Inches; omit to use the base default (30-figures)." },
+    "stats": { "$ref": "#/$defs/Stats" },
+    "damage": { "$ref": "#/$defs/DamageTrack" },
+    "systems": {
+      "type": "object", "description": "Overrides core/systems.json for this model (e.g. A = arc node).",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/SystemLetter" },
+      "additionalProperties": { "$ref": "#/$defs/System" }
+    },
+    "weapons": { "type": "array", "items": { "$ref": "#/$defs/WeaponMount" } },
+    "hardpoints": { "type": "array", "items": { "$ref": "#/$defs/Hardpoint" } },
+    "abilities": { "$ref": "common.schema.json#/$defs/IdList" },
+    "spells": { "$ref": "common.schema.json#/$defs/IdList" },
+    "feat": { "$ref": "common.schema.json#/$defs/Id" },
+    "arcNode": { "type": "boolean", "default": false },
+    "cost": { "type": "integer", "minimum": 0, "description": "Points. Leaders are 0 (free)." },
+    "fa": { "oneOf": [ { "type": "integer", "minimum": 1 }, { "const": "C" }, { "const": "U" } ] },
+    "composition": {
+      "type": "object", "additionalProperties": false, "required": ["grunts"],
+      "description": "type 'unit' only.",
+      "properties": {
+        "grunts": { "$ref": "#/$defs/TrooperSlot" },
+        "extra": { "type": "array", "items": { "$ref": "#/$defs/TrooperSlot" } },
+        "commandAttachments": { "$ref": "common.schema.json#/$defs/IdList" },
+        "weaponAttachments": { "$ref": "common.schema.json#/$defs/IdList" },
+        "costBySize": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "figure": { "$ref": "#/$defs/Figure" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "verify": { "type": "string" }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "unit" } } },
+      "then": { "required": ["composition"] },
+      "else": { "required": ["base", "stats", "damage"] } },
+    { "if": { "properties": { "type": { "const": "warEngine" } } }, "then": { "required": ["engineClass"] } }
+  ],
+  "$defs": {
+    "Stats": {
+      "type": "object", "additionalProperties": false, "required": ["SPD", "MAT", "RAT", "DEF", "ARM"],
+      "properties": {
+        "SPD": { "type": "integer", "minimum": 0 },
+        "AAT": { "type": "integer", "minimum": 0 },
+        "MAT": { "type": "integer", "minimum": 0 },
+        "RAT": { "type": "integer", "minimum": 0 },
+        "DEF": { "type": "integer", "minimum": 0 },
+        "ARM": { "type": "integer", "minimum": 0 },
+        "ARC": { "type": "integer", "minimum": 0 },
+        "CTRL": { "type": "number", "minimum": 0 },
+        "FURY": { "type": "integer", "minimum": 0 },
+        "THR": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "GridColumn": {
+      "type": "string", "pattern": "^[-A-Z]{1,8}$",
+      "description": "One column, top box first. '-' = blank box, a letter = system box."
+    },
+    "Grid": {
+      "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/$defs/GridColumn" },
+      "description": "Index 0 = column 1. Damage fills a column top-down, then spills right, wrapping 6 -> 1."
+    },
+    "DamageTrack": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["track", "boxes"],
+          "properties": { "track": { "const": "single" }, "boxes": { "type": "integer", "minimum": 1 } } },
+        { "type": "object", "additionalProperties": false, "required": ["track", "columns"],
+          "properties": { "track": { "const": "grid" }, "columns": { "$ref": "#/$defs/Grid" } } },
+        { "type": "object", "additionalProperties": false, "required": ["track", "grids"],
+          "properties": { "track": { "const": "dualGrid" },
+            "grids": { "type": "object", "additionalProperties": false, "required": ["left", "right"],
+              "properties": { "left": { "$ref": "#/$defs/Grid" }, "right": { "$ref": "#/$defs/Grid" } } } } }
+      ]
+    },
+    "System": {
+      "type": "object", "additionalProperties": false, "required": ["effect"],
+      "properties": {
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "effect": { "enum": ["crippleLocation", "crippleMovement", "crippleCortex", "crippleHead", "crippleArcNode", "code"] },
+        "location": { "$ref": "common.schema.json#/$defs/Location" },
+        "code": { "$ref": "common.schema.json#/$defs/HookName" }
+      }
+    },
+    "WeaponMount": {
+      "type": "object", "additionalProperties": false, "required": ["weapon"],
+      "properties": {
+        "weapon": { "$ref": "common.schema.json#/$defs/Id" },
+        "location": { "$ref": "common.schema.json#/$defs/Location", "description": "Overrides the weapon's own location." },
+        "count": { "type": "integer", "minimum": 1, "default": 1 },
+        "socket": { "type": "string", "description": "Figure socket name (30-figures section 5)." }
+      }
+    },
+    "Hardpoint": {
+      "type": "object", "additionalProperties": false, "required": ["slot", "location", "options"],
+      "properties": {
+        "slot": { "$ref": "common.schema.json#/$defs/Id" },
+        "location": { "$ref": "common.schema.json#/$defs/Location" },
+        "default": { "$ref": "common.schema.json#/$defs/Id" },
+        "options": { "type": "array", "minItems": 1, "items": {
+          "type": "object", "additionalProperties": false, "required": ["id", "name"],
+          "properties": {
+            "id": { "$ref": "common.schema.json#/$defs/Id" },
+            "name": { "$ref": "common.schema.json#/$defs/Name" },
+            "weapons": { "type": "array", "items": { "$ref": "#/$defs/WeaponMount" } },
+            "abilities": { "$ref": "common.schema.json#/$defs/IdList" },
+            "statMods": { "type": "object", "additionalProperties": { "type": "integer" } },
+            "cost": { "type": "integer", "default": 0 }
+          } } }
+      }
+    },
+    "TrooperSlot": {
+      "type": "object", "additionalProperties": false, "required": ["profile", "min", "max"],
+      "properties": {
+        "profile": { "$ref": "common.schema.json#/$defs/Id" },
+        "min": { "type": "integer", "minimum": 0 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "Figure": {
+      "type": "object", "additionalProperties": false, "required": ["archetype"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "GLB slug; omit for procedural only." },
+        "archetype": { "enum": ["infantry", "caster", "solo", "beast", "lightEngine", "heavyEngine", "superHeavyEngine", "colossal", "battleEngine", "structure"] },
+        "heightIn": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}

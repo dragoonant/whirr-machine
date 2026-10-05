@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/list.schema.json",
+  "title": "Army list",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "faction", "level", "leader", "entries"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "faction": { "$ref": "common.schema.json#/$defs/Id" },
+    "level": { "enum": ["recon", "skirmish", "pitched", "grandMelee"] },
+    "points": { "type": "integer", "minimum": 0, "description": "Declared total; validate-data recomputes and compares." },
+    "leader": { "$ref": "common.schema.json#/$defs/Id" },
+    "entries": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["profile"],
+        "properties": {
+          "ref": { "$ref": "common.schema.json#/$defs/Id", "description": "Stable id within the list; default = profile." },
+          "profile": { "$ref": "common.schema.json#/$defs/Id" },
+          "size": { "type": "integer", "minimum": 1, "description": "Unit size (grunts)." },
+          "loadout": { "type": "object", "description": "hardpoint slot -> option id",
+            "additionalProperties": { "$ref": "common.schema.json#/$defs/Id" } },
+          "attachments": { "$ref": "common.schema.json#/$defs/IdList" },
+          "advanceDeploy": { "type": "boolean" }
+        }
+      }
+    },
+    "source": { "type": "string", "maxLength": 120 }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/feat.schema.json",
+  "title": "Feat (once per game, during the caster's activation)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "effect", "scope", "duration"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "when": { "$ref": "common.schema.json#/$defs/Condition" },
+    "effect": { "$ref": "common.schema.json#/$defs/EffectList" },
+    "scope": { "$ref": "common.schema.json#/$defs/Scope" },
+    "duration": { "$ref": "common.schema.json#/$defs/Duration" },
+    "verify": { "type": "string" }
+  }
+}

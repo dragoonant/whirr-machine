@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/ability.schema.json",
+  "title": "Ability (model rule, weapon quality, special attack or action)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "kind", "trigger", "effect", "scope", "duration"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "kind": { "enum": ["passive", "triggered", "specialAttack", "specialAction", "weaponQuality", "aura"] },
+    "trigger": { "$ref": "common.schema.json#/$defs/WindowId" },
+    "when": { "$ref": "common.schema.json#/$defs/Condition" },
+    "effect": { "$ref": "common.schema.json#/$defs/EffectList" },
+    "scope": { "$ref": "common.schema.json#/$defs/Scope" },
+    "duration": { "$ref": "common.schema.json#/$defs/Duration" },
+    "optional": { "type": "boolean", "default": false, "description": "true = owner may decline; raises triggerWindow." },
+    "limit": { "enum": ["oncePerActivation", "oncePerTurn", "oncePerRound", "oncePerGame"] },
+    "cost": { "type": "object", "additionalProperties": false, "properties": { "focus": { "type": "integer", "minimum": 0 } } },
+    "attack": { "$ref": "common.schema.json#/$defs/Id", "description": "specialAttack only: the weapon it uses." },
+    "verify": { "type": "string", "description": "Open rules question; mirrored in needs-rules-check.md." }
+  }
+}

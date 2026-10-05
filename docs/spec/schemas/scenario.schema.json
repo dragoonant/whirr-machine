@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/scenario.schema.json",
+  "title": "Scenario (original names; all distances in inches; origin = table centre, +z = player B edge)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "levels", "table", "deployment", "rounds", "scoring", "elements"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "levels": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["recon", "skirmish", "pitched", "grandMelee"] } },
+    "table": {
+      "type": "object", "additionalProperties": false, "required": ["w", "d"],
+      "properties": { "w": { "$ref": "common.schema.json#/$defs/Inches" }, "d": { "$ref": "common.schema.json#/$defs/Inches" } }
+    },
+    "deployment": {
+      "type": "object", "additionalProperties": false, "required": ["first", "second"],
+      "properties": {
+        "first": { "$ref": "common.schema.json#/$defs/Inches" },
+        "second": { "$ref": "common.schema.json#/$defs/Inches" },
+        "advance": { "$ref": "common.schema.json#/$defs/Inches", "default": 3 },
+        "unitSpread": { "$ref": "common.schema.json#/$defs/Inches", "default": 3 }
+      }
+    },
+    "rounds": { "type": "integer", "minimum": 1, "default": 7 },
+    "scoring": {
+      "type": "object", "additionalProperties": false, "required": ["fromRound", "fromPlayer", "winMargin"],
+      "properties": {
+        "fromRound": { "type": "integer", "minimum": 1 },
+        "fromPlayer": { "enum": ["first", "second"] },
+        "winMargin": { "type": "integer", "minimum": 1 },
+        "winOnOpponentTurnOnly": { "type": "boolean", "default": true },
+        "leaderPresence": { "type": "integer", "default": 10, "description": "Tiebreak scenario-presence value of a Leader." }
+      }
+    },
+    "killBox": {
+      "type": "object", "additionalProperties": false, "required": ["fromRound", "depth", "vp"],
+      "properties": {
+        "fromRound": { "type": "integer", "minimum": 1 },
+        "fromPlayer": { "enum": ["first", "second"], "default": "first" },
+        "depth": { "$ref": "common.schema.json#/$defs/Inches" },
+        "vp": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "zones": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "pos", "shape"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/Id" },
+          "pos": { "$ref": "common.schema.json#/$defs/Vec2" },
+          "rot": { "type": "number" },
+          "shape": { "$ref": "common.schema.json#/$defs/Shape" }
+        } }
+    },
+    "elements": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "kind", "pos", "hold", "vp"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/Id" },
+          "kind": { "enum": ["objective50", "objective40", "flag", "scenarioTerrain", "zone"] },
+          "pos": { "$ref": "common.schema.json#/$defs/Vec2" },
+          "zone": { "$ref": "common.schema.json#/$defs/Id" },
+          "terrain": { "$ref": "common.schema.json#/$defs/Id", "description": "scenarioTerrain: the layout piece id." },
+          "owner": { "enum": ["A", "B", "first", "second"], "description": "Friendly-only elements." },
+          "hold": {
+            "type": "object", "additionalProperties": false, "required": ["within"],
+            "properties": {
+              "within": { "$ref": "common.schema.json#/$defs/Inches" },
+              "models": { "type": "integer", "minimum": 1, "default": 1 },
+              "eligible": { "type": "array", "uniqueItems": true,
+                "items": { "enum": ["leader", "warEngine", "battleEngine", "solo", "unitAll", "any"] } }
+            }
+          },
+          "contest": {
+            "type": "object", "additionalProperties": false, "required": ["within"],
+            "properties": {
+              "within": { "$ref": "common.schema.json#/$defs/Inches" },
+              "excludes": { "type": "array", "uniqueItems": true,
+                "items": { "enum": ["leader", "inert", "wild", "disabled", "knockedDown"] } }
+            }
+          },
+          "vp": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "control": { "type": "integer", "minimum": 0 },
+              "dominate": { "type": "integer", "minimum": 0 },
+              "destroy": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "verify": { "type": "string" }
+        } }
+    },
+    "terrainLayout": { "$ref": "common.schema.json#/$defs/Id" }
+  }
+}

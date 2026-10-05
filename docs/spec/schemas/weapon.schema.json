@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/weapon.schema.json",
+  "title": "Weapon profile",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "type", "rng", "pow"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "type": { "enum": ["melee", "ranged"] },
+    "rng": {
+      "description": "Inches. Melee: 1 (default) or 2 (reach). Ranged: a number, or SP<n> for spray.",
+      "oneOf": [ { "type": "number", "exclusiveMinimum": 0 }, { "type": "string", "pattern": "^SP\\d+$" } ]
+    },
+    "rof": { "$ref": "common.schema.json#/$defs/DiceExpr" },
+    "aoe": { "$ref": "common.schema.json#/$defs/Inches" },
+    "pow": { "type": "integer", "minimum": 0, "description": "Direct-hit POW." },
+    "blastPow": { "type": "integer", "minimum": 0, "description": "AOE weapons only (the card shows pow/blastPow)." },
+    "location": { "$ref": "common.schema.json#/$defs/Location" },
+    "damageTypes": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/DamageType" } },
+    "qualities": { "$ref": "common.schema.json#/$defs/IdList", "description": "Ability ids of kind weaponQuality (core/qualities.json)." },
+    "abilities": { "$ref": "common.schema.json#/$defs/IdList" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" }
+  },
+  "allOf": [
+    { "if": { "properties": { "type": { "const": "melee" } } },
+      "then": { "properties": { "rng": { "enum": [1, 2] } },
+                "not": { "anyOf": [ { "required": ["rof"] }, { "required": ["aoe"] } ] } } },
+    { "if": { "properties": { "type": { "const": "ranged" } } }, "then": { "required": ["rof"] } },
+    { "if": { "required": ["aoe"] }, "then": { "required": ["blastPow"] } }
+  ]
+}

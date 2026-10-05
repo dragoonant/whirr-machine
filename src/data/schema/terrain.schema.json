@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/terrain.schema.json",
+  "title": "Terrain piece type (the engine reads rulesType and props, never the mesh)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "rulesType", "footprint", "height"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "rulesType": { "enum": ["obstacle", "obstruction", "forest", "shallowWater", "rough", "hill", "trench", "building", "rubble", "hazard", "openGround"] },
+    "footprint": { "$ref": "common.schema.json#/$defs/Shape" },
+    "height": { "$ref": "common.schema.json#/$defs/Inches", "description": "Prism height for LOS; 0 = flat." },
+    "props": {
+      "type": "object", "additionalProperties": false,
+      "description": "Defaults come from rulesType (20-data-schema section 9); set only to override.",
+      "properties": {
+        "blocksLos": { "type": "boolean" },
+        "losThrough": { "$ref": "common.schema.json#/$defs/Inches", "description": "Forest: LOS may pass through this much." },
+        "cover": { "type": "boolean" },
+        "concealment": { "type": "boolean" },
+        "rough": { "type": "boolean" },
+        "impassable": { "type": "boolean" },
+        "crossable": { "type": "boolean", "description": "Obstacle: may be crossed with enough movement to clear it." },
+        "meleeDefBonus": { "type": "integer" },
+        "elevation": { "$ref": "common.schema.json#/$defs/Inches" },
+        "resistance": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/DamageType" } },
+        "hazard": {
+          "type": "object", "additionalProperties": false, "required": ["effect"],
+          "properties": { "effect": { "$ref": "common.schema.json#/$defs/EffectList" }, "trigger": { "enum": ["enter", "endActivation", "maintenance"] } }
+        }
+      }
+    },
+    "mesh": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "GLB slug; procedural prism if absent." },
+    "verify": { "type": "string" }
+  }
+}

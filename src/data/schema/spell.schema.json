@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/spell.schema.json",
+  "title": "Spell",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "cost", "rng", "dur", "offensive", "effect", "scope"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "cost": { "type": "integer", "minimum": 0 },
+    "rng": { "oneOf": [ { "type": "number", "exclusiveMinimum": 0 }, { "enum": ["SELF", "CTRL"] } ] },
+    "aoe": { "oneOf": [ { "$ref": "common.schema.json#/$defs/Inches" }, { "const": "CTRL" } ] },
+    "pow": { "type": "integer", "minimum": 0 },
+    "dur": { "enum": ["-", "TURN", "RND", "UP"] },
+    "offensive": { "type": "boolean", "description": "true = arcane attack (2d6+AAT vs DEF) dealing magical damage." },
+    "when": { "$ref": "common.schema.json#/$defs/Condition" },
+    "effect": { "$ref": "common.schema.json#/$defs/EffectList" },
+    "scope": { "$ref": "common.schema.json#/$defs/Scope" },
+    "verify": { "type": "string" }
+  }
+}

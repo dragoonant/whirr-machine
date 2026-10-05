@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/faction.schema.json",
+  "title": "Faction",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "appVersion", "palette", "sourceHues"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "short": { "type": "string", "maxLength": 12 },
+    "appVersion": { "type": "string", "description": "Official app/card version the numbers were entered from, e.g. '2026-06'." },
+    "source": { "$ref": "common.schema.json#/$defs/Text", "description": "Where numbers came from; cross-checks done." },
+    "keywords": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/Keyword" } },
+    "abilities": { "$ref": "common.schema.json#/$defs/IdList", "description": "Faction-wide rules." },
+    "palette": {
+      "type": "object", "additionalProperties": false, "required": ["primary", "secondary"],
+      "properties": {
+        "primary": { "$ref": "common.schema.json#/$defs/Hex" },
+        "secondary": { "$ref": "common.schema.json#/$defs/Hex" },
+        "metal": { "$ref": "common.schema.json#/$defs/Hex" },
+        "base": { "$ref": "common.schema.json#/$defs/Hex" },
+        "ui": { "$ref": "common.schema.json#/$defs/Hex" }
+      }
+    },
+    "sourceHues": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": { "type": "number", "minimum": 0, "maximum": 360 },
+      "description": "The two dominant hues baked into this faction's GLB textures (army painter input)."
+    },
+    "marking": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Original marking slug (no SFG icons)." }
+  }
+}
