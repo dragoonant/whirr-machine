@@ -1,0 +1,529 @@
+{
+  "_comment": "Owned by the audio task. All prompts and lines are original wording. Run `npx tsx tools/gen-audio.ts` to generate missing files into public/audio/<id>.mp3 (music into public/audio/music/<id>.mp3). Mirrored by src/client/audio/manifest.ts.",
+  "voice": {
+    "voiceId": "SOYHLrjzK2X1ezoPC6cr",
+    "voiceName": "Harry - Fierce Warrior",
+    "modelId": "eleven_flash_v2_5"
+  },
+  "music": {
+    "endpoint": "/v1/music",
+    "modelId": "music_v1",
+    "forceInstrumental": true,
+    "outputFormat": "mp3_44100_128"
+  },
+  "items": [
+    {
+      "id": "we-step",
+      "kind": "sfx",
+      "group": "engine",
+      "prompt": "One heavy footfall of a huge steam-driven iron walking machine: a deep metal clank of a massive foot plate hitting stone, a short hiss of venting steam and a faint grinding of gears, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "we-boiler-idle",
+      "kind": "sfx",
+      "group": "engine",
+      "prompt": "A steady low rumbling industrial boiler idling: deep furnace roar, faint bubbling water, rhythmic soft piston chuffing, seamless steady ambience, no music, no voices",
+      "durationSeconds": 4,
+      "promptInfluence": 0.6,
+      "loop": true
+    },
+    {
+      "id": "we-steam-vent",
+      "kind": "sfx",
+      "group": "engine",
+      "prompt": "A sudden burst of pressurised steam escaping a metal valve: sharp loud hiss that fades away, a small metallic rattle at the start, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-fist",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A huge iron fist smashing into a plate of thick armour: heavy dull metallic crunch with a deep low thud and a ringing tail, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-blade",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A steel sword slash striking an iron plate: a quick bright metallic scrape and clang with a short ring, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-axe",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A heavy axe chopping into thick metal armour: a deep wedge of steel biting iron, a heavy clang and a crunch, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-knife",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A short fast knife stab into leather and metal: a quick sharp slice and a small tink, no music, no voices",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "melee-club",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A gun stock swung into a body in heavy armour: a hard wooden and metallic thump with a grunt of impact, no music, no voices",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "melee-shield",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A heavy steel shield smashed against an iron wall: a loud booming metallic slam with a short ring, close and punchy, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "hit-trooper",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A short dull impact of a bullet hitting a soldier in cloth and leather armour, a muffled thud, no music, no voices",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "attack-miss",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A fast airy whoosh of a heavy weapon swung through empty air, quick and dry, no music, no voices",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "pa-slam",
+      "kind": "sfx",
+      "group": "power",
+      "prompt": "A heavy body slammed into an iron wall: a crashing metal collision, a clattering skid across stone and a settling rattle, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "pa-throw",
+      "kind": "sfx",
+      "group": "power",
+      "prompt": "A burst of hydraulic piston strain and a short grinding groan of gears, then a heavy crash as a large object lands on stone and rolls, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "pa-headbutt",
+      "kind": "sfx",
+      "group": "power",
+      "prompt": "A loud heavy iron clang: a thick steel helmet slamming hard into an iron plate, one deep booming bonk with a short metallic ring, close and powerful, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "pa-trample",
+      "kind": "sfx",
+      "group": "power",
+      "prompt": "Rapid heavy iron stomps with crunching and snapping debris underfoot, five fast footfalls of a huge machine, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-magelock-pistol",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A single sharp pistol shot: a crisp loud crack with a short snap of a flintlock-like mechanism, dry and punchy, a faint sizzle of arcane sparks, no music, no voices",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-dual-pistol",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "Two sharp pistol shots fired almost together, a quick double crack, dry and punchy, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-spellstorm-pistol",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A rapid stuttering burst of electrically charged pistol shots, each a crack with a bright crackling zap tail, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-spellstorm-cannon",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "Three separate sharp cannon shots with silence between each: each a sudden loud boom with a short electric zap, distinct hard transients, dry, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-magelock-rifle",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A single loud rifle shot recorded up close: a sharp explosive crack with a brief echo tail, dry and punchy, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-scattergun",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A single wide shotgun blast: a loud booming report with a spray of pellets whistling and rattling against metal, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-cannon",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A single large artillery cannon shot recorded up close: a sudden huge explosive boom with a sharp crack, brief rumble, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-cannon-blast",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A deep heavy cannon thump followed by a loud explosive burst of a shell detonating with rumbling debris, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-slug-cannon",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A large heavy slug gun firing one solid metal slug: a massive flat bang with a hard mechanical clunk of the breech, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-grenade-launcher",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A sudden punchy thump of a grenade fired from a tube followed by a sharp loud explosion bang, dry, short tail, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-jack-buster",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A rocket launch: a hard whooshing ignition roar of a rocket leaving a tube trailing a hissing flame, ending in a sharp metallic crunch, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-carbine",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A single sharp suppressed carbine shot: a tight muffled crack with a soft mechanical bolt cycle, dry, no music, no voices",
+      "durationSeconds": 0.6,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "gun-assault-cannon",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A fast heavy rattling burst of a large automatic cannon: rhythmic deep booms with metal casings clattering, no music, no voices",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-thrown-axe",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A heavy axe thrown spinning through the air with a whirring whoosh and a chunk as it buries in wood and metal, no music, no voices",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "spell-arcane-bolt",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "A crackling bolt of arcane energy: a rising electric charge, a sharp zap release and a shimmering resonant tail, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "spell-frost",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "A freezing burst: a sharp crystalline crack of ice forming, tinkling shards and a cold airy rush, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "spell-lightning",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "A branching lightning arc jumping between metal objects: a crackling electric snap with a sizzling buzz and a low thunder tail, no music, no voices",
+      "durationSeconds": 1.2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "focus-allocate",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A short bright magical chime with a soft glassy shimmer, two rising notes, gentle and clean, no music, no voices",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "boost-whine",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A rising mechanical energy whine of a capacitor charging up, pitch climbing quickly then a short snap at the top, no music, no voices",
+      "durationSeconds": 1,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "sys-crippled",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A machine system failing: electrical sparks popping, a grinding gear that stutters and a metallic screech ending in a clunk, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "we-wreck",
+      "kind": "sfx",
+      "group": "damage",
+      "prompt": "A huge steam boiler rupturing: an explosive burst, a long roaring hiss of steam and a collapsing crash of heavy iron plates falling and settling, no music, no voices",
+      "durationSeconds": 3,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-cyg",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A soldier hit and falling in armour: a short pained grunt, a stagger and a heavy collapse with equipment clattering on stone, no words, no music",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "death-kha",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A burly soldier in heavy armour taking a hit: a deep gruff groan, a dull thud and a heavy fall with metal gear rattling, no words, no music",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "death-caster",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A dramatic fall of a leader: a short strained gasp, a heavy body falling and a low sinking arcane resonance fading out, no words, no music",
+      "durationSeconds": 3,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "tough-save",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A tough soldier shrugging off a hit: a short grunt of effort and a staggering boot scuff on stone, no words, no music",
+      "durationSeconds": 1,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "cloud-hiss",
+      "kind": "sfx",
+      "group": "env",
+      "prompt": "A low steady hiss of a spreading cloud of smoke or gas, soft and airy, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.55
+    },
+    {
+      "id": "fire-crackle",
+      "kind": "sfx",
+      "group": "env",
+      "prompt": "Burning wood and tar crackling and popping, a low flickering flame roar, no music, no voices",
+      "durationSeconds": 2,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "corrosion-sizzle",
+      "kind": "sfx",
+      "group": "env",
+      "prompt": "Acid eating into metal: bubbling, fizzing and a sharp hissing sizzle, no music, no voices",
+      "durationSeconds": 1.8,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "dice-2d6",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "Two wooden dice shaken in a hand and thrown hard onto a wooden table: loud close clattering knocks and tumbling taps, no music, no voices",
+      "durationSeconds": 1.3,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "dice-3d6",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "Three six-sided wooden dice shaken and rolled across a wooden table: a busy clatter then tumbling taps settling, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "ui-click",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A single short crisp mechanical button click, dry and small, no music, no voices",
+      "durationSeconds": 0.5,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "turn-bell",
+      "kind": "sfx",
+      "group": "ui",
+      "prompt": "A single struck brass bell, clear metallic ring with a medium decay, one strike, no music, no voices",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "vo-round-start",
+      "kind": "voice",
+      "group": "voice",
+      "text": "A new round begins."
+    },
+    {
+      "id": "vo-your-turn",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Your turn. Take command."
+    },
+    {
+      "id": "vo-enemy-turn",
+      "kind": "voice",
+      "group": "voice",
+      "text": "The enemy moves."
+    },
+    {
+      "id": "vo-control-phase",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Control phase. Check the objectives."
+    },
+    {
+      "id": "vo-boost",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Boost!"
+    },
+    {
+      "id": "vo-critical",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Critical!"
+    },
+    {
+      "id": "vo-assassination",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Assassination!"
+    },
+    {
+      "id": "vo-scenario-scored",
+      "kind": "voice",
+      "group": "voice",
+      "text": "The scenario is scored."
+    },
+    {
+      "id": "vo-victory",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Victory is yours. Well fought."
+    },
+    {
+      "id": "vo-defeat",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Defeat. The field is lost."
+    },
+    {
+      "id": "music-title-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Title theme, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, slow ominous and grand, steady tempo, loops seamlessly",
+      "durationSeconds": 75,
+      "loop": true
+    },
+    {
+      "id": "music-battle-a-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, low-to-medium intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "music-battle-b-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, brooding and tense, low-to-medium intensity, slower pulse, steady dynamics so effects stand out, loops seamlessly",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "music-victory-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Short victory stinger, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, triumphant brass fanfare with a final anvil strike, ends cleanly",
+      "durationSeconds": 12
+    },
+    {
+      "id": "music-defeat-a",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Short defeat stinger, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, mournful low brass and strings falling away, a final dull anvil toll, ends cleanly",
+      "durationSeconds": 12
+    },
+    {
+      "id": "music-title-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Title theme, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, slow ominous and grand, steady tempo, loops seamlessly",
+      "durationSeconds": 75,
+      "loop": true
+    },
+    {
+      "id": "music-battle-a-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, low-to-medium intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "music-battle-b-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, brooding and tense, low-to-medium intensity, slower pulse, steady dynamics so effects stand out, loops seamlessly",
+      "durationSeconds": 150,
+      "loop": true
+    },
+    {
+      "id": "music-victory-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Short victory stinger, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, triumphant brass fanfare with a final anvil strike, ends cleanly",
+      "durationSeconds": 12
+    },
+    {
+      "id": "music-defeat-b",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Short defeat stinger, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, mournful low brass and strings falling away, a final dull anvil toll, ends cleanly",
+      "durationSeconds": 12
+    }
+  ]
+}
