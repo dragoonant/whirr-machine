@@ -17,6 +17,8 @@
 | `src/engine/decider.ts` | `Decider`, random and replay deciders | implemented |
 | `src/engine/index.ts` | `createGame step legalActions validate replay save load view query.* describe.*` | stubs (throw) |
 
+- M1 engine pieces: `geometry.ts`, `los.ts`, `measure.ts`, `terrain.ts`, `dice.ts`, `attack.ts`, `damage.ts` (damage grid), with tests in `tests/engine/` and `tests/data/`.
+- Starter data in `src/data/` (core, factions, lists, scenarios, terrain; loader `index.ts`/`raw.ts`); `tools/validate-data.ts` implemented (77 abilities, 14 models, 23 weapons, 2 lists, 2 scenarios).
 - Specs reconciled with the official rulebook and Quick Start (M1 commit); rulings logged in `docs/needs-rules-check.md`.
 - Data schemas: `src/data/schema/*.schema.json` (11 files, kept identical to `docs/spec/schemas`).
 
@@ -34,4 +36,6 @@
 Scenario decision: S1 Ashwall Divide uses Quick Start rules (hold 2+ within 2", contest within 2", scoring
 from round 1). GOLD-001 runs on `scn-qs-demo` with a pinned `qs-2025` bundle.
 
-Next: M1 (geometry and LOS, headless sim, `validate-data`).
+M1 landed: typecheck, 41 tests and validate-data pass. Open: `src/engine/code-hooks.ts` not yet present (16 code hooks unchecked).
+
+Next: M2 (engine core: createGame/step/legalActions, activation flow, code hooks, headless sim).
