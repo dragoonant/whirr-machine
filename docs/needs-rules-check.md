@@ -98,3 +98,11 @@ RULING: Beat Back timing | The push and follow-up resolve after damage (A1 step 
 RULING: Critical with no crit rule | Razor's 5,5 and 6,6 rolls and Vilkul's 5,5 are crits with no effect | The weapons have no critical rule
 RULING: Charge boost | Only the charge attack gets the free damage boost; additional melee attacks don't | QS p47: the extra attack rolls 2d6+1 (Weapon Master) only
 RULING: AOE 2 for Razor's grenades | Kept; blast hits the 2 closest models within 2", and Caine at 1.199" is third, so he is excluded | QS p46 names exactly two blast victims
+RULING: Two friendly upkeeps on Razor | The engine follows R8.6 (rulebook p110: one friendly upkeep per model), so Avenging Force replaces Superiority; GOLD-001 asserts DEF 11 and one upkeep paid. The QS keeps both | Core rule beats the QS walkthrough; open check whether the QS cards override it
+RULING: Take Down vs the QS | Vilkul's melee kill of Falk is removed from play (Take Down in our data), not destroyed as the QS narrates | Take Down is unverified (U-cd) on the QS card; open app check
+RULING: Skipping initial attacks | A model may give up its remaining initial attacks by buying an additional attack (after at least one attack) | QS p47: Vilkul attacks once with her axe, never with her knife, then buys an extra axe attack
+RULING: Beat Back follow-up | The pushed model is the target; the follow-up 1" advance is the attacker's, taken with the trigger | Rulebook wording; the M1 data applied both moves to the target
+RULING: Charge move | After the target is declared, the charge is a straight-line moveModel (any line that could reach melee range); it may stop early only once the target is in range; a blocked charge ends where it stops | R5.2 (p75); the engine used to auto-move to contact
+RULING: Evasive while knocked down | Not offered: a knocked-down or stationary model cannot advance | R5 movement; Deuce is knocked down by Momentum before Evasive would trigger (QS p46)
+RULING: Cloud duration | Clouds end at the start of the creator's next turn, or with the effect that made them, before Maintenance | QS p45: the ash clouds are gone at the start of Khador's turn
+RULING: Blast roll order | Simultaneous blast damage rolls go in distance order, ties by model id | Arbitrary but stable; matches the QS order Glover then Watts

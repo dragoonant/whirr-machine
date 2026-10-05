@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
 import { checkRefs, rawRecords, type RecordType, type TypedRecord } from '../src/data/index'
+import { codeHooks, knownCodeConditions } from '../src/engine/code-hooks'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const schemaDir = path.join(root, 'src/data/schema')
@@ -14,21 +15,10 @@ export interface ValidationReport { errors: string[]; warnings: string[]; stats:
 const MK3_KEYS = ['STR', 'facing', 'backArc', 'freeStrike', 'template', 'scatter', 'deviation']
 const LEVEL_CAP: Record<string, number> = { recon: 30, skirmish: 50, pitched: 75, grandMelee: 100 }
 
-/** Names mentioned in the engine code-hook registry files, or null when the registry does not exist yet. */
+/** Names the engine code-hook registry knows: effect hooks, condition hooks and code conditions. */
 export function hookNames(): Set<string> | null {
-  const files = ['src/engine/code-hooks.ts']
-  const fdir = path.join(root, 'src/engine/factions')
-  if (fs.existsSync(fdir)) for (const f of fs.readdirSync(fdir)) files.push('src/engine/factions/' + f)
-  const names = new Set<string>()
-  let any = false
-  for (const f of files) {
-    const p = path.join(root, f)
-    if (!fs.existsSync(p)) continue
-    any = true
-    const txt = fs.readFileSync(p, 'utf8')
-    for (const m of txt.matchAll(/([A-Za-z][A-Za-z0-9]*)['"`]?\s*[:(]/g)) names.add(m[1])
-  }
-  return any ? names : null
+  const reg = codeHooks()
+  return new Set<string>([...Object.keys(reg.effects ?? {}), ...Object.keys(reg.conditions ?? {}), ...knownCodeConditions()])
 }
 
 function collectCodes(node: unknown, out: Set<string>): void {

@@ -150,6 +150,11 @@ export function applyDamage(state: GameState, modelId: ModelId, points: number, 
   let nm: ModelState = { ...m, damage, crippled: crip }
   events.push({ type: 'DamageApplied', targetId: modelId, attackId: opts.attackId, instanceId: opts.instanceId, source: opts.source ?? 'direct', points, damageTypes: opts.damageTypes ?? [], grid: gridId, column, columnRollId, boxes, crippled: newly, overflow } as GameEvent)
   for (const x of newly) events.push({ type: 'SystemCrippled', modelId, system: x } as GameEvent)
+  // R8 crippled Cortex: the war-engine loses all its focus at once
+  if (newly.includes('C') && m.type === 'warEngine' && nm.focus > 0) {
+    events.push({ type: 'FocusChanged', modelId, delta: -nm.focus, after: 0, reason: 'lose' } as GameEvent)
+    nm = { ...nm, focus: 0 }
+  }
   if (points > 0 && isFull(damage) && m.life === 'active') {
     nm = { ...nm, life: 'disabled' }
     events.push({ type: 'LifeStateChanged', modelId, from: 'active', to: 'disabled', cause: opts.attackId } as GameEvent)

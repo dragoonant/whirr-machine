@@ -1,19 +1,26 @@
 # Handoff
 
-**Current state:** M0 is done. Specs, frozen contracts, the rules checklist and the review fixes are on
-`main`. Every former `(verify)` was checked against the official PDFs in `docs/sources/` (MK4 rulebook,
-Quick Start Jul 2025, Steamroller 2026); what the sources don't settle is tagged `(unsourced)` or `(app)`
-and logged in `docs/needs-rules-check.md`.
+**Current state:** M2 is done. The rules engine is integrated behind `src/engine/index.ts`: whole Quick Start games run
+headless (`npm run sim -- --games 50 --seed 1`: every game ends, zero invariant violations), the Quick Start worked
+turns replay exactly through `step` (GOLD-001), and a sensible random bot (`src/ai/random.ts`) can play either side.
 
-**Next: M1, geometry + LOS + headless sim + `validate-data`.** Read `10-rules-core` R0, R2 (base table),
-R5.0–R5.23, R6, R10, and `12` LOS/TERR/MOVE. LOS essentials that changed in the review:
-- Intervening models are a **2D** test: the line passes over a base ≥ the target's (R6.4). Volumes
-  (1.75/2.25/2.75/3.25/5") are for terrain only (R6.3).
-- Clouds block lines over their 2D footprint unless the viewer or target is in them; never vs 120 mm (R6.5).
-- Forests: ≤3" when an end is inside; outside→outside blocks beyond; never vs 120 mm (R10).
-- Cover/concealment need the target within 1" of the feature along a line; forest/rubble only when
-  completely inside (R6.11).
-- Knocked down / stationary: base DEF set to 5, bonuses still add (R6.11).
+**Next: M3, the playable client on Pages.** Read `50-client` (all), `30-figures` §1–3 and `40-ai` §8. Build:
+- `GameRunner` store (`src/client/store/`): the only caller of `step`; the bot answers via `pickSensible` when
+  presentation is idle; 5 s watchdog answers bot decisions with `legal[0]`.
+- One prompt per `PendingDecision.kind`, text from `pending.context`, `state.attack` and `query.*` (never client math).
+  Continuous answers: `moveModel` (drag with `query.moveCheck`; charges are straight-line with `constraints.toward`),
+  `placeTroopers` (within 2" of the moved trooper, LOS), `deploy`/`advanceDeploy` (zone in `context.data.zone`).
+  The engine always offers a valid default option (`auto`, `full`, sampled moves) for each of these.
+- Ruler, LOS view, threat rings from `query.distance/los/threat`; scenario control from `query.control`.
+- Grid card, focus orbs, dice tray (every `DiceRolled`), save/load via `save`/`load` in `localStorage`.
+- Start screen: Quick Start demo (`scn-qs-demo`) vs the bot; Ashwall Divide (`scn-ashwall-divide`) with roll-off.
+
+**Engine notes for the client:**
+- `createGame(setup, seed, loadBundle())` registers the bundle; `step(state, action)` finds it by `state.dataVersion`.
+- Model ids: `A:L` / `B:L` leaders, `A:e<n>` list entries, `A:u<n>.<k>` troopers of unit `A:u<n>`.
+- Maintenance can raise decisions (Avenging Force: `context.data.code === 'avengingForce'`); Prey is an
+  `abilityChoice` after deployment (`context.data.code === 'prey'`).
+- Known gaps are listed in `STATUS.md`; rules deviations from the QS are RULINGs in `docs/needs-rules-check.md`.
 
 **Contracts:** additive changes since the first freeze are listed in `docs/spec/00-architecture.md` §14.
 
