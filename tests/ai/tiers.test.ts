@@ -17,10 +17,9 @@ describe('bot tiers on the start screen and in the driver', () => {
     expect(buildNewGame({ listId: sides[0]!.listId, scenario: 'scn-ashwall-divide' }, sides)!.bot).toEqual({ tier: 'normal' })
     expect(buildNewGame({ listId: sides[0]!.listId, scenario: 'scn-ashwall-divide', tier: 'easy' }, sides)!.bot).toEqual({ tier: 'easy' })
   })
-  it('AI-TIER-2 reads the Opponent select when the start screen does not pass a tier', () => {
-    g.document = { querySelector: (sel: string) => (sel.includes('start-opponent') ? { value: 'random' } : null) }
+  it('AI-TIER-2 passes the chosen tier through to the new game', () => {
     const sides = sideChoices()
-    expect(buildNewGame({ listId: sides[0]!.listId, scenario: 'scn-ashwall-divide' }, sides)!.bot).toEqual({ tier: 'random' })
+    expect(buildNewGame({ listId: sides[0]!.listId, scenario: 'scn-ashwall-divide', tier: 'random' }, sides)!.bot).toEqual({ tier: 'random' })
   })
   it('AI-TIER-3 easy and normal answer through the utility AI with legal actions', () => {
     expect(isAiTier('normal')).toBe(true)

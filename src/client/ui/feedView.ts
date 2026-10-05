@@ -43,6 +43,7 @@ export function buildFeed(state: GameState | null, feed: readonly Entry[], expec
   let curDeclared = -1
   const boosts: Record<'attack' | 'damage', number> = { attack: 0, damage: 0 }
   let turnDamage = new Map<string, number>()
+  const dead = new Set<string>()
   for (const { seq, event: ev } of feed) {
     switch (ev.type) {
       case 'AttackDeclared':
@@ -87,6 +88,7 @@ export function buildFeed(state: GameState | null, feed: readonly Entry[], expec
         out.push({ seq, tone: 'damage', text: ev.points > 0 ? `${name(ev.targetId)} loses ${ev.boxes.length} box${ev.boxes.length === 1 ? '' : 'es'}${ev.column ? ` (column ${ev.column})` : ''}` : `${name(ev.targetId)} is unharmed`, detail: ev.crippled.length ? [`Crippled: ${ev.crippled.join(', ')}`] : [] })
         break
       case 'LifeStateChanged': {
+        if (ev.to === 'boxed' || ev.to === 'destroyed') { if (dead.has(ev.modelId)) break; dead.add(ev.modelId) }
         const t = narrate(state, ev)
         if (t) out.push({ seq, tone: 'death', text: t, detail: [] })
         break

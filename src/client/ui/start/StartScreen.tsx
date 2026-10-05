@@ -3,7 +3,8 @@ import { settings, useSettings } from '../../contract'
 import { SoundSettings } from '../../audio/SoundSettings'
 import { TitleArt } from './TitleArt'
 import { openHelp } from '../help/HelpGuide'
-import { BOT_TIERS, buildNewGame, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
+import { usePaint, usePaintStore, PAINT_PRESETS } from '../../figures/paintStore'
+import { BOT_TIERS, buildNewGame, type BotTierChoice, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
 import './start.css'
 
 export interface StartScreenProps {
@@ -22,14 +23,18 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const [listId, setListId] = useState(sides[0]?.listId ?? '')
   const [scenario, setScenario] = useState(scenarios[0]?.id ?? '')
   const [error, setError] = useState<string | null>(null)
-  const [tier, setTier] = useState<string>(BOT_TIERS[0].id)
+  const [tier, setTier] = useState<BotTierChoice>(BOT_TIERS[0].id)
   const side = sides.find((s) => s.listId === listId)
   const scn = scenarios.find((s) => s.id === scenario)
+  const faction = side?.factionId ?? ''
+  const paint = usePaint(faction, 'A')
+  const setPaint = (v: { primary?: string; secondary?: string }) => usePaintStore.getState().setFaction(faction, v)
+  const presetId = PAINT_PRESETS.find((pr) => pr.primary === paint?.primary && pr.secondary === paint?.secondary)?.id ?? (paint ? 'custom' : 'stock')
 
   const start = () => {
     // ?seed= gives a repeatable game (tests, bug reports)
     const seed = new URLSearchParams(location.search).get('seed') ?? undefined
-    const opts = buildNewGame({ listId, scenario, ...(seed ? { seed } : {}) }, sides)
+    const opts = buildNewGame({ listId, scenario, tier, ...(seed ? { seed } : {}) }, sides)
     if (!opts) { setError('Pick a side first.'); return }
     setError(onStart(opts))
   }
@@ -59,12 +64,27 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
             </ul>
           )}
           {side && <p className="start-note">{side.listName}, {side.points} points.</p>}
+          {side && (
+            <div className="start-paint" data-testid="start-paint">
+              <span>Paint</span>
+              <input type="color" aria-label="Main colour" data-testid="start-paint-primary" value={paint?.primary ?? '#444444'} onChange={(e) => setPaint({ ...paint, primary: e.target.value })} />
+              <input type="color" aria-label="Trim colour" data-testid="start-paint-secondary" value={paint?.secondary ?? '#888888'} onChange={(e) => setPaint({ ...paint, secondary: e.target.value })} />
+              <select aria-label="Paint preset" data-testid="start-paint-preset" value={presetId} onChange={(e) => {
+                const pr = PAINT_PRESETS.find((x) => x.id === e.target.value)
+                if (pr) setPaint({ primary: pr.primary, secondary: pr.secondary }); else if (e.target.value === 'stock') setPaint({})
+              }}>
+                <option value="stock">Stock</option>
+                {presetId === 'custom' && <option value="custom">Custom</option>}
+                {PAINT_PRESETS.map((pr) => <option key={pr.id} value={pr.id}>{pr.label}</option>)}
+              </select>
+            </div>
+          )}
         </section>
 
         <section className="start-card">
           <h2>Match</h2>
           <label>Opponent
-            <select data-testid="start-opponent" defaultValue={BOT_TIERS[0].id} onChange={(e) => setTier(e.target.value)}>
+            <select data-testid="start-opponent" defaultValue={BOT_TIERS[0].id} onChange={(e) => setTier(e.target.value as BotTierChoice)}>
               {BOT_TIERS.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
             </select>
           </label>

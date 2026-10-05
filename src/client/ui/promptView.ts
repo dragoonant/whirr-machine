@@ -66,7 +66,7 @@ export const humanize = (state: GameState, text: string): string =>
 
 const costText = (o: DecisionOption): string | undefined => (o.cost?.focus ? `${o.cost.focus} focus` : undefined)
 
-function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxModel?: ModelId): OptionView {
+function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxModel?: ModelId, slam = false): OptionView {
   const a = o.action
   let label = humanize(state, o.label)
   let note = oddsText(o.odds)
@@ -83,13 +83,13 @@ function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxMode
   } else if (a.type === 'endTurn') { label = 'End turn' }
   else if (a.type === 'chargeTarget') {
     const t = state.models[a.targetId]
-    label = `Charge ${modelName(state, a.targetId)}`
+    label = `${slam ? 'Slam' : 'Charge'} ${modelName(state, a.targetId)}`
     hoverId = a.targetId
     const lead = ctxModel
     if (t && lead) {
       const d = queryDistance(lead, a.targetId)
       const th = queryThreat(lead)
-      if (Number.isFinite(d) && th) note = `${d.toFixed(1)}" away, reach ${th.charge}"`
+      if (Number.isFinite(d) && th) note = `${d.toFixed(1)}" away, reach ${slam ? (th.slam ?? th.charge) : th.charge}"`
     }
   } else if (a.type === 'chooseTurnOrder' || a.type === 'chooseEdge') { label = actionLabel(a, state); tone = 'primary' }
   else if ((kind === 'boostAttack' || kind === 'boostDamage') && (a.type === 'boostAttack' || a.type === 'boostDamage')) {
@@ -115,7 +115,7 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
   const lines: string[] = []
   let title = ''
   let form: PromptForm = 'buttons'
-  let options: OptionView[] = (pd.options ?? []).map((o) => toView(o, state, pd.kind, ctx.modelId))
+  let options: OptionView[] = (pd.options ?? []).map((o) => toView(o, state, pd.kind, ctx.modelId, ctx.data?.mode === 'slam'))
   if (!options.length && !PANEL_KINDS.includes(pd.kind)) {
     options = legal.filter((a) => a.type !== 'pass').map((a, i) => ({ id: `legal${i}`, label: actionLabel(a, state), tone: 'neutral' as Tone, action: a }))
   }
@@ -162,7 +162,10 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
       lines.push('Spending 1 focus shrinks the damage; the buttons show the result.')
       break
     }
-    case 'chargeTarget': title = `${who}: choose a charge target`; lines.push('Each button shows the engine’s distance against the charge reach.'); break
+    case 'chargeTarget':
+      if (ctx.data?.mode === 'slam') { title = `${who}: choose a slam target`; lines.push('Each button shows the engine’s distance against the slam reach.') }
+      else { title = `${who}: choose a charge target`; lines.push('Each button shows the engine’s distance against the charge reach.') }
+      break
     case 'castSpell': title = `${who}: cast a spell`; break
     case 'useFeat': title = `${who}: use the feat?`; break
     case 'triggerWindow': {
@@ -205,7 +208,9 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'advanceDeploy': title = 'Advance Deployment: these models may start further forward'; form = 'board'; break
     case 'moveModel': {
       const trig = ctx.data?.trigger as { abilityId?: string; dist?: number; mode?: string } | undefined
-      if (trig?.abilityId) {
+      if (ctx.data?.mode === 'trample') {
+        title = `Trample: ${who} moves in a straight line through the enemy`
+      } else if (trig?.abilityId) {
         title = `${niceName(trig.abilityId)}: ${who} may ${trig.mode === 'place' ? 'be placed' : 'move'} up to ${trig.dist ?? '?'}"${pd.canPass ? ' (optional)' : ''}`
         const t = dataText(trig.abilityId)
         if (t) lines.push(t)

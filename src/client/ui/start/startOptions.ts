@@ -50,16 +50,6 @@ export const BOT_TIERS = [
 export type BotTierChoice = (typeof BOT_TIERS)[number]['id']
 export const DEFAULT_BOT_TIER: BotTierChoice = 'normal'
 
-/** The Opponent select's value (the select on the start screen is uncontrolled), else the default tier. */
-export function selectedBotTier(): BotTierChoice {
-  try {
-    const el = typeof document !== 'undefined' ? document.querySelector('[data-testid="start-opponent"]') as HTMLSelectElement | null : null
-    const v = el?.value
-    if (v && BOT_TIERS.some((b) => b.id === v)) return v as BotTierChoice
-  } catch { /* headless */ }
-  return DEFAULT_BOT_TIER
-}
-
 export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice }
 
 /** The side the player picked is A (human); the first other faction's list is B (bot). */
@@ -71,7 +61,7 @@ export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewG
     scenario: choices.scenario,
     lists: { A: mine.listId, B: theirs.listId },
     controllers: { A: 'human', B: 'bot' },
-    bot: { tier: choices.tier ?? selectedBotTier() },
+    bot: { tier: choices.tier ?? DEFAULT_BOT_TIER },
     ...(choices.seed ? { seed: choices.seed } : {}),
   }
 }
