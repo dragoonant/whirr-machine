@@ -5,7 +5,58 @@
     "board": "bog",
     "name": "Gallows Deadwood",
     "rulesType": "forest",
-    "footprint": {"polygon":[{"x":3,"z":0},{"x":2.598,"z":1.125},{"x":1.5,"z":1.949},{"x":0,"z":2.25},{"x":-1.5,"z":1.949},{"x":-2.598,"z":1.125},{"x":-3,"z":0},{"x":-2.598,"z":-1.125},{"x":-1.5,"z":-1.949},{"x":0,"z":-2.25},{"x":1.5,"z":-1.949},{"x":2.598,"z":-1.125}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.125
+        },
+        {
+          "x": 1.5,
+          "z": 1.949
+        },
+        {
+          "x": 0,
+          "z": 2.25
+        },
+        {
+          "x": -1.5,
+          "z": 1.949
+        },
+        {
+          "x": -2.598,
+          "z": 1.125
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.125
+        },
+        {
+          "x": -1.5,
+          "z": -1.949
+        },
+        {
+          "x": 0,
+          "z": -2.25
+        },
+        {
+          "x": 1.5,
+          "z": -1.949
+        },
+        {
+          "x": 2.598,
+          "z": -1.125
+        }
+      ]
+    },
     "height": 4,
     "visualHeight": 5,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a copse of four gnarled leafless dead trees with hooked branches and hanging moss strands, roots gripping a muddy oval base, eerie haunted swamp mood"
@@ -16,7 +67,12 @@
     "board": "bog",
     "name": "Crooked Stilt Hut",
     "rulesType": "building",
-    "footprint": {"rect":{"w":4,"d":4}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 4
+      }
+    },
     "height": 4.5,
     "visualHeight": 5.5,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a leaning ramshackle wooden hut on crooked stilts over mud, patched plank walls, sagging thatch roof, rope ladder, square base, haunted swamp mood"
@@ -27,7 +83,58 @@
     "board": "bog",
     "name": "Mossy Hummock",
     "rulesType": "hill",
-    "footprint": {"polygon":[{"x":3.5,"z":0},{"x":3.031,"z":1.25},{"x":1.75,"z":2.165},{"x":0,"z":2.5},{"x":-1.75,"z":2.165},{"x":-3.031,"z":1.25},{"x":-3.5,"z":0},{"x":-3.031,"z":-1.25},{"x":-1.75,"z":-2.165},{"x":0,"z":-2.5},{"x":1.75,"z":-2.165},{"x":3.031,"z":-1.25}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3.5,
+          "z": 0
+        },
+        {
+          "x": 3.031,
+          "z": 1.25
+        },
+        {
+          "x": 1.75,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.75,
+          "z": 2.165
+        },
+        {
+          "x": -3.031,
+          "z": 1.25
+        },
+        {
+          "x": -3.5,
+          "z": 0
+        },
+        {
+          "x": -3.031,
+          "z": -1.25
+        },
+        {
+          "x": -1.75,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.75,
+          "z": -2.165
+        },
+        {
+          "x": 3.031,
+          "z": -1.25
+        }
+      ]
+    },
     "height": 1,
     "visualHeight": 1,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low gently sloped earthen mound covered in moss tufts and small mushrooms, flat walkable top, oval base, swamp mood"
@@ -38,7 +145,12 @@
     "board": "bog",
     "name": "Fallen Log Barrier",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":4,"d":0.75}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
     "height": 0.75,
     "visualHeight": 0.9,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a long low barrier of two rotting fallen logs lashed with rope, fungus shelves, narrow strip base, swamp mood"
@@ -49,7 +161,58 @@
     "board": "bog",
     "name": "Murk Pool",
     "rulesType": "shallowWater",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":0.875},{"x":1.25,"z":1.516},{"x":0,"z":1.75},{"x":-1.25,"z":1.516},{"x":-2.165,"z":0.875},{"x":-2.5,"z":0},{"x":-2.165,"z":-0.875},{"x":-1.25,"z":-1.516},{"x":0,"z":-1.75},{"x":1.25,"z":-1.516},{"x":2.165,"z":-0.875}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.2,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a shallow flat oval pool of still murky water with reeds, lily pads and a half-sunk branch at the rim, very low profile"
@@ -60,10 +223,62 @@
     "board": "bog",
     "name": "Bone-Strewn Mire",
     "rulesType": "rough",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":1},{"x":1.25,"z":1.732},{"x":0,"z":2},{"x":-1.25,"z":1.732},{"x":-2.165,"z":1},{"x":-2.5,"z":0},{"x":-2.165,"z":-1},{"x":-1.25,"z":-1.732},{"x":0,"z":-2},{"x":1.25,"z":-1.732},{"x":2.165,"z":-1}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 1
+        },
+        {
+          "x": 1.25,
+          "z": 1.732
+        },
+        {
+          "x": 0,
+          "z": 2
+        },
+        {
+          "x": -1.25,
+          "z": 1.732
+        },
+        {
+          "x": -2.165,
+          "z": 1
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -1
+        },
+        {
+          "x": -1.25,
+          "z": -1.732
+        },
+        {
+          "x": 0,
+          "z": -2
+        },
+        {
+          "x": 1.25,
+          "z": -1.732
+        },
+        {
+          "x": 2.165,
+          "z": -1
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.3,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a flat patch of churned sucking mud with scattered animal bones, a cracked skull and broken stakes, very low profile, oval base"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece, isolated, plain white background, studio lighting, three-quarter view from slightly above, whole piece in frame, original design, a flat oval base of dark wet brown swamp mud filling the whole base, a few puddles of green scum, one big beast skull half sunk in the mud and four curved rib bones lying flat on the mud, a few broken wooden stakes sticking out, mostly dark mud ground with the bones small and low, flat very low terrain base seen from above, no pale base, no standing skeleton, no tall bones, no trees, no huts",
+    "nostretch": true
   },
   {
     "slug": "wt-bog-stumps",
@@ -71,10 +286,62 @@
     "board": "bog",
     "name": "Mossy Stump Cluster",
     "rulesType": "rubble",
-    "footprint": {"polygon":[{"x":2,"z":0},{"x":1.732,"z":0.75},{"x":1,"z":1.299},{"x":0,"z":1.5},{"x":-1,"z":1.299},{"x":-1.732,"z":0.75},{"x":-2,"z":0},{"x":-1.732,"z":-0.75},{"x":-1,"z":-1.299},{"x":0,"z":-1.5},{"x":1,"z":-1.299},{"x":1.732,"z":-0.75}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
     "height": 0.5,
     "visualHeight": 0.8,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a cluster of short broken tree stumps and roots wrapped in moss, low and walkable between, oval base, swamp mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, one compact oval swampy mud base with three short fat broken tree stumps close together, each stump with a jagged splintered broken top of sharp wood shards, no flat cap, no mushroom shape, exposed roots, green moss only on the sides and roots, all three clustered in the middle, no long branches, no fallen log, no leaves, no tall trees, no hut",
+    "nostretch": true
   },
   {
     "slug": "wt-ruins-monolith",
@@ -82,7 +349,12 @@
     "board": "ruins",
     "name": "Root-Bound Monolith",
     "rulesType": "obstruction",
-    "footprint": {"rect":{"w":2.5,"d":2.5}},
+    "footprint": {
+      "rect": {
+        "w": 2.5,
+        "d": 2.5
+      }
+    },
     "height": 5,
     "visualHeight": 6,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a tall weathered carved stone obelisk with flowing abstract spiral carvings, gripped by thick twisting tree roots, square base, ancient overgrown ruin mood"
@@ -93,10 +365,15 @@
     "board": "ruins",
     "name": "Broken Archway",
     "rulesType": "obstruction",
-    "footprint": {"rect":{"w":5,"d":1.25}},
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 1.25
+      }
+    },
     "height": 4,
     "visualHeight": 4.5,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a broken pointed stone archway with one pillar snapped short, slender fluted columns, fallen keystone at its foot, narrow base, ancient overgrown ruin mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a free-standing ruined pointed stone archway, two thick pillars joined by a broken arch with a clear open gap, one side crumbled, a few fallen stones at the base, front view, narrow rectangular base, no building, no tower, no wall behind it"
   },
   {
     "slug": "wt-ruins-colonnade",
@@ -104,7 +381,12 @@
     "board": "ruins",
     "name": "Fallen Colonnade",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":4,"d":0.75}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
     "height": 0.75,
     "visualHeight": 0.9,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low ruined wall made of toppled fluted column drums and a cracked lintel lying end to end, narrow strip base, ancient overgrown ruin mood"
@@ -115,7 +397,11 @@
     "board": "ruins",
     "name": "Crystal Outcrop",
     "rulesType": "obstruction",
-    "footprint": {"circle":{"r":1.25}},
+    "footprint": {
+      "circle": {
+        "r": 1.25
+      }
+    },
     "height": 2.5,
     "visualHeight": 3,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a cluster of tall faceted crystal shards erupting from cracked rock, sharp geometric points, round base, ancient overgrown ruin mood"
@@ -126,7 +412,58 @@
     "board": "ruins",
     "name": "Shadowroot Grove",
     "rulesType": "forest",
-    "footprint": {"polygon":[{"x":3,"z":0},{"x":2.598,"z":1.25},{"x":1.5,"z":2.165},{"x":0,"z":2.5},{"x":-1.5,"z":2.165},{"x":-2.598,"z":1.25},{"x":-3,"z":0},{"x":-2.598,"z":-1.25},{"x":-1.5,"z":-2.165},{"x":0,"z":-2.5},{"x":1.5,"z":-2.165},{"x":2.598,"z":-1.25}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.25
+        },
+        {
+          "x": 1.5,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.5,
+          "z": 2.165
+        },
+        {
+          "x": -2.598,
+          "z": 1.25
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.25
+        },
+        {
+          "x": -1.5,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.5,
+          "z": -2.165
+        },
+        {
+          "x": 2.598,
+          "z": -1.25
+        }
+      ]
+    },
     "height": 4,
     "visualHeight": 5,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a grove of slender pale trees with arching roots growing over broken carved stones, oval base, ancient overgrown ruin mood"
@@ -137,7 +474,42 @@
     "board": "ruins",
     "name": "Flagstone Dais",
     "rulesType": "hill",
-    "footprint": {"polygon":[{"x":3.5,"z":0},{"x":2.475,"z":1.768},{"x":0,"z":2.5},{"x":-2.475,"z":1.768},{"x":-3.5,"z":0},{"x":-2.475,"z":-1.768},{"x":0,"z":-2.5},{"x":2.475,"z":-1.768}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3.5,
+          "z": 0
+        },
+        {
+          "x": 2.475,
+          "z": 1.768
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -2.475,
+          "z": 1.768
+        },
+        {
+          "x": -3.5,
+          "z": 0
+        },
+        {
+          "x": -2.475,
+          "z": -1.768
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 2.475,
+          "z": -1.768
+        }
+      ]
+    },
     "height": 1,
     "visualHeight": 1,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a raised octagonal platform of worn cracked flagstones with two shallow steps and broken column stubs at the corners, flat walkable top"
@@ -148,7 +520,58 @@
     "board": "ruins",
     "name": "Toppled Masonry",
     "rulesType": "rubble",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":0.875},{"x":1.25,"z":1.516},{"x":0,"z":1.75},{"x":-1.25,"z":1.516},{"x":-2.165,"z":0.875},{"x":-2.5,"z":0},{"x":-2.165,"z":-0.875},{"x":-1.25,"z":-1.516},{"x":0,"z":-1.75},{"x":1.25,"z":-1.516},{"x":2.165,"z":-0.875}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
     "height": 0.5,
     "visualHeight": 0.7,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of broken carved stone blocks, column fragments and rocky rubble, low and walkable, oval base, ancient overgrown ruin mood"
@@ -159,7 +582,12 @@
     "board": "village",
     "name": "Domed Chapel",
     "rulesType": "building",
-    "footprint": {"rect":{"w":5,"d":4}},
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 4
+      }
+    },
     "height": 5.5,
     "visualHeight": 6,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a small fieldstone chapel with one round onion dome on a drum tower, arched wooden door, tiled roof, rectangular base, cold northern frontier mood"
@@ -170,7 +598,12 @@
     "board": "village",
     "name": "Stone Watchtower",
     "rulesType": "building",
-    "footprint": {"rect":{"w":3,"d":3}},
+    "footprint": {
+      "rect": {
+        "w": 3,
+        "d": 3
+      }
+    },
     "height": 6,
     "visualHeight": 7,
     "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a tall square fieldstone watchtower with a timber lookout platform and peaked shingle roof, narrow arrow slits, square base, northern frontier mood"
@@ -181,10 +614,61 @@
     "board": "village",
     "name": "Pine Stand",
     "rulesType": "forest",
-    "footprint": {"polygon":[{"x":3,"z":0},{"x":2.598,"z":1.25},{"x":1.5,"z":2.165},{"x":0,"z":2.5},{"x":-1.5,"z":2.165},{"x":-2.598,"z":1.25},{"x":-3,"z":0},{"x":-2.598,"z":-1.25},{"x":-1.5,"z":-2.165},{"x":0,"z":-2.5},{"x":1.5,"z":-2.165},{"x":2.598,"z":-1.25}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.25
+        },
+        {
+          "x": 1.5,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.5,
+          "z": 2.165
+        },
+        {
+          "x": -2.598,
+          "z": 1.25
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.25
+        },
+        {
+          "x": -1.5,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.5,
+          "z": -2.165
+        },
+        {
+          "x": 2.598,
+          "z": -1.25
+        }
+      ]
+    },
     "height": 5,
     "visualHeight": 6,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a stand of five tall straight pine trees with dense needle boughs and fallen cones, oval base, northern frontier mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a stand of four tall green pine trees with separate trunks and dark green needle boughs, standing apart on one oval base of brown forest floor with a few fallen needles, no snow, no backdrop, no wall, no panel, no house"
   },
   {
     "slug": "wt-village-rail-fence",
@@ -192,11 +676,18 @@
     "board": "village",
     "name": "Split-Rail Fence",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":5,"d":0.5}},
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 0.5
+      }
+    },
     "height": 0.75,
     "visualHeight": 1,
-    "props": {"concealment":true},
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a zig-zag split-rail timber fence with three rail sections and crossed posts, see-through, narrow strip base, rustic farm mood"
+    "props": {
+      "concealment": true
+    },
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a standing upright wooden post and rail fence, straight-on front elevation view at eye level, five tall vertical round wooden posts standing upright with three horizontal rails threaded between them, rails shorter than the posts are tall, gaps of empty air visible under and between rails, short green grass strip at the foot, long and narrow, no gate, no pickets, no solid planks, no roof, no house, no lying flat, no overhead view"
   },
   {
     "slug": "wt-village-stone-wall",
@@ -204,10 +695,15 @@
     "board": "village",
     "name": "Fieldstone Wall",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":4,"d":0.75}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
     "height": 0.75,
     "visualHeight": 0.85,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low dry-stacked fieldstone wall with a few loose stones and grass tufts, narrow strip base, rustic farm mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, one long low dry-stacked fieldstone field wall only, a straight knee-high wall of stacked grey stones with a flat capstone row, wide side view, very long and thin on a narrow strip of grass, no roof, no house, no cabin, no door, no windows, no building, no thatch"
   },
   {
     "slug": "wt-village-pond",
@@ -215,10 +711,61 @@
     "board": "village",
     "name": "Mill Pond",
     "rulesType": "shallowWater",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":0.875},{"x":1.25,"z":1.516},{"x":0,"z":1.75},{"x":-1.25,"z":1.516},{"x":-2.165,"z":0.875},{"x":-2.5,"z":0},{"x":-2.165,"z":-0.875},{"x":-1.25,"z":-1.516},{"x":0,"z":-1.75},{"x":1.25,"z":-1.516},{"x":2.165,"z":-0.875}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.2,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a shallow flat oval pond with reeds, a small wooden jetty stub and rounded bank stones, very low profile"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a flat shallow oval farm pond seen from above at a three-quarter angle, still green water surface level with the rim, ring of rounded bank stones and a few reeds, very low profile, no tall objects, no buildings, no mill, no trees"
   },
   {
     "slug": "wt-village-knoll",
@@ -226,10 +773,61 @@
     "board": "village",
     "name": "Grassy Knoll",
     "rulesType": "hill",
-    "footprint": {"polygon":[{"x":3.5,"z":0},{"x":3.031,"z":1.25},{"x":1.75,"z":2.165},{"x":0,"z":2.5},{"x":-1.75,"z":2.165},{"x":-3.031,"z":1.25},{"x":-3.5,"z":0},{"x":-3.031,"z":-1.25},{"x":-1.75,"z":-2.165},{"x":0,"z":-2.5},{"x":1.75,"z":-2.165},{"x":3.031,"z":-1.25}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3.5,
+          "z": 0
+        },
+        {
+          "x": 3.031,
+          "z": 1.25
+        },
+        {
+          "x": 1.75,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.75,
+          "z": 2.165
+        },
+        {
+          "x": -3.031,
+          "z": 1.25
+        },
+        {
+          "x": -3.5,
+          "z": 0
+        },
+        {
+          "x": -3.031,
+          "z": -1.25
+        },
+        {
+          "x": -1.75,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.75,
+          "z": -2.165
+        },
+        {
+          "x": 3.031,
+          "z": -1.25
+        }
+      ]
+    },
     "height": 1,
     "visualHeight": 1,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low grassy hill with gentle slopes, a few rocks breaking the turf and a flat walkable top, oval base"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a gentle round grassy hill with a grey rocky outcrop on one side, a few green grass tufts, a pale dirt path winding up the slope, brown earthy sides and rim, clearly a rounded hill about as tall as a quarter of its width, no snow, no white cap, no plain smooth dome, no buildings, no trees, no stairs"
   },
   {
     "slug": "wt-village-boulders",
@@ -237,10 +835,61 @@
     "board": "village",
     "name": "Boulder Scatter",
     "rulesType": "rubble",
-    "footprint": {"polygon":[{"x":2,"z":0},{"x":1.732,"z":0.75},{"x":1,"z":1.299},{"x":0,"z":1.5},{"x":-1,"z":1.299},{"x":-1.732,"z":0.75},{"x":-2,"z":0},{"x":-1.732,"z":-0.75},{"x":-1,"z":-1.299},{"x":0,"z":-1.5},{"x":1,"z":-1.299},{"x":1.732,"z":-0.75}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
     "height": 0.5,
     "visualHeight": 0.8,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of rounded lichen-covered boulders and small stones, low and walkable between, oval base"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of five chunky rounded grey boulders of different sizes, tallest in the middle, with small stones between them, lying on a flat oval patch of brown earth with a little short grass, side view, natural muted colours, no plants, no leaves, no flowers, no building, no wall"
   },
   {
     "slug": "wt-wasteland-thorn-palisade",
@@ -248,10 +897,15 @@
     "board": "wasteland",
     "name": "Iron Thorn Palisade",
     "rulesType": "obstruction",
-    "footprint": {"rect":{"w":6,"d":1}},
+    "footprint": {
+      "rect": {
+        "w": 6,
+        "d": 1
+      }
+    },
     "height": 3,
     "visualHeight": 3.5,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a tall wall of jagged black iron plates bristling with hooked spikes and draped heavy chains, narrow base, hellish blighted wasteland mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a long straight fence wall of many tall jagged black iron plates standing side by side in a row, each plate topped with hooked spikes, heavy chains hanging between them, wide side view showing the whole long wall, very long and not very deep, flat narrow strip base of dark cracked earth, no single tower, no cone, no building, no gate"
   },
   {
     "slug": "wt-wasteland-chain-barricade",
@@ -259,10 +913,15 @@
     "board": "wasteland",
     "name": "Chain-Strung Barricade",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":4,"d":0.75}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
     "height": 0.75,
     "visualHeight": 1,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low barricade of short iron stakes strung with sagging chains and small barbs, narrow strip base, blighted wasteland mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a long low fence of many short black iron stakes standing side by side in a row, each stake with a barbed point, sagging heavy iron chains hanging between the tops, wide side view showing the whole long fence, very long and not deep, flat narrow strip base of dark cracked earth, no roof, no shed, no house, no wall, no block"
   },
   {
     "slug": "wt-wasteland-thornwood",
@@ -270,10 +929,61 @@
     "board": "wasteland",
     "name": "Thornwood",
     "rulesType": "forest",
-    "footprint": {"polygon":[{"x":3,"z":0},{"x":2.598,"z":1.125},{"x":1.5,"z":1.949},{"x":0,"z":2.25},{"x":-1.5,"z":1.949},{"x":-2.598,"z":1.125},{"x":-3,"z":0},{"x":-2.598,"z":-1.125},{"x":-1.5,"z":-1.949},{"x":0,"z":-2.25},{"x":1.5,"z":-1.949},{"x":2.598,"z":-1.125}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.125
+        },
+        {
+          "x": 1.5,
+          "z": 1.949
+        },
+        {
+          "x": 0,
+          "z": 2.25
+        },
+        {
+          "x": -1.5,
+          "z": 1.949
+        },
+        {
+          "x": -2.598,
+          "z": 1.125
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.125
+        },
+        {
+          "x": -1.5,
+          "z": -1.949
+        },
+        {
+          "x": 0,
+          "z": -2.25
+        },
+        {
+          "x": 1.5,
+          "z": -1.949
+        },
+        {
+          "x": 2.598,
+          "z": -1.125
+        }
+      ]
+    },
     "height": 4,
     "visualHeight": 5,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a cluster of twisted black dead trees covered in long thorns, bark split and charred, oval base of cracked earth, blighted wasteland mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, four short thick twisted trees with dark charcoal-black bark covered in long sharp thorns, clustered closely together on one oval base of grey cracked ash earth, compact crowns that do not reach outside the base, four distinct trunks, no pale wood, no single tree, no backdrop, no wall, no buildings"
   },
   {
     "slug": "wt-wasteland-ritual-dais",
@@ -281,10 +991,14 @@
     "board": "wasteland",
     "name": "Ritual Dais",
     "rulesType": "hill",
-    "footprint": {"circle":{"r":3}},
+    "footprint": {
+      "circle": {
+        "r": 3
+      }
+    },
     "height": 1,
     "visualHeight": 1,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low round stone platform carved with concentric rings of abstract runes and a shallow central groove, flat walkable top, ominous mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low round stone platform one step high with concentric rings of abstract runes carved in the flat top and a shallow central groove, round base, plain, no pillars, no walls, no statues, no buildings"
   },
   {
     "slug": "wt-wasteland-ash-flats",
@@ -292,10 +1006,61 @@
     "board": "wasteland",
     "name": "Cracked Ash Flats",
     "rulesType": "rough",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":1},{"x":1.25,"z":1.732},{"x":0,"z":2},{"x":-1.25,"z":1.732},{"x":-2.165,"z":1},{"x":-2.5,"z":0},{"x":-2.165,"z":-1},{"x":-1.25,"z":-1.732},{"x":0,"z":-2},{"x":1.25,"z":-1.732},{"x":2.165,"z":-1}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 1
+        },
+        {
+          "x": 1.25,
+          "z": 1.732
+        },
+        {
+          "x": 0,
+          "z": 2
+        },
+        {
+          "x": -1.25,
+          "z": 1.732
+        },
+        {
+          "x": -2.165,
+          "z": 1
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -1
+        },
+        {
+          "x": -1.25,
+          "z": -1.732
+        },
+        {
+          "x": 0,
+          "z": -2
+        },
+        {
+          "x": 1.25,
+          "z": -1.732
+        },
+        {
+          "x": 2.165,
+          "z": -1
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.3,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a flat patch of deeply cracked ashen ground with small cinder lumps and fissures, very low profile, oval base"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low flat oval patch of burnt dark grey ground, cracked black crust, powdery ash drifts, a few short black burnt stump stubs only ankle high, small cinders and a few tiny dull orange embers, very low flat terrain seen from a high angle, dark charcoal colour all over, no tall trees, no branches, no large orange, no white, no pale slab, no buildings"
   },
   {
     "slug": "wt-wasteland-blight-pool",
@@ -303,11 +1068,73 @@
     "board": "wasteland",
     "name": "Molten Blight Pool",
     "rulesType": "hazard",
-    "footprint": {"polygon":[{"x":2.25,"z":0},{"x":1.949,"z":0.75},{"x":1.125,"z":1.299},{"x":0,"z":1.5},{"x":-1.125,"z":1.299},{"x":-1.949,"z":0.75},{"x":-2.25,"z":0},{"x":-1.949,"z":-0.75},{"x":-1.125,"z":-1.299},{"x":0,"z":-1.5},{"x":1.125,"z":-1.299},{"x":1.949,"z":-0.75}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.25,
+          "z": 0
+        },
+        {
+          "x": 1.949,
+          "z": 0.75
+        },
+        {
+          "x": 1.125,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1.125,
+          "z": 1.299
+        },
+        {
+          "x": -1.949,
+          "z": 0.75
+        },
+        {
+          "x": -2.25,
+          "z": 0
+        },
+        {
+          "x": -1.949,
+          "z": -0.75
+        },
+        {
+          "x": -1.125,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1.125,
+          "z": -1.299
+        },
+        {
+          "x": 1.949,
+          "z": -0.75
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.3,
-    "props": {"hazard":{"effect":[{"op":"damage","pow":10,"damageType":"fire"}],"trigger":"enter"}},
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a shallow oval pit of bubbling molten slag with a crusted rim and rising bubbles, very low profile, blighted wasteland mood"
+    "props": {
+      "hazard": {
+        "effect": [
+          {
+            "op": "damage",
+            "pow": 10,
+            "damageType": "fire"
+          }
+        ],
+        "trigger": "enter"
+      }
+    },
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a thick oval slab of dark crusted ground with a shallow round pit in the middle filled with glowing molten orange slag and a few bubbles, three-quarter view from above, whole slab in frame, no trees, no buildings"
   },
   {
     "slug": "wt-wasteland-bone-spikes",
@@ -315,10 +1142,61 @@
     "board": "wasteland",
     "name": "Bone Spike Field",
     "rulesType": "rubble",
-    "footprint": {"polygon":[{"x":2,"z":0},{"x":1.732,"z":0.75},{"x":1,"z":1.299},{"x":0,"z":1.5},{"x":-1,"z":1.299},{"x":-1.732,"z":0.75},{"x":-2,"z":0},{"x":-1.732,"z":-0.75},{"x":-1,"z":-1.299},{"x":0,"z":-1.5},{"x":1,"z":-1.299},{"x":1.732,"z":-0.75}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
     "height": 0.5,
     "visualHeight": 1,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of curved bone spikes and ribs jutting from cracked earth, low and walkable between, oval base, blighted wasteland mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a row of six sharpened bone-coloured tusk-like stakes and rusty iron spears planted upright in cracked dark grey earth, each stake long and thin with a sharp point, evenly spaced in a line with open gaps, a few small bone fragments and broken rubble at the base, dark brown and grey ground, side view, no crystals, no cluster, no skeleton, no skull, no creature, no buildings"
   },
   {
     "slug": "wt-outpost-blockhouse",
@@ -326,10 +1204,15 @@
     "board": "outpost",
     "name": "Timber Blockhouse",
     "rulesType": "building",
-    "footprint": {"rect":{"w":6,"d":4.5}},
+    "footprint": {
+      "rect": {
+        "w": 6,
+        "d": 4.5
+      }
+    },
     "height": 4,
     "visualHeight": 5,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a small square fort of sharpened log palisade walls around a timber blockhouse with a snowy roof and firing step, rectangular base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a single small timber blockhouse with a snowy pitched roof inside a low sharpened-log palisade, rectangular base, frozen front line mood, one building only, no tower, no extra buildings"
   },
   {
     "slug": "wt-outpost-snow-pines",
@@ -337,10 +1220,61 @@
     "board": "outpost",
     "name": "Snowbound Pines",
     "rulesType": "forest",
-    "footprint": {"polygon":[{"x":3,"z":0},{"x":2.598,"z":1.125},{"x":1.5,"z":1.949},{"x":0,"z":2.25},{"x":-1.5,"z":1.949},{"x":-2.598,"z":1.125},{"x":-3,"z":0},{"x":-2.598,"z":-1.125},{"x":-1.5,"z":-1.949},{"x":0,"z":-2.25},{"x":1.5,"z":-1.949},{"x":2.598,"z":-1.125}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.125
+        },
+        {
+          "x": 1.5,
+          "z": 1.949
+        },
+        {
+          "x": 0,
+          "z": 2.25
+        },
+        {
+          "x": -1.5,
+          "z": 1.949
+        },
+        {
+          "x": -2.598,
+          "z": 1.125
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.125
+        },
+        {
+          "x": -1.5,
+          "z": -1.949
+        },
+        {
+          "x": 0,
+          "z": -2.25
+        },
+        {
+          "x": 1.5,
+          "z": -1.949
+        },
+        {
+          "x": 2.598,
+          "z": -1.125
+        }
+      ]
+    },
     "height": 5,
     "visualHeight": 6,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a stand of four tall pine trees heavy with snow on their boughs, snowdrifts at the roots, oval base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a stand of four tall pine trees heavy with snow, separate trunks, snowdrifts at the roots, on one oval snowy base, no backdrop, no wall, no panel, no house"
   },
   {
     "slug": "wt-outpost-trench",
@@ -348,10 +1282,15 @@
     "board": "outpost",
     "name": "Zig-Zag Trench",
     "rulesType": "trench",
-    "footprint": {"rect":{"w":5,"d":3}},
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 3
+      }
+    },
     "height": 0,
     "visualHeight": 0.4,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a zig-zag dug trench section with timber-lined walls, duckboards and a snowy earthen lip, recessed into a flat rectangular base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a first world war style zig-zag trench, a deep narrow winding ditch dug into brown earth with a wooden duckboard walkway on its floor, vertical wall of horizontal brown planks holding up both sides of the ditch, large lumpy piles of dark earth heaped along both edges, patches of white snow on the earth, seen from high above looking down into the ditch, irregular ground outline, no tray, no box, no wooden frame, no rectangular base, no stone, no building, no people"
   },
   {
     "slug": "wt-outpost-sandbags",
@@ -359,10 +1298,15 @@
     "board": "outpost",
     "name": "Sandbag Barricade",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":4,"d":0.75}},
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
     "height": 0.75,
     "visualHeight": 0.85,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low straight wall of stacked sandbags with a dusting of snow, narrow strip base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a long low curved wall of many individual lumpy tan burlap sandbags stacked in staggered rows, the wall running the whole length of the base, only two rows high, white snow lying on top of the wall, two brown wooden stakes standing up at the ends, thin base of trampled snow, front view, no tall pile, no roof, no building, no bunker, no pillow"
   },
   {
     "slug": "wt-outpost-stakes",
@@ -370,10 +1314,15 @@
     "board": "outpost",
     "name": "Stake Barricade",
     "rulesType": "obstacle",
-    "footprint": {"rect":{"w":5,"d":1}},
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 1
+      }
+    },
     "height": 0.9,
     "visualHeight": 1,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low row of crossed sharpened timber stakes lashed together, snow in the crooks, narrow strip base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a long straight row of many sharpened wooden stakes standing side by side and angled forward in a line, light brown timber, a little snow at the base, wide side view showing the whole long row, very long and not deep, flat narrow strip base of snow, no roof, no tarp, no house, no building"
   },
   {
     "slug": "wt-outpost-wagon",
@@ -381,10 +1330,15 @@
     "board": "outpost",
     "name": "Supply Wagon",
     "rulesType": "obstruction",
-    "footprint": {"rect":{"w":3.5,"d":1.75}},
+    "footprint": {
+      "rect": {
+        "w": 3.5,
+        "d": 1.75
+      }
+    },
     "height": 2,
     "visualHeight": 2.2,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a four-wheeled wooden supply wagon loaded with crates and barrels under a tarp, one wheel sunk in snow, rectangular base"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, one four-wheeled wooden supply wagon with crates and barrels under a canvas tarp, side view, one wheel sunk in snow, no horses, no people, no building, small rectangular snowy base"
   },
   {
     "slug": "wt-outpost-frozen-pond",
@@ -392,10 +1346,61 @@
     "board": "outpost",
     "name": "Frozen Pond",
     "rulesType": "rough",
-    "footprint": {"polygon":[{"x":2.5,"z":0},{"x":2.165,"z":0.875},{"x":1.25,"z":1.516},{"x":0,"z":1.75},{"x":-1.25,"z":1.516},{"x":-2.165,"z":0.875},{"x":-2.5,"z":0},{"x":-2.165,"z":-0.875},{"x":-1.25,"z":-1.516},{"x":0,"z":-1.75},{"x":1.25,"z":-1.516},{"x":2.165,"z":-0.875}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
     "height": 0,
     "visualHeight": 0.2,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a flat oval frozen pond with cracked ice surface, snowy banks and a few reeds poking through, very low profile"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a thick oval slab of snowy ground with a flat round pond of cracked pale blue ice in the middle, snowy banks and a few reeds, three-quarter view from above, whole slab in frame, no trees, no buildings"
   },
   {
     "slug": "wt-outpost-snow-rocks",
@@ -403,9 +1408,60 @@
     "board": "outpost",
     "name": "Snow-Capped Rocks",
     "rulesType": "rubble",
-    "footprint": {"polygon":[{"x":2,"z":0},{"x":1.732,"z":0.75},{"x":1,"z":1.299},{"x":0,"z":1.5},{"x":-1,"z":1.299},{"x":-1.732,"z":0.75},{"x":-2,"z":0},{"x":-1.732,"z":-0.75},{"x":-1,"z":-1.299},{"x":0,"z":-1.5},{"x":1,"z":-1.299},{"x":1.732,"z":-0.75}]},
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
     "height": 0.5,
     "visualHeight": 0.8,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of jagged rocks capped with snow and small drifts, low and walkable between, oval base, frozen front line mood"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a scatter of five jagged grey rocks capped with snow and small drifts, oval snowy base, low, no building, no wall, no cabin"
   }
 ]
