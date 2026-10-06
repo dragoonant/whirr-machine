@@ -43,7 +43,7 @@
 - E2E (`npm run e2e`, vite preview at /whirr-machine/): `tests/e2e/play.spec.ts` plays Cygnar vs the bot through UI
   clicks to round 3 (How to Play tabs checked, screenshots in `e2e-out/`), and Khador on the Quick Start demo for a round
   with attacks made by clicking the enemy. Shared click policy in `tests/e2e/policy.ts`.
-- Tests: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
+- Tests: 285 unit tests in 39 files (M8 adds terrain, boards and procedural-piece tests); earlier count: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
   `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
 
@@ -61,6 +61,22 @@
   default).
 - Frame time (headless Chromium, software WebGL, 1280x760, all 8 GLBs on the table, camera panning): 18.5 ms mean,
   33 ms p95. A real GPU will be faster.
+
+## Battlefields (M8)
+- Five themed boards (`docs/spec/70-terrain-boards.md`): Hollowmere Bog, Veilstone Ruins, Ironpine Hamlet, Cinder Blight,
+  Frostline Outpost. Each has its own ground mat (`public/assets/terrain/boards/<board>/`, made by
+  `art/board-textures/gen.py` from CC0 Poly Haven bases), light and fog tint, and 7-8 pieces; 15 layouts. A game picks
+  the board and layout from its seed unless the start screen (Battlefield select) or `?board=` names one; `?layout=`
+  forces an eligible layout (tests). The Quick Start demo keeps its own terrain, reskinned by the board.
+- 35 Hunyuan terrain GLBs in `public/assets/terrain/` (contact sheets in `art/terrain-sheets/`), fitted to the rules
+  footprints by `board/terrainFit.ts` and instanced per slug; the procedural stand-in draws while loading or on failure.
+  The trench and the ash flats are procedural (`board/proceduralPieces.tsx`): a stencil-cut zig-zag trench with plank
+  revetments, duckboards and berms that blend into the mat, and an ash decal with ember cracks and charred stumps.
+- `tests/e2e/boards.spec.ts`: Khador vs the Normal bot on each board, deploy plus one round through UI clicks, no page
+  errors, every terrain GLB 200, screenshots `e2e-out/board-<id>.png` (and `-close.png` for outpost and wasteland).
+- Frame time (headless Chromium, software WebGL, 1280x760, High): the art spec (M5 method, close camera) 23.4 ms mean
+  on Cinder Blight; the overview camera panning over the whole table with the HUD up 76-86 ms per board (Low
+  graphics about 20 ms). Main costs there: MSAA, the 12k-triangle terrain GLBs, the mat maps. A real GPU is far faster.
 
 ## Polish (M7)
 - Event feed with attack breakdowns (dice, boosts, target number, expected vs actual damage) and per-turn damage
@@ -117,5 +133,5 @@
   cover much of the board.
 - The army painter has no in-game control yet (gallery only).
 
-Next: owner playtest of the M5/M7 build on Pages, and veto the figure concept picks (candidates in
-`C:/Users/antho/Hunyuan3D-2/outputs/wm-*/concepts/`). See HANDOFF.md.
+Next: owner veto of the terrain pieces (`art/terrain-sheets/*.png`; three flagged for a GPU redo in HANDOFF.md), owner
+playtest on Pages, and the figure concept veto. See HANDOFF.md.

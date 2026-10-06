@@ -1,6 +1,7 @@
 // Terrain pieces (70 section F). Each piece draws its GLB (public/assets/terrain/<slug>.glb) fitted to the engine
 // footprint; every repeat of a slug is one InstancedMesh per template mesh (one draw call for a one-mesh model).
 // While a GLB loads, or if it is missing or fails, the procedural stand-in draws (tinted by the board).
+// The trench and the ash flats are built procedurally (proceduralPieces.tsx) and never load a GLB.
 // The rules footprint outline shows only while something is selected or "Show terrain zones" is on.
 import { useEffect, useLayoutEffect, useMemo, useRef, type ReactElement } from 'react'
 import * as THREE from 'three'
@@ -15,6 +16,7 @@ import { planFit } from './terrainFit'
 import { tintedMaterial, useTerrainTemplate, type TerrainTemplate } from './terrainGlb'
 import { clearTerrainHover, hoverTerrain } from './terrainHover'
 import { modelFor } from './terrainModels'
+import { ProceduralGroup, isProcedural } from './proceduralPieces'
 
 // ---------- procedural stand-in (today's look, tinted per board) ----------
 const matCache = new Map<string, THREE.MeshStandardMaterial>()
@@ -143,7 +145,7 @@ export function buildInstances(tpl: TerrainTemplate, slug: string, items: Item[]
   const meshes = tpl.meshes.map((m, i) => {
     const im = new THREE.InstancedMesh(m.geometry, tintedMaterial(`${slug}:${board.id}:${i}`, m.material, board.fallback.piece), items.length)
     im.frustumCulled = false
-    im.castShadow = shadows
+    im.castShadow = shadows && (items[0]?.vh ?? 1) > 0.4 // flat pieces (pools, ponds) cast no useful shadow
     im.receiveShadow = shadows
     return im
   })
@@ -171,6 +173,11 @@ function Instanced({ tpl, slug, items, board, shadows }: { tpl: TerrainTemplate;
 }
 
 function SlugGroup({ slug, items, board, shadows }: { slug: string; items: Item[]; board: BoardDef; shadows: boolean }): ReactElement {
+  if (isProcedural(slug)) return <ProceduralGroup slug={slug} items={items} shadows={shadows} />
+  return <GlbGroup slug={slug} items={items} board={board} shadows={shadows} />
+}
+
+function GlbGroup({ slug, items, board, shadows }: { slug: string; items: Item[]; board: BoardDef; shadows: boolean }): ReactElement {
   const tpl = useTerrainTemplate(slug || undefined)
   const outlines = useMemo(() => items.map((i) => i.o), [items])
   if (tpl) return <Instanced tpl={tpl} slug={slug} items={items} board={board} shadows={shadows} />

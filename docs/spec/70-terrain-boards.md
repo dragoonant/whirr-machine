@@ -243,7 +243,7 @@ rebuild the same table. **No frozen contract changes.**
 3. **Layout.** If the scenario is in `FIXED_LAYOUT_SCENARIOS = ['scn-qs-demo']` (GOLD-001 depends on the Quick Start
    ponds), or nothing is eligible, use the scenario's `terrainLayout`; the board still sets the mat, light and
    `reskin`. Otherwise `eligible[nextU32(deriveSeed(seed, 'battlefield', 'layout'))[0] % eligible.length]`. A URL
-   `?layout=<id>` overrides it when that layout is eligible (tests).
+   `?layout=<id>` (or the short form `outpost-1`) overrides it when that layout is eligible (tests; `boardPick.ts`).
 4. **Seed first.** `buildNewGame` makes the seed (`?seed=` or `randomSeed()`) before choosing, and passes both
    `seed` and `layout` to `newGame`, so `?seed=X` always gives the same board and layout when the board is Random.
 5. **Persistence.** `ClientSave` (client type, not frozen) gains optional `board?: Id`. On load the board is
@@ -292,6 +292,19 @@ piece's local space (the engine's pos and rot are applied to the group afterward
 **Fallback.** The current `Terrain.tsx` prisms and instanced cones and chunks stay as the stand-in while a GLB
 loads, if it fails, or on Low graphics when a piece has no GLB. They are tinted by `board.fallback`. A failed GLB
 logs once and never throws.
+
+**Procedural pieces (M8 integration).** Two pieces are too flat for image-to-3D, so `src/client/board/proceduralPieces.tsx`
+builds them and their GLBs are not shipped (`PROCEDURAL_PIECE_SLUGS` in `terrainModels.ts`; the catalog marks them
+`render: "procedural"`). `wt-outpost-trench`: a three-run zig-zag channel at about 35 degrees, its dark earth floor 0.22"
+below the mat (a stencil cut: the mat and table draw first at render order -10, the channel mask writes stencil 1, the
+floor draws only there), timber plank revetments with posts, duckboards, and earth berms that sample the board mat
+(world UVs) so they grow out of the ground, snow on the crests. `wt-wasteland-ash-flats` (also the wasteland pond
+reskin): a pale ash decal with a soft rim and faint ember glow in its cracks, plus a few charred stump stubs. Both stay
+inside the footprint and under the visual height (tests/client/proceduralPieces.test.ts).
+
+**Mat textures (M8 QC).** `art/board-textures/gen.py` tiles each photo base 2 to 6 times across the board (prefiltered),
+so ground detail reads at tabletop scale, and scales the height-map normals to a fixed tilt (the first mats had
+normals lying almost flat, which drew them as dark blotches). The wood surround is a frame with a hole under the mat.
 
 **Footprint truth.** A faint footprint outline (the `outlineGeometry` edges at 25% opacity) is always drawn, so the
 rules area is readable under organic models. The LOS view (L) and ruler use engine data only, as now.

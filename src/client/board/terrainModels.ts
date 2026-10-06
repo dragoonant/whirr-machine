@@ -45,6 +45,11 @@ export const PIECE_MODELS: Readonly<Record<Id, readonly [string, number]>> = {
 
 export interface ModelRef { slug: string; visualHeight: number }
 
+/** Slugs drawn by proceduralPieces.tsx instead of a GLB (too flat for image-to-3D). Not in the enabled GLB set. */
+export const PROCEDURAL_PIECE_SLUGS: readonly string[] = ['wt-outpost-trench', 'wt-wasteland-ash-flats']
+/** The GLB files the client may fetch. */
+export const ENABLED_GLB_SLUGS: readonly string[] = [...new Set(Object.values(PIECE_MODELS).map(([s]) => s))].filter((s) => !PROCEDURAL_PIECE_SLUGS.includes(s))
+
 /** Visual heights of the reskin slugs (looks only; the rules stay those of the generic piece). */
 const slugHeight = (slug: string): number => Object.values(PIECE_MODELS).find(([s]) => s === slug)?.[1] ?? 1
 

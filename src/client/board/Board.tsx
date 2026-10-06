@@ -1,6 +1,6 @@
 // The battlefield canvas: demand frameloop, dpr cap, shared geometry. Mount <Battlefield /> where the board goes.
 // Also renders the invisible DOM proxies (data-testid="model-<id>") from the presented store.
-import { useEffect, useMemo, type ReactElement } from 'react'
+import { useEffect, useMemo, useRef, type ReactElement } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import {
   useAnimating, useHoverId, useMeasure, useModelIds, usePresentedModels, usePresentedRev, usePresentedState, usePrompt, useSelectedId,
@@ -42,6 +42,36 @@ function Invalidator(): null {
   useEffect(() => { invalidate() }, [invalidate, rev, mode, sel, hover, measure, threat, prompt?.id, ghost, staged, placements, weapon, graphics, showZones, board])
   const animating = useAnimating()
   useFrame(() => { if (animating) invalidate() })
+  return null
+}
+
+/**
+ * Shadow map on demand: re-rendered when the presented state, board, graphics or the figure set changes, every frame
+ * while something animates, and at most every 400 ms otherwise (with a trailing update, so late model loads get
+ * their shadow). A camera pan alone no longer re-renders the shadow pass every frame (M8 frame budget).
+ */
+function ShadowGate(): null {
+  const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
+  const rev = usePresentedRev()
+  const ids = useModelIds()
+  const board = useBoard()
+  const { graphics } = useSettings()
+  const animating = useAnimating()
+  const last = useRef(0)
+  const trailing = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false
+    gl.shadowMap.needsUpdate = true
+    return () => { gl.shadowMap.autoUpdate = true; if (trailing.current) clearTimeout(trailing.current) }
+  }, [gl])
+  useEffect(() => { gl.shadowMap.needsUpdate = true; invalidate() }, [gl, invalidate, rev, ids, board, graphics])
+  useFrame(() => {
+    const now = performance.now()
+    if (animating || now - last.current > 400) { gl.shadowMap.needsUpdate = true; last.current = now; return }
+    // one trailing frame that updates the shadows (last = 0 makes that frame update without scheduling another)
+    if (!trailing.current) trailing.current = setTimeout(() => { trailing.current = null; last.current = 0; invalidate() }, 450)
+  })
   return null
 }
 
@@ -102,6 +132,7 @@ function Scene(): ReactElement {
   return (
     <>
       <Invalidator />
+      {shadows && <ShadowGate />}
       <AmbientTick />
       <Lights shadows={shadows} />
       <CameraRig />
@@ -153,7 +184,7 @@ export function Battlefield(): ReactElement {
         dpr={graphics === 'low' ? 1 : [1, 1.5]}
         shadows={graphics === 'high'}
         camera={{ position: pose.position, fov: 42, near: 0.5, far: 400 }}
-        gl={{ antialias: graphics === 'high', powerPreference: 'high-performance' }}
+        gl={{ antialias: graphics === 'high', powerPreference: 'high-performance', stencil: true }}
         onPointerMissed={() => { /* background clicks are handled by <Ground /> */ }}
       >
         <Scene />

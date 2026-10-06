@@ -1060,7 +1060,9 @@
     },
     "height": 0,
     "visualHeight": 0.3,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low flat oval patch of burnt dark grey ground, cracked black crust, powdery ash drifts, a few short black burnt stump stubs only ankle high, small cinders and a few tiny dull orange embers, very low flat terrain seen from a high angle, dark charcoal colour all over, no tall trees, no branches, no large orange, no white, no pale slab, no buildings"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a low flat oval patch of burnt dark grey ground, cracked black crust, powdery ash drifts, a few short black burnt stump stubs only ankle high, small cinders and a few tiny dull orange embers, very low flat terrain seen from a high angle, dark charcoal colour all over, no tall trees, no branches, no large orange, no white, no pale slab, no buildings",
+    "render": "procedural",
+    "renderNote": "Too flat for image-to-3D: drawn by src/client/board/proceduralPieces.tsx; no GLB ships."
   },
   {
     "slug": "wt-wasteland-blight-pool",
@@ -1290,7 +1292,9 @@
     },
     "height": 0,
     "visualHeight": 0.4,
-    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a first world war style zig-zag trench, a deep narrow winding ditch dug into brown earth with a wooden duckboard walkway on its floor, vertical wall of horizontal brown planks holding up both sides of the ditch, large lumpy piles of dark earth heaped along both edges, patches of white snow on the earth, seen from high above looking down into the ditch, irregular ground outline, no tray, no box, no wooden frame, no rectangular base, no stone, no building, no people"
+    "prompt": "unpainted grey resin 28mm wargame terrain piece on a sculpted base, isolated, plain white background, studio lighting, three-quarter view, whole piece in frame, original design, a first world war style zig-zag trench, a deep narrow winding ditch dug into brown earth with a wooden duckboard walkway on its floor, vertical wall of horizontal brown planks holding up both sides of the ditch, large lumpy piles of dark earth heaped along both edges, patches of white snow on the earth, seen from high above looking down into the ditch, irregular ground outline, no tray, no box, no wooden frame, no rectangular base, no stone, no building, no people",
+    "render": "procedural",
+    "renderNote": "Too flat for image-to-3D: drawn by src/client/board/proceduralPieces.tsx; no GLB ships."
   },
   {
     "slug": "wt-outpost-sandbags",

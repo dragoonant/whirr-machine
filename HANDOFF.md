@@ -1,6 +1,6 @@
 # Handoff
 
-**Current state:** M3 to M7 are done (M4 AI, M5 figures, M6 audio, M7 polish). The playable vertical slice is on Pages (https://dragoonant.github.io/whirr-machine/):
+**Current state:** M3 to M8 are done (M4 AI, M5 figures, M6 audio, M7 polish, M8 battlefields). The playable vertical slice is on Pages (https://dragoonant.github.io/whirr-machine/):
 pick Cygnar or Khador, a scenario (Ashwall Divide or the Quick Start demo) and an animation speed, read How to Play
 (9 tabs), then play a whole game against the sensible random bot: roll-off, edges, deployment, Prey, focus
 allocation, activations (advance, run, charge, aim), ranged and melee attacks with boosts, Powerful Attack, spells,
@@ -16,8 +16,20 @@ painter shader, status visuals and attack VFX; feed breakdowns, end-screen stats
 title art. Review the figures at /whirr-machine/?gallery. `tests/e2e/art.spec.ts` plays Khador vs the Normal bot for two
 rounds and writes `e2e-out/art-*.png` and `gallery.png`.
 
+**M8 battlefields (done):** five themed boards with generated terrain, a random board per game (or pick one on the
+start screen, or `?board=bog|ruins|village|wasteland|outpost`). See STATUS.md "Battlefields (M8)" and
+`e2e-out/board-*.png`.
+
+**Owner: veto terrain pieces.** Look at `art/terrain-sheets/<board>.png` (four views per piece) and at the boards in game;
+name any slug to redo. Flagged in the integration pass as wrong in context (need a GPU redo, not run here):
+`wt-wasteland-ritual-dais` (reads as a sawn log slice), `wt-wasteland-bone-spikes` (bright orange tray under the
+spikes), `wt-ruins-grove` (unpainted pale trees). Also worth a decimation pass to about 6k triangles each (all
+pieces are about 12k; headless frame time on the overview camera is well over the 21.5 ms budget).
+The trench and the ash flats are procedural now (no GLB). Ground mats are rebuilt by
+`art/board-textures/gen.py` (Hunyuan venv python: numpy, scipy, Pillow; bases in `%TEMP%/ph` from `fetch.py`).
+
 **Next, in order:**
-1. **Owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
+1. **Owner veto of the terrain pieces** (above), then the **owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
    top items before new features. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
 2. **Owner veto of the figure concept picks.** The candidates for each figure are in
    `C:/Users/antho/Hunyuan3D-2/outputs/wm-<slug>/concepts/` (`s0.png`..`s5.png` plus `sheet.png`). Name any figure

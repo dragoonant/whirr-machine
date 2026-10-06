@@ -15,7 +15,7 @@ export const TRANSITION_MS = Math.min(600, CAMERA_TRANSITION_MS)
 
 export function CameraRig(): ReactElement {
   const controls = useRef<OrbitImpl>(null)
-  const { camera, invalidate } = useThree()
+  const { camera, invalidate, gl, scene } = useThree()
   const cam = useInteractionStore((s) => s.cam)
   const state = usePresentedState()
   const selected = useSelectedModel()
@@ -39,6 +39,33 @@ export function CameraRig(): ReactElement {
     invalidate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cam?.nonce])
+
+  // test hook (?test=1 only): window.__camera(position, target) jumps the camera, for e2e screenshots
+  useEffect(() => {
+    const w = window as unknown as { __game?: unknown; __camera?: (p: [number, number, number], t: [number, number, number]) => void; __render?: () => unknown }
+    if (!w.__game) return
+    w.__camera = (p, t) => {
+      const c = controls.current
+      if (!c) return
+      tween.current = null
+      camera.position.set(...p); c.target.set(...t); c.update(); invalidate()
+    }
+    // render stats and the heaviest meshes, for perf checks
+    w.__render = () => {
+      const heavy: [string, number, number][] = []
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh
+        if (!m.isMesh || !m.visible) return
+        const g = m.geometry
+        const n = (g.index ? g.index.count : g.getAttribute('position')?.count ?? 0) / 3
+        const inst = (m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1
+        heavy.push([`${m.name || o.parent?.name || m.type}:${(m.material as THREE.Material).type}`, Math.round(n * inst), g.getAttribute('position')?.count ?? 0])
+      })
+      heavy.sort((a, b) => b[1] - a[1])
+      return { info: { ...gl.info.render }, mem: { ...gl.info.memory }, programs: gl.info.programs?.length, heavy: heavy.slice(0, 15) }
+    }
+    return () => { delete w.__camera; delete w.__render }
+  }, [camera, invalidate, gl, scene])
 
   // WASD pan (ignored while typing)
   useEffect(() => {

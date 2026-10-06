@@ -46,15 +46,25 @@ def load(name):
     return d('diff'), d('nor'), d('rough')[..., 0]
 
 
+def shrink(a, m):
+    """Resize a 0..1 float image (H, W[, C]) to m x m with Lanczos (prefilter before fine tiling)."""
+    if a.ndim == 2: return shrink(a[..., None].repeat(3, -1), m)[..., 0]
+    return np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8)).resize((m, m), Image.LANCZOS), np.float32) / 255
+
+
 def layer(name, seed, scale=1.0, warpamp=45):
-    """Sample a tiling base at two scales (noise-masked) through a domain warp so no tile repeat shows."""
-    diff, nor, rough = load(name)
+    """Sample a tiling base at two scales (noise-masked) through a domain warp so no tile repeat shows.
+    scale = photo tiles across the board: a 2 m photo should read as tabletop grit, not giant leaves (M8 QC),
+    so boards tile each base 3-7 times, prefiltered (Lanczos) to avoid aliasing."""
+    full = load(name)
     out = []
     for i, s in enumerate((scale, scale * 1.37)):
+        m = max(64, int(round(N / s)))
+        diff, nor, rough = (shrink(a, m) for a in full) if m < N else full
         rng = np.random.default_rng(seed + i)
-        oy, ox = rng.uniform(0, N, 2)
+        oy, ox = rng.uniform(0, m, 2)
         wx = fbm(seed + 20 + i, 260, 2.0) * warpamp; wy = fbm(seed + 30 + i, 260, 2.0) * warpamp
-        c = [((YY + wy) * s + oy) % N, ((XX + wx) * s + ox) % N]
+        c = [((YY + wy) * (s * m / N) + oy) % m, ((XX + wx) * (s * m / N) + ox) % m]
         smp = lambda a: ndi.map_coordinates(a, c, order=1, mode='grid-wrap')
         out.append((np.stack([smp(diff[..., k]) for k in range(3)], -1),
                     np.stack([smp(nor[..., k]) for k in range(2)], -1) - 0.5, smp(rough)))
@@ -65,6 +75,11 @@ def layer(name, seed, scale=1.0, warpamp=45):
     lum = D.mean(-1); low = gblur(lum, 120)
     D = D * (lum.mean() / (low + 1e-3))[..., None] ** 0.6   # flatten big colour blotches of the photo
     return np.clip(D, 0, 1), Nn, R
+
+
+def soften(D, k):
+    """Pull a layer's local contrast toward its own mean by k (0 = unchanged), so a tiled photo reads as texture, not spots."""
+    m = D.mean((0, 1), keepdims=True); return m + (D - m) * (1 - k)
 
 
 def tint(D, mul, sat=1.0, gain=1.0):
@@ -112,8 +127,12 @@ def save(a, path, limit=880, gray=False):
 def finish(alb, Nn, rough, h, strength, name, vig=0.10, nblur=1.0):
     r = np.hypot(XX / N - .5, YY / N - .5) * 2
     alb = alb * (1 - vig * ss(0.55, 1.35, r))[..., None]
-    nx = 2 * Nn[..., 0] - np.gradient(h, axis=1) * strength
-    ny = 2 * Nn[..., 1] + np.gradient(h, axis=0) * strength   # image y runs down, OpenGL +Y up
+    # height gradient scaled so its 95th-percentile tilt is about strength/120 (M8 QC: the raw gradient * strength
+    # laid the normals almost flat, nz ~0.2, which drew the mats as dark camouflage blotches)
+    gx = np.gradient(h, axis=1); gy = np.gradient(h, axis=0)
+    k = (strength / 120) / (np.percentile(np.hypot(gx, gy), 95) + 1e-6)
+    nx = 1.4 * Nn[..., 0] - gx * k
+    ny = 1.4 * Nn[..., 1] + gy * k   # image y runs down, OpenGL +Y up
     nx = gblur(nx, nblur); ny = gblur(ny, nblur)
     nz = np.sqrt(np.clip(1 - nx ** 2 - ny ** 2, 0.05, 1))
     n3 = np.stack([nx, ny, nz], -1); n3 /= np.linalg.norm(n3, axis=-1, keepdims=True)
@@ -134,9 +153,9 @@ def streaks(seed, sx, sy):
 # ---------------------------------------------------------------- boards
 def bog():
     s = 100
-    A = layer('brown_mud', s); B = layer('brown_mud_leaves_01', s + 100, 0.9)
+    A = layer('brown_mud', s, 5.0); B = layer('brown_mud_leaves_01', s + 100, 4.5)
     leaf = blobs(s + 3, 320, 0.8, 0.7)
-    D = mix(tint(A[0], (0.7, 0.74, 0.64), 0.8, 0.95), tint(B[0], (0.62, 0.58, 0.45), 0.55, 0.85), leaf)
+    D = mix(tint(soften(A[0], 0.55), (0.7, 0.74, 0.64), 0.8, 1.05), tint(soften(B[0], 0.35), (0.62, 0.58, 0.45), 0.55, 0.95), leaf)
     Nn = mix(A[1], B[1], leaf[..., None]); R = mix(A[2], B[2], leaf) * 0.95
     h = gblur(fbm(s + 5, 90, 2.0), 3) * 0.5
     moss = blobs(s + 7, 300, 0.5, 0.9) * (1 - leaf * 0.5); mt = fbm(s + 8, 18, 1.2)
@@ -144,12 +163,12 @@ def bog():
     D = mix(D, mc * (0.8 + 0.5 * D.mean(-1, keepdims=True)), moss * 0.42)
     R = mix(R, np.full_like(R, 0.9), moss)
     low = norm(gblur(fbm(s + 9, 230, 2.2), 6)) + 0.15 * fbm(s + 10, 60, 1.6)
-    wet = ss(0.72, 0.9, low)
+    wet = ss(1.0, 1.25, norm(fbm(s + 9, 700, 3.0)) + 0.12 * fbm(s + 10, 60, 1.6))
     sheen = 0.5 + 0.5 * fbm(s + 11, 120, 2.0)
-    water = np.stack([0.10 + 0.07 * sheen, 0.14 + 0.07 * sheen, 0.13 + 0.06 * sheen], -1)
-    D = mix(D, water, wet * 0.93); R = mix(R, np.full_like(R, 0.07), wet * 0.95)
+    water = np.stack([0.15 + 0.08 * sheen, 0.21 + 0.08 * sheen, 0.19 + 0.07 * sheen], -1)
+    D = mix(D, water, wet * 0.93); R = mix(R, np.full_like(R, 0.34), wet * 0.95)  # satin, not mirror: low roughness glittered under the normal map
     Nn = Nn * (1 - wet[..., None] * 0.95)
-    h = h - wet * 0.9 + moss * 0.15
+    h = h * (1 - wet) - wet * 0.9 + moss * 0.15 * (1 - wet)   # still water is flat
     reed = ss(2.2, 2.9, streaks(s, 14, 1.0)) * (1 - wet) * blobs(s + 12, 110, 0.55, 0.3)
     D = mix(D, col(0.40, 0.38, 0.23), reed * 0.55)
     return finish(D, Nn, R, h, 55, "bog", 0.14)
@@ -157,11 +176,13 @@ def bog():
 
 def ruins():
     s = 200
-    G = layer('leafy_grass', s, 1.0); F = layer('cobblestone_floor_08', s + 100, 0.55); M = layer('mossy_cobblestone', s + 200, 0.55)
-    grass = tint(G[0], (0.62, 0.78, 0.55), 0.9, 0.62)
-    reg = blobs(s + 3, 330, 0.55, 0.22)
+    G = layer('leafy_grass', s, 6.0); F = layer('cobblestone_floor_08', s + 100, 2.2); M = layer('mossy_cobblestone', s + 200, 2.2)
+    grass = tint(G[0], (0.62, 0.78, 0.55), 0.9, 0.7)
+    gv = blobs(s + 2, 260, 0.2, 0.8)
+    grass = mix(grass, tint(G[0], (0.78, 0.8, 0.5), 0.8, 0.78), gv * 0.55)
+    reg = blobs(s + 3, 260, 0.8, 0.22)
     edge = ss(0.0, 0.5, reg) * (1 - ss(0.5, 1.0, reg))
-    stone = mix(tint(F[0], (0.78, 0.76, 0.9), 0.6, 0.95), tint(M[0], (0.75, 0.85, 0.75), 0.9, 0.9), blobs(s + 4, 120, 0.1, 0.5) * 0.6)
+    stone = mix(tint(F[0], (0.78, 0.76, 0.9), 0.6, 0.72), tint(M[0], (0.75, 0.85, 0.75), 0.9, 0.7), blobs(s + 4, 120, 0.1, 0.5) * 0.6)
     D = mix(grass, stone, reg)
     Nn = mix(G[1], F[1], reg[..., None]); R = mix(G[2], F[2], reg) * 0.95
     h = gblur(fbm(s + 6, 70, 2.0), 2) * 0.3 + reg * 0.5
@@ -181,7 +202,7 @@ def ruins():
 
 def village():
     s = 300
-    G = layer('grass_path_3', s, 1.0); L = layer('leafy_grass', s + 100, 1.0); T = layer('muddy_tracks', s + 200, 1.0)
+    G = layer('grass_path_3', s, 5.0); L = layer('leafy_grass', s + 100, 6.0); T = layer('muddy_tracks', s + 200, 3.5)
     patch = blobs(s + 3, 200, 0.1, 0.5)
     meadow = mix(tint(G[0], (0.78, 0.9, 0.72), 1.0, 0.85), tint(L[0], (0.8, 0.9, 0.78), 0.9, 0.8), patch * 0.3)
     meadow = mix(meadow, col(0.72, 0.78, 0.76), blobs(s + 4, 120, 0.55, 0.3) * 0.05)
@@ -205,7 +226,7 @@ def village():
 
 def wasteland():
     s = 400
-    A = layer('burned_ground_01', s, 1.0); B = layer('mud_cracked_dry_03', s + 100, 0.8)
+    A = layer('burned_ground_01', s, 4.5); B = layer('mud_cracked_dry_03', s + 100, 2.6)
     crust = blobs(s + 3, 260, 0.1, 0.45)
     D = mix(tint(A[0], (0.62, 0.6, 0.6), 0.25, 0.65), tint(B[0], (0.45, 0.43, 0.43), 0.0, 0.75), crust)
     Nn = mix(A[1], B[1], crust[..., None]); R = mix(A[2], B[2], crust) * 0.98
@@ -214,11 +235,11 @@ def wasteland():
     big = np.exp(-(np.clip(e1 - 1, 0, None) / 6.0) ** 2)
     thin = np.exp(-(np.clip(e2 - 1, 0, None) / 2.0) ** 2) * blobs(s + 7, 180, 0.0, 0.5)
     zone = blobs(s + 8, 300, -0.15, 0.5)
-    hot = np.clip((big * 0.9 + thin * 0.8) * (0.25 + 0.75 * zone), 0, 1)
-    ember = np.clip(hot * (0.55 + 0.45 * ss(-1, 1.2, fbm(s + 9, 30, 1.4))) * 1.3, 0, 1)
+    hot = np.clip((big * 0.9 + thin * 0.45) * (0.08 + 0.92 * zone), 0, 1)
+    ember = np.clip(hot * (0.45 + 0.55 * ss(-1, 1.2, fbm(s + 9, 30, 1.4))) * 1.05, 0, 1)
     gl = ramp(ember, [(0, (0, 0, 0)), (0.2, (95, 18, 6)), (0.5, (220, 70, 14)), (0.8, (255, 150, 40)), (1, (255, 215, 120))])
     halo = ramp(np.clip(gblur(hot * zone, 10) * 2.2, 0, 1), [(0, (0, 0, 0)), (1, (120, 36, 8))])
-    D = np.clip(D * (1 - ember * 0.9)[..., None] + gl + halo * 0.45, 0, 1)
+    D = np.clip(D * (1 - ember * 0.9)[..., None] + gl * 0.85 + halo * 0.3, 0, 1)
     sp = ss(0.05, 0.2, speckle(s, 0.0025, 1.6)); D = mix(D, col(0.7, 0.28, 0.1), sp * zone * 0.7)
     R = np.clip(R * (1 - ember * 0.35) + 0.05, 0, 1)
     h = h - big * 1.0 - thin * 0.6
@@ -227,7 +248,7 @@ def wasteland():
 
 def outpost():
     s = 500
-    S = layer('snow_02', s, 1.0); S2 = layer('snow_02', s + 100, 0.8); M = layer('brown_mud', s + 200, 1.0); L = layer('brown_mud_leaves_01', s + 300, 0.9)
+    S = layer('snow_02', s, 3.5); S2 = layer('snow_02', s + 100, 2.8); M = layer('brown_mud', s + 200, 5.0); L = layer('brown_mud_leaves_01', s + 300, 4.5)
     snow = mix(tint(S[0], (0.96, 0.98, 1.06), 0.6, 1.0), tint(S2[0], (0.9, 0.94, 1.02), 0.5, 0.95), blobs(s + 3, 220, 0.0, 0.5))
     mud = mix(tint(M[0], (0.78, 0.62, 0.48), 1.0, 0.8), tint(L[0], (0.7, 0.55, 0.4), 0.8, 0.7), blobs(s + 4, 80, 0.3, 0.4))
     tramp = blobs(s + 5, 260, 0.1, 0.5)

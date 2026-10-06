@@ -7,8 +7,11 @@ import * as THREE from 'three'
 import type { BoardDef } from './boards'
 import { useBoard } from './boardStore'
 import { useSettings } from '../contract'
+import { shareMatAlbedo } from './matShare'
 
 export const SURROUND = 8 // inches of table past the play edge
+/** The mat and the table draw first, so the trench's stencil cut (proceduralPieces.tsx) can open a hole in them. */
+export const MAT_ORDER = -10
 const WOOD_TILE = 12 // inches per wood texture tile
 const WOOD_FLAT = '#2a1d14'
 const assetUrl = (rel: string): string => `${import.meta.env.BASE_URL}assets/terrain/${rel}`
@@ -64,6 +67,16 @@ function useMatSet(folder: string, low: boolean, enabled: boolean, repeat?: [num
   return set
 }
 
+/** The wood surround as a frame around the play area (no hidden overdraw under the mat). UVs in inches. */
+export function woodFrame(w: number, d: number): THREE.BufferGeometry {
+  const sw = w / 2 + SURROUND, sd = d / 2 + SURROUND, iw = w / 2 - 0.05, id = d / 2 - 0.05
+  const outer = new THREE.Shape([new THREE.Vector2(-sw, -sd), new THREE.Vector2(sw, -sd), new THREE.Vector2(sw, sd), new THREE.Vector2(-sw, sd)])
+  outer.holes.push(new THREE.Path([new THREE.Vector2(-iw, -id), new THREE.Vector2(-iw, id), new THREE.Vector2(iw, id), new THREE.Vector2(iw, -id)]))
+  const g = new THREE.ShapeGeometry(outer)
+  g.rotateX(-Math.PI / 2)
+  return g
+}
+
 const BOX = new THREE.BoxGeometry(1, 1, 1)
 const TRIM = new THREE.MeshStandardMaterial({ color: '#b87333', roughness: 0.5, metalness: 0.6 })
 const TICK = new THREE.MeshStandardMaterial({ color: '#e0c28a', roughness: 0.6, metalness: 0.4 })
@@ -94,8 +107,10 @@ export function Surface({ w, d, onShadows, board: boardProp }: { w: number; d: n
   const { graphics } = useSettings()
   const low = graphics === 'low'
   const mat = useMatSet(`boards/${board.short}`, low, true)
-  const wood = useMatSet('boards/table', low, !low, [(w + SURROUND * 2) / WOOD_TILE, (d + SURROUND * 2) / WOOD_TILE])
-  const sw = w + SURROUND * 2, sd = d + SURROUND * 2
+  useEffect(() => { shareMatAlbedo(mat.albedo ?? null); return () => shareMatAlbedo(null) }, [mat.albedo])
+  const wood = useMatSet('boards/table', low, !low, [1 / WOOD_TILE, 1 / WOOD_TILE])
+  const frame = useMemo(() => woodFrame(w, d), [w, d])
+  useEffect(() => () => frame.dispose(), [frame])
   const woodMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: wood.albedo ? '#ffffff' : WOOD_FLAT, map: wood.albedo ?? null, normalMap: wood.normal ?? null, roughnessMap: wood.rough ?? null, roughness: wood.rough ? 1 : 0.7,
   }), [wood])
@@ -103,16 +118,14 @@ export function Surface({ w, d, onShadows, board: boardProp }: { w: number; d: n
   const lipMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#4a3424', roughness: 0.55 }), [])
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow={onShadows}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow={onShadows} renderOrder={MAT_ORDER}>
         <planeGeometry args={[w, d]} />
         <meshStandardMaterial
           color={mat.albedo ? '#ffffff' : board.fallback.ground} map={mat.albedo ?? null} normalMap={mat.normal ?? null} roughnessMap={mat.rough ?? null}
           roughness={mat.rough ? 1 : 0.95} key={`${board.id}:${mat.albedo?.uuid ?? 'flat'}:${mat.normal?.uuid ?? ''}:${mat.rough?.uuid ?? ''}`}
         />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]} material={woodMat} receiveShadow={onShadows}>
-        <planeGeometry args={[sw, sd]} />
-      </mesh>
+      <mesh geometry={frame} position={[0, -0.06, 0]} material={woodMat} receiveShadow={onShadows} renderOrder={MAT_ORDER} />
       {[
         { p: [0, 0, -(d / 2 + LIP * 0.2)], s: [w + LIP * 2, LIP, LIP], r: [Math.PI / 4, 0, 0] },
         { p: [0, 0, d / 2 + LIP * 0.2], s: [w + LIP * 2, LIP, LIP], r: [Math.PI / 4, 0, 0] },

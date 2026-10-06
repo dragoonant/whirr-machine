@@ -2,7 +2,8 @@
 // Board and layout come from the engine agent's pure picker in src/data/battlefields.ts; the board-only rule is the fallback.
 import type { Id } from '../../engine/index'
 import { deriveSeed, nextU32 } from '../../engine/rng'
-import { pickBattlefield as pickFromData } from '../../data/battlefields'
+import { FIXED_LAYOUT_SCENARIOS, eligibleLayouts, pickBattlefield as pickFromData } from '../../data/battlefields'
+import { loadBundle } from '../../data/index'
 import { BOARDS, boardFor } from './boards'
 
 /** Section E rule 1 without a player choice. Never touches game RNG. */
@@ -11,7 +12,13 @@ export function boardFromSeed(seed: string): Id {
 }
 
 export interface BattlefieldPick { board: Id; layout?: Id }
-export interface PickInput { seed: string; scenario: Id; board?: Id | 'random' }
+export interface PickInput { seed: string; scenario: Id; board?: Id | 'random'; layout?: Id }
+
+/** Section E rule 3: `?layout=<id>` (or the short form "outpost-1") for tests. Undefined when absent. */
+export function layoutFromUrl(search = typeof location !== 'undefined' ? location.search : ''): Id | undefined {
+  const v = new URLSearchParams(search).get('layout')
+  return v ? (v.startsWith('layout.') ? v : `layout.${v}`) : undefined
+}
 
 /** True: the picker lives in src/data/battlefields.ts. */
 export const hasExternalPicker = (): boolean => true
@@ -21,7 +28,11 @@ export function pickBattlefield(input: PickInput): BattlefieldPick {
   const chosen = input.board && input.board !== 'random' ? boardFor(input.board)?.id : undefined
   try {
     const r = pickFromData(input.seed, input.scenario, input.board ?? null)
-    return { board: boardFor(r.board)?.id ?? chosen ?? boardFromSeed(input.seed), layout: r.layoutId }
+    const board = boardFor(r.board)?.id ?? chosen ?? boardFromSeed(input.seed)
+    // a requested layout wins when it is eligible for this board and scenario (never for a fixed-layout scenario)
+    const want = input.layout ?? layoutFromUrl()
+    if (want && !FIXED_LAYOUT_SCENARIOS.includes(input.scenario) && eligibleLayouts(loadBundle(), board, input.scenario).includes(want)) return { board, layout: want }
+    return { board, layout: r.layoutId }
   } catch { return { board: chosen ?? boardFromSeed(input.seed) } }
 }
 
