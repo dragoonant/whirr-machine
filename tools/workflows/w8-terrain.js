@@ -71,14 +71,14 @@ Fix first:
 4. Make terrain_batch.py robust: per-slug try/except, resume (skip slugs with a finished GLB), log JSON lines to ${HY2}/outputs/terrain_batch.log.jsonl.
 Then run the batch over all catalog entries. Each Bash call must stay under 10 minutes, so invoke the batch one slug at a time (a --only <slug> flag) in the FOREGROUND, looping in your own turns. Do the five boards in order bog, ruins, village, wasteland, outpost. Re-use the probe tree for wt-bog-deadtree only if its slug matches the catalog; otherwise regenerate.
 Copy each finished GLB to ${ROOT}/public/assets/terrain/<slug>.glb (≤1.5 MB each; re-encode texture JPEG q85 / 1024 if larger). Make one contact sheet per board at ${ROOT}/art/terrain-sheets/<board>.png (≤600 KB).
-Quality bar per piece: whole piece present, base intact and flat on y=0, no white or grey background slab fused to the mesh, readable silhouette. If a piece fails twice, mark it failed in issues (the client keeps its procedural fallback) and move on.
+QUALITY CHECK EVERY PIECE (owner order: redo anything less than ideal). After each slug finishes, open its <slug>_sheet.png with the Read tool and LOOK at it. Reject and redo if ANY of: it is not the object the catalog names (e.g. a fence that came out as a cabin, an arch with no opening); it is a near-duplicate of another piece on the same board; a backdrop/panel/slab or ground plane is fused to it; parts are missing or it floats; base cut off or not flat on y=0; the silhouette is mush or blobby; the size in the sidecar is off the footprint/visualHeight by more than 35% (e.g. a "very low" rough-ground patch with a 2" tall lump); colours look muddy or garish next to the other pieces of its board. To redo: delete the GLB + work dir for that slug, strengthen the prompt in tools/terrain-catalog.json (say concretely what it must be and add "no ..." for what went wrong; long thin pieces work better with "wide side view"), try new seeds, and run again. Up to 3 attempts; keep the best attempt and list it in issues if still weak. Already-finished pieces from the previous run (13 GLBs in public/assets/terrain) were reviewed by the owner and approved; do not redo them. Five were deleted for redo with improved prompts: wt-village-pines, wt-village-rail-fence, wt-ruins-arch, wt-bog-stumps, wt-bog-bone-mire — run those after the remaining new pieces. At the end, view each board's contact sheet once more as a set and redo any piece that clashes with its board.
 Return JSON: ok, summary (pieces done/failed, mean minutes per piece), files (the 5 contact sheets), issues (failed slugs + why).`, { label: 'gpu-batch', phase: 'Art', schema: RESULT, model: 'sonnet' })
 
 const matsAgent = () => agent(`${COMMON}
 You own ONLY: ${ROOT}/public/assets/terrain/boards/**, ${ROOT}/public/assets/terrain/CREDITS.md, ${ROOT}/art/board-textures/**.
 Read ${SPEC} §C and §F and ${ROOT}/art/board-textures/gen.py (Mallet's battle-scarred FFT-noise ground generator) if it exists; else port it from ${MALLET}/art/board-textures/gen.py.
 Make a ground mat for each of the five boards (bog, ruins, village, wasteland, outpost) plus one dark wood tabletop for the surround: public/assets/terrain/boards/<board>/{albedo,normal,rough}.jpg at 2048 (≤900 KB each; the wood at 1024 is fine, put it at boards/table/). Base them on CC0 Poly Haven textures (download the 2k JPGs via the polyhaven API: https://api.polyhaven.com/files/<id>; pick fitting ids such as forest/mud/brown_mud, rocky/stone/flagstone variants, snow, ash/burnt/volcanic ground, wood_table / dark_wooden_planks), then make them non-tiling and characterful with gen.py-style large-scale noise: patches of moss/puddles for the bog, flagstone ruins + crystal-lit cracks for the ruins, muddy grass and a cart track for the village, cracked ash with ember glow in cracks for the wasteland, trampled snow with mud ruts for the outpost. Each mat should read as one 36"x36" table at a glance, not a repeating tile. Credit every source in CREDITS.md (asset name, author, CC0, URL). Also write public/assets/terrain/boards/boards.json: [{board, tint (hex light colour), fogColor, edgeColor, fallbackColor}] matching §C.
-Write a quick preview PNG of all five albedos side by side to ${ROOT}/art/board-textures/preview.png (≤600 KB).
+Write a quick preview PNG of all five albedos side by side to ${ROOT}/art/board-textures/preview.png (≤600 KB). QUALITY CHECK (owner order: redo anything less than ideal): open the preview with the Read tool and look; redo any mat that shows visible tiling/seams, is too busy or too dark to read figures on, or does not read as its theme at a glance.
 Return JSON: ok, summary, files (preview + boards.json), issues.`, { label: 'ground-mats', phase: 'Art', schema: RESULT, model: 'sonnet' })
 
 const engineAgent = () => agent(`${COMMON}
@@ -112,12 +112,25 @@ if (STAGE === 'art-build') {
   return { gpu: s(gpu), mats: s(mats), engine: s(engine), client: s(client) }
 }
 
+if (STAGE === 'redo') {
+  phase('Art')
+  const REDO = (args && args.redo) || []
+  const r = await agent(`${COMMON}
+You own ONLY: ${HY2}/terrain_*.py, ${HY2}/outputs/wt-*/**, ${ROOT}/tools/terrain-catalog.json (prompts of the slugs below only), ${ROOT}/public/assets/terrain/<slug>.glb for the slugs below, ${ROOT}/art/terrain-sheets/*.png. GPU work is owner-approved. Use ${HY2}/terrain_batch.py (--only <slug> --force, one slug per FOREGROUND Bash call, each under 10 minutes) and terrain_contact.py.
+The owner ordered: redo anything less than ideal. The main loop reviewed the contact sheets and rejected these pieces; for each, the problem and what it must become:
+${REDO.map(x => `- ${x.slug}: ${x.why}`).join('\n')}
+For each: rewrite its catalog prompt (keep the house prefix, say concretely what the object must look like, add "no ..." for the failure seen), try fresh seeds, run, then open <slug>_sheet.png with the Read tool and judge it honestly against the catalog name, footprint and visualHeight. Up to 3 attempts per slug; keep the best and say in issues if still weak. Copy the final GLB to ${ROOT}/public/assets/terrain/<slug>.glb (≤1.5 MB). Finally rebuild all five ${ROOT}/art/terrain-sheets/<board>.png (≤600 KB each, delete village-partial.png) and view each once.
+Return JSON: ok, summary (per slug: attempts, verdict), files (the five sheets), issues.`, { label: 'gpu-redo', phase: 'Art', schema: RESULT, model: 'sonnet' })
+  return { redo: s(r) }
+}
+
 if (STAGE === 'ship') {
   phase('Ship')
   const ship = await agent(`${COMMON}
 Integrate M8. You may edit any src file, tests, STATUS.md, HANDOFF.md, package.json, public/assets/terrain/**.
 1. npm run typecheck, npm test, npm run validate:data, npm run build green; npm run bench:ai -- --games 20 --seed 1 normal ≥18/20.
 2. Play in Playwright (vite preview at /whirr-machine/): for EACH of the five boards (?board=<id>), start Khador vs the normal bot, deploy, play one round through the UI. Fix any crash, missing/misplaced GLB (piece floating, sunk, rotated off its footprint, clipping a deployment zone), unreadable ground, stuck prompt. Report ms/frame per board.
+2b. Quality check in-game (owner order: redo anything less than ideal): open each screenshot with the Read tool and judge it. Fix (client fit, ground mat contrast, lighting tint, scale, z-fighting, piece sunk/floating) until each board looks like a finished tabletop. A GLB that looks wrong in context: list its slug in issues as "needs GPU redo" (do not run the GPU yourself).
 3. Screenshots to e2e-out/: board-<id>.png for all five (the overview camera after deployment) and board-<id>-close.png for two of them (low angle across terrain toward the figures).
 4. Update STATUS.md + HANDOFF.md (M8 done; owner to veto pieces from art/terrain-sheets/*.png). Stage by exact paths: src public/assets/terrain tools/terrain-catalog.json tools/workflows/w8-terrain.js docs/spec docs/needs-rules-check.md art/terrain-sheets art/board-textures tests STATUS.md HANDOFF.md package.json package-lock.json (never docs/sources, Tokens, e2e-out, refs). Commit "M8: five themed battlefields with generated terrain, random board per game" + blank line + "${ATTR}"; git pull --rebase; git push origin main; gh run watch the Pages deploy (fix and retry up to 2 times).
 Return JSON: ok, summary (≤120 words), files (absolute screenshot paths), issues.`, { label: 'terrain-ship', phase: 'Ship', schema: RESULT, effort: 'high' })

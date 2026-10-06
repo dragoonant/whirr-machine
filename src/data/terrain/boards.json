@@ -1,0 +1,208 @@
+[
+  {
+    "id": "board.bog",
+    "name": "Hollowmere Bog",
+    "text": "A drowned hollow of black peat, reed beds and dead trees. Footing is poor, the light is poor, and everything sits close to the water.",
+    "pieces": [
+      "terrain.bog-deadwood",
+      "terrain.bog-stilt-hut",
+      "terrain.bog-hummock",
+      "terrain.bog-log-barrier",
+      "terrain.bog-murk-pool",
+      "terrain.bog-bone-mire",
+      "terrain.bog-stumps"
+    ],
+    "layouts": [
+      "layout.bog-1",
+      "layout.bog-2",
+      "layout.bog-3"
+    ],
+    "reskin": {
+      "terrain.low-wall": "wt-bog-log-barrier",
+      "terrain.pond": "wt-bog-murk-pool"
+    },
+    "ground": {
+      "albedo": "terrain/boards/bog/albedo.jpg",
+      "normal": "terrain/boards/bog/normal.jpg",
+      "rough": "terrain/boards/bog/rough.jpg"
+    },
+    "light": {
+      "key": "#c9d6b0",
+      "ambient": "#4b5a47",
+      "fog": "#26302a",
+      "keyIntensity": 1,
+      "fogNear": 40,
+      "fogFar": 110
+    },
+    "fallback": {
+      "ground": "#3a3b2b",
+      "accent": "#5c6e3c",
+      "piece": "#6b6450"
+    }
+  },
+  {
+    "id": "board.ruins",
+    "name": "Veilstone Ruins",
+    "text": "Pale stone shards and root-wrapped monoliths lie scattered over mossy turf under a violet dusk. Plenty of tall blockers, few clean lanes.",
+    "pieces": [
+      "terrain.ruins-monolith",
+      "terrain.ruins-arch",
+      "terrain.ruins-colonnade",
+      "terrain.ruins-crystal",
+      "terrain.ruins-grove",
+      "terrain.ruins-dais",
+      "terrain.ruins-masonry"
+    ],
+    "layouts": [
+      "layout.ruins-1",
+      "layout.ruins-2",
+      "layout.ruins-3"
+    ],
+    "reskin": {
+      "terrain.low-wall": "wt-ruins-colonnade"
+    },
+    "ground": {
+      "albedo": "terrain/boards/ruins/albedo.jpg",
+      "normal": "terrain/boards/ruins/normal.jpg",
+      "rough": "terrain/boards/ruins/rough.jpg"
+    },
+    "light": {
+      "key": "#ddd3f2",
+      "ambient": "#3f3b58",
+      "fog": "#28263a",
+      "keyIntensity": 1,
+      "fogNear": 40,
+      "fogFar": 110
+    },
+    "fallback": {
+      "ground": "#4a5a3e",
+      "accent": "#9a94b8",
+      "piece": "#b8b2a4"
+    }
+  },
+  {
+    "id": "board.village",
+    "name": "Ironpine Hamlet",
+    "text": "A cold, clear morning over a small settlement of stone and timber, with pine stands and low walls between the farm plots.",
+    "pieces": [
+      "terrain.village-chapel",
+      "terrain.village-watchtower",
+      "terrain.village-pines",
+      "terrain.village-rail-fence",
+      "terrain.village-stone-wall",
+      "terrain.village-pond",
+      "terrain.village-knoll",
+      "terrain.village-boulders"
+    ],
+    "layouts": [
+      "layout.village-1",
+      "layout.village-2",
+      "layout.village-3"
+    ],
+    "reskin": {
+      "terrain.low-wall": "wt-village-stone-wall",
+      "terrain.pond": "wt-village-pond"
+    },
+    "ground": {
+      "albedo": "terrain/boards/village/albedo.jpg",
+      "normal": "terrain/boards/village/normal.jpg",
+      "rough": "terrain/boards/village/rough.jpg"
+    },
+    "light": {
+      "key": "#f3e7cf",
+      "ambient": "#56606a",
+      "fog": "#2e343a",
+      "keyIntensity": 1.1,
+      "fogNear": 40,
+      "fogFar": 110
+    },
+    "fallback": {
+      "ground": "#5a6440",
+      "accent": "#8a7a5a",
+      "piece": "#9c958a"
+    }
+  },
+  {
+    "id": "board.wasteland",
+    "name": "Cinder Blight",
+    "text": "A scorched crust of ash and cinders cut by glowing fissures. Thorned iron stakes and a pool of molten blight make the ground itself an enemy.",
+    "pieces": [
+      "terrain.wasteland-thorn-palisade",
+      "terrain.wasteland-chain-barricade",
+      "terrain.wasteland-thornwood",
+      "terrain.wasteland-ritual-dais",
+      "terrain.wasteland-ash-flats",
+      "terrain.wasteland-blight-pool",
+      "terrain.wasteland-bone-spikes"
+    ],
+    "layouts": [
+      "layout.wasteland-1",
+      "layout.wasteland-2",
+      "layout.wasteland-3"
+    ],
+    "reskin": {
+      "terrain.low-wall": "wt-wasteland-chain-barricade",
+      "terrain.pond": "wt-wasteland-ash-flats"
+    },
+    "ground": {
+      "albedo": "terrain/boards/wasteland/albedo.jpg",
+      "normal": "terrain/boards/wasteland/normal.jpg",
+      "rough": "terrain/boards/wasteland/rough.jpg"
+    },
+    "light": {
+      "key": "#ffb27a",
+      "ambient": "#3c2622",
+      "fog": "#2b1a16",
+      "keyIntensity": 1,
+      "fogNear": 40,
+      "fogFar": 110
+    },
+    "fallback": {
+      "ground": "#3a302b",
+      "accent": "#c4521f",
+      "piece": "#5a524e"
+    }
+  },
+  {
+    "id": "board.outpost",
+    "name": "Frostline Outpost",
+    "text": "A snowbound picket camp of timber and sandbags, with a cut trench line and wagons parked across the road.",
+    "pieces": [
+      "terrain.outpost-blockhouse",
+      "terrain.outpost-snow-pines",
+      "terrain.outpost-trench",
+      "terrain.outpost-sandbags",
+      "terrain.outpost-stakes",
+      "terrain.outpost-wagon",
+      "terrain.outpost-frozen-pond",
+      "terrain.outpost-snow-rocks"
+    ],
+    "layouts": [
+      "layout.outpost-1",
+      "layout.outpost-2",
+      "layout.outpost-3"
+    ],
+    "reskin": {
+      "terrain.low-wall": "wt-outpost-sandbags",
+      "terrain.pond": "wt-outpost-frozen-pond"
+    },
+    "ground": {
+      "albedo": "terrain/boards/outpost/albedo.jpg",
+      "normal": "terrain/boards/outpost/normal.jpg",
+      "rough": "terrain/boards/outpost/rough.jpg"
+    },
+    "light": {
+      "key": "#e0e9ff",
+      "ambient": "#6a7488",
+      "fog": "#3a4250",
+      "keyIntensity": 0.95,
+      "fogNear": 40,
+      "fogFar": 110
+    },
+    "fallback": {
+      "ground": "#d9dde2",
+      "accent": "#6c5a46",
+      "piece": "#7d7a74"
+    }
+  }
+]

@@ -55,6 +55,9 @@ export function SettingsPanel() {
         Narration pauses (round and turn banners hold; click to skip)
       </label>
       <label className="set-row set-check">
+        <input type="checkbox" data-testid="set-zones" checked={st.showZones} onChange={(e) => settings.set({ showZones: e.target.checked })} /> Show terrain zones (outline each piece's rules area)
+      </label>
+      <label className="set-row set-check">
         <input type="checkbox" data-testid="set-tips" checked={tips} onChange={(e) => setTipsEnabled(e.target.checked)} /> Show tips
       </label>
       <label className="set-row set-check">

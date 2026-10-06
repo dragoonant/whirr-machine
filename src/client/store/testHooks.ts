@@ -1,4 +1,5 @@
 // Test hooks (50 §10): `?test=1` exposes window.__game, and URL params give e2e a fast setup.
+import { boardFromUrl } from '../board/boards'
 import { loadBundle } from '../../data/index'
 import type { Action, GameState, Id, PendingDecision, PlayerId, SaveFile } from '../../engine/index'
 import { skipAll, skipBeat } from '../presentation/director'
@@ -100,5 +101,6 @@ export function setupFromUrl(search = typeof location !== 'undefined' ? location
     controllers: { A: ctl[0] ?? 'human', B: ctl[1] ?? 'bot' },
     bot: { tier: ['random', 'easy', 'normal', 'hard'].includes(tier) ? tier : 'random' },
     ...(q.get('seed') ? { seed: q.get('seed')! } : {}),
+    ...(boardFromUrl(search) ? { board: boardFromUrl(search)! } : {}),
   }
 }

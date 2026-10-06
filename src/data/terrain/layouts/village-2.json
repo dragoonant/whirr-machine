@@ -1,0 +1,83 @@
+{
+  "id": "layout.village-2",
+  "name": "Watch Hill",
+  "board": "board.village",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "h1",
+      "terrain": "terrain.village-knoll",
+      "pos": {
+        "x": -12,
+        "z": 1
+      },
+      "rot": 1.570796326795
+    },
+    {
+      "id": "h2",
+      "terrain": "terrain.village-knoll",
+      "pos": {
+        "x": 12,
+        "z": -1
+      },
+      "rot": 4.712388980385
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.village-watchtower",
+      "pos": {
+        "x": -1.5,
+        "z": 6
+      },
+      "rot": 0
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.village-watchtower",
+      "pos": {
+        "x": 1.5,
+        "z": -6
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "p1",
+      "terrain": "terrain.village-pond",
+      "pos": {
+        "x": 9.5,
+        "z": -9
+      },
+      "rot": 0
+    },
+    {
+      "id": "p2",
+      "terrain": "terrain.village-pond",
+      "pos": {
+        "x": -9.5,
+        "z": 9
+      },
+      "rot": 3.14159265359
+    }
+  ]
+}

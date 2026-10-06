@@ -1,0 +1,7 @@
+[
+  {"board": "bog", "tint": "#c9d6b0", "fogColor": "#26302a", "edgeColor": "#4b5a47", "fallbackColor": "#3a3b2b"},
+  {"board": "ruins", "tint": "#ddd3f2", "fogColor": "#28263a", "edgeColor": "#3f3b58", "fallbackColor": "#4a5a3e"},
+  {"board": "village", "tint": "#f3e7cf", "fogColor": "#2e343a", "edgeColor": "#56606a", "fallbackColor": "#5a6440"},
+  {"board": "wasteland", "tint": "#ffb27a", "fogColor": "#2b1a16", "edgeColor": "#3c2622", "fallbackColor": "#3a302b"},
+  {"board": "outpost", "tint": "#e0e9ff", "fogColor": "#3a4250", "edgeColor": "#6a7488", "fallbackColor": "#d9dde2"}
+]

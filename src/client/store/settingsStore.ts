@@ -18,10 +18,14 @@ export interface Settings {
   narration: boolean
   /** Ask before ending a turn with models still able to activate. */
   confirmEndTurn: boolean
+  /** Draw the rules footprints of terrain pieces all the time (otherwise only while a model is selected). */
+  showZones: boolean
+  /** Start-screen Battlefield choice: 'random' or a board id (remembered between visits). */
+  battlefield: string
 }
 
 export const SETTINGS_KEY = 'wm.settings'
-export const DEFAULT_SETTINGS: Settings = { speed: 1, graphics: 'high', narration: true, confirmEndTurn: true }
+export const DEFAULT_SETTINGS: Settings = { speed: 1, graphics: 'high', narration: true, confirmEndTurn: true, showZones: false, battlefield: 'random' }
 
 function sanitize(raw: Partial<Settings> | null): Settings {
   const s = { ...DEFAULT_SETTINGS }
@@ -30,6 +34,8 @@ function sanitize(raw: Partial<Settings> | null): Settings {
   if (raw.graphics === 'low' || raw.graphics === 'high') s.graphics = raw.graphics
   if (typeof raw.narration === 'boolean') s.narration = raw.narration
   if (typeof raw.confirmEndTurn === 'boolean') s.confirmEndTurn = raw.confirmEndTurn
+  if (typeof raw.showZones === 'boolean') s.showZones = raw.showZones
+  if (typeof raw.battlefield === 'string' && raw.battlefield.length < 40) s.battlefield = raw.battlefield
   return s
 }
 
@@ -49,7 +55,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 }))
 
 function pick(s: Settings): Settings {
-  return { speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn }
+  return { speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn, showZones: s.showZones, battlefield: s.battlefield }
 }
 
 export function getSettings(): Settings { return pick(useSettingsStore.getState()) }

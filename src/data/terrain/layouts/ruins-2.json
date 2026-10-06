@@ -1,0 +1,74 @@
+{
+  "id": "layout.ruins-2",
+  "name": "Crystal Steps",
+  "board": "board.ruins",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.ruins-colonnade",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.ruins-colonnade",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "h1",
+      "terrain": "terrain.ruins-dais",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "h2",
+      "terrain": "terrain.ruins-dais",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.ruins-arch",
+      "pos": {
+        "x": -2,
+        "z": 5.5
+      },
+      "rot": 0
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.ruins-arch",
+      "pos": {
+        "x": 2,
+        "z": -5.5
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "b0",
+      "terrain": "terrain.ruins-crystal",
+      "pos": {
+        "x": 0,
+        "z": 0
+      },
+      "rot": 0
+    }
+  ]
+}

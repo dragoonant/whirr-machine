@@ -1,0 +1,249 @@
+[
+  {
+    "id": "terrain.outpost-blockhouse",
+    "name": "Timber Blockhouse",
+    "rulesType": "building",
+    "footprint": {
+      "rect": {
+        "w": 6,
+        "d": 4.5
+      }
+    },
+    "height": 4,
+    "mesh": "wt-outpost-blockhouse"
+  },
+  {
+    "id": "terrain.outpost-snow-pines",
+    "name": "Snowbound Pines",
+    "rulesType": "forest",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.125
+        },
+        {
+          "x": 1.5,
+          "z": 1.949
+        },
+        {
+          "x": 0,
+          "z": 2.25
+        },
+        {
+          "x": -1.5,
+          "z": 1.949
+        },
+        {
+          "x": -2.598,
+          "z": 1.125
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.125
+        },
+        {
+          "x": -1.5,
+          "z": -1.949
+        },
+        {
+          "x": 0,
+          "z": -2.25
+        },
+        {
+          "x": 1.5,
+          "z": -1.949
+        },
+        {
+          "x": 2.598,
+          "z": -1.125
+        }
+      ]
+    },
+    "height": 5,
+    "mesh": "wt-outpost-snow-pines"
+  },
+  {
+    "id": "terrain.outpost-trench",
+    "name": "Zig-Zag Trench",
+    "rulesType": "trench",
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 3
+      }
+    },
+    "height": 0,
+    "props": {
+      "resistance": [
+        "blast"
+      ]
+    },
+    "mesh": "wt-outpost-trench"
+  },
+  {
+    "id": "terrain.outpost-sandbags",
+    "name": "Sandbag Barricade",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
+    "height": 0.75,
+    "mesh": "wt-outpost-sandbags"
+  },
+  {
+    "id": "terrain.outpost-stakes",
+    "name": "Stake Barricade",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 1
+      }
+    },
+    "height": 0.9,
+    "mesh": "wt-outpost-stakes"
+  },
+  {
+    "id": "terrain.outpost-wagon",
+    "name": "Supply Wagon",
+    "rulesType": "obstruction",
+    "footprint": {
+      "rect": {
+        "w": 3.5,
+        "d": 1.75
+      }
+    },
+    "height": 2,
+    "mesh": "wt-outpost-wagon"
+  },
+  {
+    "id": "terrain.outpost-frozen-pond",
+    "name": "Frozen Pond",
+    "rulesType": "rough",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
+    "height": 0,
+    "mesh": "wt-outpost-frozen-pond"
+  },
+  {
+    "id": "terrain.outpost-snow-rocks",
+    "name": "Snow-Capped Rocks",
+    "rulesType": "rubble",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
+    "height": 0.5,
+    "mesh": "wt-outpost-snow-rocks"
+  }
+]

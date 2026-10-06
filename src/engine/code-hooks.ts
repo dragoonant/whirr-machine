@@ -6,7 +6,7 @@ import { computeStat } from './dice'
 import { effectsOn, hasCondition } from './effects'
 import { baseRadius, dist, isOnTable } from './geometry'
 import { modelDistance, within } from './measure'
-import { insideCoverOf } from './terrain'
+import { insideCoverOf, terrainResistance } from './terrain'
 import type { GridLayout } from './damage'
 import type { HitLookups } from './movement'
 import type {
@@ -213,6 +213,7 @@ export function armOf(state: GameState, b: DataBundle, id: ModelId, o: { armorPi
 export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, types: DamageType[]): boolean {
   const me = state.models[id]
   if (!me) return false
+  if (isOnTable(me) && terrainResistance(state, me.pos, baseRadius(me.base)).some((t) => types.includes(t))) return true
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
   }

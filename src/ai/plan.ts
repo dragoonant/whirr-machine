@@ -14,7 +14,7 @@ import { nearestOpenElement, scenarioValue } from './scenario'
 import { exposureValue, threatAt, type ThreatReport } from './threat'
 import type { TierParams } from './tiers'
 import {
-  baseRadius, boxesTotal, dist, distToElement, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
+  baseRadius, boxesTotal, dist, distToElement, hazardCost, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
 } from './world'
 
 export interface ActPlan {
@@ -120,7 +120,8 @@ export function fastThreat(env: Env, me: ModelState, p: Vec2, ignore?: Set<strin
       let k = 1
       if (env.tier.cover) try {
         const los = query.los(hs, f.e.id, me.id)
-        k = !los.visible ? 1 : los.mods.cover ? 0.6 : los.mods.concealment ? 0.8 : 1
+        // no line at all (a wall, building or hill between): they must move to get one, which costs them reach
+        k = !los.visible ? 0.75 : los.mods.cover ? 0.6 : los.mods.concealment ? 0.8 : 1
       } catch { k = 1 }
       const x = f.rangedExp * k
       if (!best || x > best.x) best = { a: k === 1 ? f.ranged : f.ranged.map((r) => ({ ...r, p: r.p * k })), x }
@@ -231,7 +232,9 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
     }
   }
   prog -= 0.25 * Math.max(0, 3 - edgeGap(s, p, m.base))
-  const score = off.v + env.tier.wScenario * scen - env.tier.wThreat * exposure - (isLeader && env.tier.wThreat === 0 ? risk * 60 : 0) + prog
+  // terrain hazards: entering one on the way or ending the activation in it costs expected damage (R9.8)
+  const hz = hazardCost(s, m, m.pos, p)
+  const score = off.v + env.tier.wScenario * scen - env.tier.wThreat * exposure - hz - (isLeader && env.tier.wThreat === 0 ? risk * 60 : 0) + prog
   return { score, off: off.v, pos: p, targetId: off.targetId, mode: off.mode, risk, focusUse: off.used }
 }
 

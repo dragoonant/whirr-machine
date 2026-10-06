@@ -1,0 +1,74 @@
+{
+  "id": "layout.outpost-3",
+  "name": "Supply Road",
+  "board": "board.outpost",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.outpost-sandbags",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.outpost-sandbags",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.outpost-blockhouse",
+      "pos": {
+        "x": -12,
+        "z": 2.5
+      },
+      "rot": 1.570796326795
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.outpost-blockhouse",
+      "pos": {
+        "x": 12,
+        "z": -2.5
+      },
+      "rot": 4.712388980385
+    },
+    {
+      "id": "p1",
+      "terrain": "terrain.outpost-frozen-pond",
+      "pos": {
+        "x": -1,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "p2",
+      "terrain": "terrain.outpost-frozen-pond",
+      "pos": {
+        "x": 1,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "r0",
+      "terrain": "terrain.outpost-snow-rocks",
+      "pos": {
+        "x": 0,
+        "z": 0
+      },
+      "rot": 0
+    }
+  ]
+}

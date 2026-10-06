@@ -1,0 +1,83 @@
+{
+  "id": "layout.bog-3",
+  "name": "Witchlight Fen",
+  "board": "board.bog",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.bog-log-barrier",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.bog-log-barrier",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "r1",
+      "terrain": "terrain.bog-bone-mire",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 1.570796326795
+    },
+    {
+      "id": "r2",
+      "terrain": "terrain.bog-bone-mire",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 4.712388980385
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.bog-stilt-hut",
+      "pos": {
+        "x": -2,
+        "z": 5.5
+      },
+      "rot": 0.261799387799
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.bog-stilt-hut",
+      "pos": {
+        "x": 2,
+        "z": -5.5
+      },
+      "rot": 3.403392041389
+    },
+    {
+      "id": "s1",
+      "terrain": "terrain.bog-stumps",
+      "pos": {
+        "x": -12,
+        "z": -9
+      },
+      "rot": 0
+    },
+    {
+      "id": "s2",
+      "terrain": "terrain.bog-stumps",
+      "pos": {
+        "x": 12,
+        "z": 9
+      },
+      "rot": 3.14159265359
+    }
+  ]
+}

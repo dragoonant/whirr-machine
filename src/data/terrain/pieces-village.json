@@ -1,0 +1,293 @@
+[
+  {
+    "id": "terrain.village-chapel",
+    "name": "Domed Chapel",
+    "rulesType": "building",
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 4
+      }
+    },
+    "height": 5.5,
+    "mesh": "wt-village-chapel"
+  },
+  {
+    "id": "terrain.village-watchtower",
+    "name": "Stone Watchtower",
+    "rulesType": "building",
+    "footprint": {
+      "rect": {
+        "w": 3,
+        "d": 3
+      }
+    },
+    "height": 6,
+    "mesh": "wt-village-watchtower"
+  },
+  {
+    "id": "terrain.village-pines",
+    "name": "Pine Stand",
+    "rulesType": "forest",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.25
+        },
+        {
+          "x": 1.5,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.5,
+          "z": 2.165
+        },
+        {
+          "x": -2.598,
+          "z": 1.25
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.25
+        },
+        {
+          "x": -1.5,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.5,
+          "z": -2.165
+        },
+        {
+          "x": 2.598,
+          "z": -1.25
+        }
+      ]
+    },
+    "height": 5,
+    "mesh": "wt-village-pines"
+  },
+  {
+    "id": "terrain.village-rail-fence",
+    "name": "Split-Rail Fence",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 0.5
+      }
+    },
+    "height": 0.75,
+    "props": {
+      "concealment": true
+    },
+    "mesh": "wt-village-rail-fence"
+  },
+  {
+    "id": "terrain.village-stone-wall",
+    "name": "Fieldstone Wall",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
+    "height": 0.75,
+    "mesh": "wt-village-stone-wall"
+  },
+  {
+    "id": "terrain.village-pond",
+    "name": "Mill Pond",
+    "rulesType": "shallowWater",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
+    "height": 0,
+    "mesh": "wt-village-pond"
+  },
+  {
+    "id": "terrain.village-knoll",
+    "name": "Grassy Knoll",
+    "rulesType": "hill",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3.5,
+          "z": 0
+        },
+        {
+          "x": 3.031,
+          "z": 1.25
+        },
+        {
+          "x": 1.75,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.75,
+          "z": 2.165
+        },
+        {
+          "x": -3.031,
+          "z": 1.25
+        },
+        {
+          "x": -3.5,
+          "z": 0
+        },
+        {
+          "x": -3.031,
+          "z": -1.25
+        },
+        {
+          "x": -1.75,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.75,
+          "z": -2.165
+        },
+        {
+          "x": 3.031,
+          "z": -1.25
+        }
+      ]
+    },
+    "height": 1,
+    "mesh": "wt-village-knoll"
+  },
+  {
+    "id": "terrain.village-boulders",
+    "name": "Boulder Scatter",
+    "rulesType": "rubble",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
+    "height": 0.5,
+    "mesh": "wt-village-boulders"
+  }
+]

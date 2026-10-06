@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { GameState, PlayerId } from '../../engine/index'
-import { endWord, game, playerName, useGameResult, usePresentedState, usePresentedVp } from '../contract'
+import { endWord, game, useBoardName, playerName, useGameResult, usePresentedState, usePresentedVp } from '../contract'
+import { boardFor, boardFromUrl } from '../board/boards'
+import { getSettings } from '../store/settingsStore'
 import { useGameStore } from '../store/gameStore'
 import './hud.css'
 import { getMatchStats, installMatchStats } from './matchStats'
@@ -44,7 +46,7 @@ export function vpByRound(state: GameState): RoundVp[] {
 /** Start the same match again with a fresh seed (same lists, scenario, controllers and bot strength). */
 export function playAgain(state: GameState): string | null {
   const g = useGameStore.getState()
-  const rej = game.newGame({ scenario: state.setup.scenario, lists: { ...state.setup.lists }, controllers: { ...g.controllers }, bot: { tier: g.bot.tier } })
+  const rej = game.newGame({ scenario: state.setup.scenario, lists: { ...state.setup.lists }, controllers: { ...g.controllers }, bot: { tier: g.bot.tier }, board: boardFromUrl() ?? (boardFor(getSettings().battlefield)?.id ?? 'random') })
   return rej ? rej.text : null
 }
 
@@ -53,6 +55,7 @@ export function GameOver({ onExit }: { onExit?: () => void }) {
   const result = useGameResult()
   const state = usePresentedState()
   const vp = usePresentedVp()
+  const boardName = useBoardName()
   const [hidden, setHidden] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const over = !!result
@@ -68,6 +71,7 @@ export function GameOver({ onExit }: { onExit?: () => void }) {
         <h2 className="over-title" data-testid="gameover-result">{resultHeadline(state, result)}</h2>
         <p className="over-reason" data-testid="gameover-reason">{result.winner ? `Won by ${endWord(result.reason)}.` : `Ended on ${endWord(result.reason)}.`}</p>
         <p className="over-cause hud-dim" data-testid="gameover-cause">{causeText(result)}</p>
+        <p className="over-cause hud-dim" data-testid="gameover-board">Battlefield: {boardName}</p>
         <div className="over-vp">
           {sides.map((p) => (
             <div key={p} className={`vp vp-${p}${result.winner === p ? ' vp-win' : ''}`} data-testid={`gameover-vp-${p}`}>

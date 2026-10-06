@@ -148,19 +148,21 @@ Defaults by kind (engine fills when omitted): `objective50` hold within 3 by lea
 
 ## 8. Terrain (`terrain.schema.json`, `terrain-layout.schema.json`)
 
-Piece `{id, name, rulesType, footprint, height, props?, mesh?}`; layout `{id, name, table, pieces:[{id, terrain, pos, rot?}]}`.
+Piece `{id, name, rulesType, footprint, height, props?, mesh?}`; layout `{id, name, board?, table, pieces:[{id, terrain, pos, rot?}]}`; board `{id, name, text, pieces[], layouts[], reskin, ground, light, fallback}` (`board.schema.json`, 70 §C). `rulesType` is the engine's `TerrainRulesType`: obstacle, obstruction, building, forest, shallowWater, rough, rubble, hill, trench, hazard, deepWater, scenarioTerrain. An obstacle is under 1" tall and an obstruction or building 1" or taller (checked on load). A layout used with a scenario must carry the scenario's terrain anchors (`scenarioAnchorProblems`).
 
 ## 9. Terrain rules-type defaults (`props` overrides)
 
 | rulesType | blocksLos | cover/conceal | movement | other |
 |---|---|---|---|---|
-| `obstacle` (<1" tall wall) | by height vs volumes | cover (wall) or concealment (hedge, `props.concealment`), within 1" along a line | crossable if the move clears it; never stood on | `meleeDefBonus: 2` |
+| `obstacle` (<1" tall wall) | by height vs volumes | cover (wall) or concealment (hedge, `props.concealment`), within 1" along a line | crossable if the move clears it; never stood on | +2 melee DEF if partly obscured |
 | `obstruction` / `building` (≥1") | yes | cover | impassable (Flight/Incorporeal excepted) | |
 | `forest` | from inside: through ≤ `losThrough: 3`; outside→outside: blocks beyond; never vs 120 mm | concealment, completely inside only | rough | |
 | `shallowWater`, `rough`, `rubble` | no | rubble: cover, completely inside only; others none | rough (−2", min 1") | |
 | `hill` | by height | none (elevation +2 only) | open; leaving it is never a fall | `elevation` to models completely within |
-| `trench` (3×5) | no | cover | open | `resistance: [blast]` |
-| `hazard` | no | none | open | `hazard.effect` (burning earth, acid bath) |
+| `trench` (RULING G2) | no | cover, completely inside only | open | `resistance: [blast]` while completely inside |
+| `hazard` | no | none | open | `hazard: {effect: [{op: damage, pow, damageType?}], on?: [enter, endActivation]}`: one roll on entering and one on ending an activation inside (R9.8) |
+
+Props the engine reads: `blocksLos losThrough cover concealment rough impassable elevation resistance hazard`, plus `feature` (`hedge`), `baseType` and `baseElev`. `crossable` and `meleeDefBonus` do not exist.
 
 ## 10. Worked example: a heavy war-engine with a grid (illustrative numbers, not a real card)
 

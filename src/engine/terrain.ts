@@ -1,6 +1,6 @@
 // Terrain prisms by rules type (10-rules-core R10, R5.12-R5.14, R6.3). Pure functions, inches.
 // Self-contained on purpose (geometry.ts imports this file, not the other way round).
-import type { GameState, TerrainInstance, TerrainRulesType, Vec2 } from './types'
+import type { DamageType, GameState, TerrainInstance, TerrainRulesType, Vec2 } from './types'
 
 const EPS = 1e-9
 
@@ -122,6 +122,12 @@ export interface TerrainTraits {
   cover: CoverKind // granted within 1" along a line (obstacle/obstruction)
   insideCover: CoverKind // granted to a model completely inside (rubble, forest)
   hazard: boolean
+  /** R9.8 hazard data (props.hazard); only on hazard pieces */
+  hazardSpec?: { pow: number; damageType?: DamageType; on: ('enter' | 'endActivation')[] }
+  /** forest: a line that starts or ends inside may cross this much (R10); props.losThrough, default 3 */
+  losThrough: number
+  /** damage types a model completely inside resists (trench: blast; props.resistance) */
+  resist: DamageType[]
 }
 
 export function effectiveType(t: TerrainInstance): TerrainRulesType {
@@ -132,29 +138,56 @@ export function effectiveType(t: TerrainInstance): TerrainRulesType {
   return t.rulesType
 }
 
+/** First 'damage' node of props.hazard.effect (R9.8): POW, optional damage type, and the triggers (default both). */
+function hazardSpecOf(t: TerrainInstance): TerrainTraits['hazardSpec'] {
+  const h = t.props['hazard'] as { effect?: Record<string, unknown>[]; on?: ('enter' | 'endActivation')[] } | undefined
+  const node = h?.effect?.find((n) => n['op'] === 'damage')
+  const pow = typeof node?.['pow'] === 'number' ? (node['pow'] as number) : 10
+  const on = Array.isArray(h?.on) && h!.on!.length ? h!.on! : (['enter', 'endActivation'] as ('enter' | 'endActivation')[])
+  return { pow, ...(typeof node?.['damageType'] === 'string' ? { damageType: node['damageType'] as DamageType } : {}), on }
+}
+
+/**
+ * Traits by rules type, then the schema props overrides (terrain.schema.json): blocksLos, losThrough, cover, concealment,
+ * rough, impassable, elevation, resistance, hazard. (feature, baseType and baseElev are read elsewhere.)
+ */
 export function terrainTraits(t: TerrainInstance): TerrainTraits {
   const type = effectiveType(t)
-  const hedge = t.props['feature'] === 'hedge' || t.props['concealment'] === true
+  const p = t.props
+  const hedge = p['feature'] === 'hedge' || p['concealment'] === true
   const base: TerrainTraits = {
     type, move: 'none', rough: false, blocksLos: false, forest: false, height: t.height, elevation: 0,
-    cover: 'none', insideCover: 'none', hazard: false,
+    cover: 'none', insideCover: 'none', hazard: false, losThrough: 3, resist: [],
   }
+  let r: TerrainTraits
   switch (type) {
-    case 'obstacle': return { ...base, move: 'obstacle', blocksLos: true, cover: hedge ? 'concealment' : 'cover' }
+    case 'obstacle': r = { ...base, move: 'obstacle', blocksLos: true, cover: hedge ? 'concealment' : 'cover' }; break
     case 'obstruction':
-    case 'building': return { ...base, move: 'impassable', blocksLos: true, cover: 'cover' }
-    case 'forest': return { ...base, rough: true, forest: true, insideCover: 'concealment' }
-    case 'shallowWater': return { ...base, rough: true }
-    case 'rough': return { ...base, rough: true }
-    case 'rubble': return { ...base, rough: true, insideCover: 'cover' }
-    case 'hill': {
-      const e = typeof t.props['elevation'] === 'number' ? (t.props['elevation'] as number) : t.height
-      return { ...base, blocksLos: true, elevation: e }
-    }
-    case 'hazard': return { ...base, hazard: true }
-    case 'deepWater': return { ...base, move: 'impassable' }
-    default: return base // trench: treated as open ground
+    case 'building': r = { ...base, move: 'impassable', blocksLos: true, cover: 'cover' }; break
+    case 'forest': r = { ...base, rough: true, forest: true, insideCover: 'concealment' }; break
+    case 'shallowWater': r = { ...base, rough: true }; break
+    case 'rough': r = { ...base, rough: true }; break
+    case 'rubble': r = { ...base, rough: true, insideCover: 'cover' }; break
+    case 'hill': r = { ...base, blocksLos: true, elevation: typeof p['elevation'] === 'number' ? (p['elevation'] as number) : t.height }; break
+    case 'hazard': r = { ...base, hazard: true, hazardSpec: hazardSpecOf(t) }; break
+    case 'deepWater': r = { ...base, move: 'impassable' }; break
+    // RULING (G2): a trench is open ground; a model completely inside has cover and Resistance: Blast (20 section 9)
+    case 'trench': r = { ...base, insideCover: 'cover', resist: ['blast'] }; break
+    default: r = base
   }
+  // props overrides (G3)
+  if (typeof p['blocksLos'] === 'boolean') r.blocksLos = p['blocksLos']
+  if (typeof p['losThrough'] === 'number') r.losThrough = p['losThrough']
+  if (typeof p['rough'] === 'boolean') r.rough = p['rough']
+  if (typeof p['impassable'] === 'boolean') r.move = p['impassable'] ? 'impassable' : r.move === 'impassable' ? 'none' : r.move
+  if (typeof p['elevation'] === 'number' && type !== 'hill') r.elevation = p['elevation']
+  if (Array.isArray(p['resistance'])) r.resist = p['resistance'] as DamageType[]
+  if (p['hazard'] && type !== 'hazard') { r.hazard = true; r.hazardSpec = hazardSpecOf(t) }
+  const lineKind = r.move !== 'none' // walls, buildings and obstructions grant cover along a line; the rest only completely inside
+  if (p['cover'] === false) { r.cover = 'none'; r.insideCover = 'none' }
+  else if (p['cover'] === true) { if (lineKind) r.cover = 'cover'; else r.insideCover = 'cover' }
+  else if (p['concealment'] === true && type !== 'obstacle') { if (lineKind) r.cover = 'concealment'; else if (r.insideCover !== 'cover') r.insideCover = 'concealment' }
+  return r
 }
 
 export interface TerrainPiece { t: TerrainInstance; shape: WorldShape; traits: TerrainTraits }
@@ -196,6 +229,13 @@ export function insideCoverOf(state: Pick<GameState, 'terrain'>, pos: Vec2, r: n
     best = 'concealment'
   }
   return best
+}
+
+/** Damage types a base completely inside terrain resists (trench: blast; props.resistance). */
+export function terrainResistance(state: Pick<GameState, 'terrain'>, pos: Vec2, r: number): DamageType[] {
+  const out: DamageType[] = []
+  for (const p of terrainPieces(state)) if (p.traits.resist.length && circleInsideShape(pos, r, p.shape)) out.push(...p.traits.resist)
+  return out
 }
 
 /** Hazard pieces a base overlaps (R9.8). */

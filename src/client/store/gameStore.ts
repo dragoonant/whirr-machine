@@ -10,6 +10,8 @@ import {
 } from '../../engine/index'
 import { enqueueBatch, resetPresentation } from '../presentation/director'
 import type { SeqEvent } from '../presentation/beats'
+import { boardForLoad, pickBattlefield } from '../board/boardPick'
+import { setBoardId, getBoardId } from '../board/boardStore'
 import { getStorage, readJson, writeJson } from './storage'
 import { ui } from './uiStore'
 
@@ -26,6 +28,8 @@ export interface NewGameOptions {
   seed?: string // engine seed; random when omitted
   names?: Partial<Record<PlayerId, string>>
   layout?: Id
+  /** Battlefield: a board id ('board.bog') or short name, or 'random' / omitted to pick from the seed (70 section E). */
+  board?: Id | 'random'
 }
 
 export interface BotConfig { tier: BotTier; seed: string }
@@ -167,11 +171,18 @@ function startFrom(state: GameState, events: readonly GameEvent[], controllers: 
 export function newGame(opts: NewGameOptions): ClientRejection | null {
   const setup: GameSetup = { scenario: opts.scenario, lists: { ...opts.lists }, ...(opts.layout ? { layout: opts.layout } : {}), ...(opts.names ? { names: opts.names } : {}) }
   const seed = opts.seed ?? randomSeed()
-  let r
-  try { r = createGame(setup, seed, loadBundle()) } catch (e) { return reject('E_BAD_SETUP', e instanceof Error ? e.message : String(e), null) }
+  const pick = pickBattlefield({ seed, scenario: opts.scenario, board: opts.board })
+  const build = (layout?: Id) => {
+    try { return createGame(layout ? { ...setup, layout } : setup, seed, loadBundle()) } catch (e) { return e instanceof Error ? e : new Error(String(e)) }
+  }
+  let r = build(opts.layout ? undefined : pick.layout)
+  // a battlefield layout the engine will not take must never stop the game: retry on the scenario's own terrain
+  if (!opts.layout && pick.layout && (r instanceof Error || r.rejection)) r = build()
+  if (r instanceof Error) return reject('E_BAD_SETUP', r.message, null)
   if (r.rejection) return reject(r.rejection.code, r.rejection.message, null)
   const controllers = { A: 'human', B: 'bot', ...(opts.controllers ?? {}) } as Record<PlayerId, Controller>
   const bot: BotConfig = { tier: opts.bot?.tier ?? 'random', seed: opts.bot?.seed ?? seed }
+  setBoardId(pick.board)
   startFrom(r.state, r.events, controllers, bot, true)
   return null
 }
@@ -226,13 +237,13 @@ export const SAVE_PREFIX = 'wm.save.'
 export const AUTOSAVE_SLOT = 'auto'
 
 /** What we store: the engine SaveFile plus who controls each side. */
-export interface ClientSave { kind: 'whirr-save'; v: 1; file: SaveFile; controllers: Record<PlayerId, Controller>; bot: BotConfig }
+export interface ClientSave { kind: 'whirr-save'; v: 1; file: SaveFile; controllers: Record<PlayerId, Controller>; bot: BotConfig; board?: Id }
 export interface SaveSummary { slot: string; label: string; savedAt: string; scenario: Id; round: number | null; actions: number }
 
 export function exportSave(label = ''): ClientSave | null {
   const s = useGameStore.getState()
   if (!s.state) return null
-  return { kind: 'whirr-save', v: 1, file: engineSave(s.state, label), controllers: s.controllers, bot: s.bot }
+  return { kind: 'whirr-save', v: 1, file: engineSave(s.state, label), controllers: s.controllers, bot: s.bot, board: getBoardId() }
 }
 
 export function saveGame(slot = AUTOSAVE_SLOT, label = ''): boolean {
@@ -255,6 +266,7 @@ export function importSave(data: unknown): ClientRejection | null {
   const cur = useGameStore.getState()
   const controllers = isClientSave(data) ? data.controllers : cur.controllers
   const bot = isClientSave(data) ? data.bot : { ...cur.bot, seed: file.seed }
+  setBoardId(boardForLoad(isClientSave(data) ? data.board : undefined, r.state.setup.layout, file.seed))
   startFrom(r.state, [], controllers, bot, false)
   return null
 }

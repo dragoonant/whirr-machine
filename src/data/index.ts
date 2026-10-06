@@ -4,7 +4,7 @@ import type { DataBundle, DataRecord } from '../engine/types'
 import { RAW } from './raw'
 
 export type RecordType =
-  | 'ability' | 'weapon' | 'spell' | 'feat' | 'faction' | 'model' | 'list' | 'scenario' | 'terrain' | 'terrain-layout' | 'systems'
+  | 'ability' | 'weapon' | 'spell' | 'feat' | 'faction' | 'model' | 'list' | 'scenario' | 'terrain' | 'terrain-layout' | 'board' | 'systems'
 
 export interface TypedRecord extends DataRecord { recordType: RecordType }
 
@@ -85,8 +85,33 @@ export function checkRefs(byId: Record<string, TypedRecord>): string[] {
         }
         break
       }
-      case 'terrain-layout':
+      case 'terrain-layout': {
         for (const p of arr(o.pieces)) need(r.id, asObj(p).terrain, ['terrain'], 'terrain piece')
+        const seen = new Set<unknown>()
+        for (const p of arr(o.pieces)) { const pid = asObj(p).id; if (seen.has(pid)) errs.push(`${r.id}: duplicate piece id '${String(pid)}'`); seen.add(pid) }
+        if (o.board !== undefined) {
+          need(r.id, o.board, ['board'], 'board')
+          const bd = byId[String(o.board)] as Record<string, unknown> | undefined
+          if (bd && !arr(bd.layouts).includes(r.id)) errs.push(`${r.id}: board '${String(o.board)}' does not list this layout`)
+        }
+        break
+      }
+      case 'terrain': {
+        const h = Number(o.height ?? 0)
+        // R5.13 / R5.14: an obstacle is under 1" tall, an obstruction or building is 1" or taller (G5)
+        if (o.rulesType === 'obstacle' && h >= 1) errs.push(`${r.id}: an obstacle must be under 1" tall (height ${h})`)
+        if ((o.rulesType === 'obstruction' || o.rulesType === 'building') && h < 1) errs.push(`${r.id}: an obstruction or building must be 1" or taller (height ${h})`)
+        break
+      }
+      case 'board':
+        for (const p of arr(o.pieces)) need(r.id, p, ['terrain'], 'piece')
+        for (const l of arr(o.layouts)) {
+          need(r.id, l, ['terrain-layout'], 'layout')
+          const lo = byId[String(l)] as Record<string, unknown> | undefined
+          if (lo && lo.board !== r.id) errs.push(`${r.id}: layout '${String(l)}' names board '${String(lo.board)}'`)
+          const own = new Set(arr(o.pieces))
+          for (const p of arr(lo?.pieces)) { const t = asObj(p).terrain; if (typeof t === 'string' && !own.has(t) && t !== 'terrain.low-wall' && t !== 'terrain.pond') errs.push(`${String(l)}: piece type '${t}' is not in board '${r.id}'`) }
+        }
         break
       default:
         break

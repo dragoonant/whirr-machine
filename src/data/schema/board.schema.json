@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/board.schema.json",
+  "title": "Board: a themed battlefield (ground mat, light, piece set, layouts)",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "pieces", "layouts", "reskin", "ground", "light", "fallback"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^board\\.[a-z0-9-]+$" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "pieces": { "$ref": "common.schema.json#/$defs/IdList" },
+    "layouts": { "$ref": "common.schema.json#/$defs/IdList" },
+    "reskin": {
+      "type": "object", "description": "Client-only GLB slugs for the generic pieces (looks only).",
+      "additionalProperties": { "type": "string", "pattern": "^[a-z0-9-]+$" }
+    },
+    "ground": {
+      "type": "object", "additionalProperties": false, "required": ["albedo", "normal", "rough"],
+      "properties": { "albedo": { "type": "string" }, "normal": { "type": "string" }, "rough": { "type": "string" } }
+    },
+    "light": {
+      "type": "object", "additionalProperties": false, "required": ["key", "ambient", "fog", "keyIntensity", "fogNear", "fogFar"],
+      "properties": {
+        "key": { "$ref": "common.schema.json#/$defs/Hex" }, "ambient": { "$ref": "common.schema.json#/$defs/Hex" },
+        "fog": { "$ref": "common.schema.json#/$defs/Hex" }, "keyIntensity": { "type": "number", "minimum": 0 },
+        "fogNear": { "$ref": "common.schema.json#/$defs/Inches" }, "fogFar": { "$ref": "common.schema.json#/$defs/Inches" }
+      }
+    },
+    "fallback": {
+      "type": "object", "additionalProperties": false, "required": ["ground", "accent", "piece"],
+      "properties": { "ground": { "$ref": "common.schema.json#/$defs/Hex" }, "accent": { "$ref": "common.schema.json#/$defs/Hex" }, "piece": { "$ref": "common.schema.json#/$defs/Hex" } }
+    }
+  }
+}

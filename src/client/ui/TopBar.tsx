@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameState, PlayerId } from '../../engine/index'
 import {
-  dataName, game, playerName, queryControl, useBanner, usePresentationIdle, usePresentedState, usePresentedVp, usePrompt, usePromptLegal, useSettings,
+  dataName, game, playerName, queryControl, useBanner, useBoardName, usePresentationIdle, usePresentedState, usePresentedVp, usePrompt, usePromptLegal, useSettings,
 } from '../contract'
 import './hud.css'
 import { PHASE_WORD, windowWord } from './format'
@@ -70,6 +70,7 @@ export function TopBar() {
   const vp = usePresentedVp()
   const idle = usePresentationIdle()
   const control = useControl(state, idle)
+  const boardName = useBoardName()
   if (!state) return null
   const ended = state.phase === 'ended'
   const els = Object.entries(control?.elements ?? {})
@@ -83,6 +84,7 @@ export function TopBar() {
           {state.turn > 0 && !ended && <span className="top-sub" data-testid="hud-turn-n">Turn {state.turn}</span>}
           <span className={`top-active side-${state.activePlayer}`} data-testid="hud-active">{ended ? 'Game over' : `${playerName(state, state.activePlayer)}'s turn`}</span>
         </div>
+        <div className="top-board hud-dim" data-testid="hud-board" title="Battlefield">{boardName}</div>
         <div className="top-phase" data-testid="hud-phase" data-phase={state.phase} data-window={state.window}>
           <b>{PHASE_WORD[state.phase]}</b>
           {!ended && <span className="hud-dim"> {windowWord(state.window)}</span>}

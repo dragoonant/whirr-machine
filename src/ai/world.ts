@@ -3,6 +3,7 @@
 import { loadBundle } from '../data/index'
 import type { DataBundle, GameState, ModelId, ModelState, PlayerId, TerrainInstance, UnitId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
+import { circleOverlapsShape, terrainPieces } from '../engine/terrain'
 
 export const MM_PER_INCH = 25.4
 export const baseRadius = (mm: number): number => mm / MM_PER_INCH / 2
@@ -207,4 +208,37 @@ export function forwardOf(s: GameState, p: PlayerId): Vec2 {
     case 'east': return { x: -1, z: 0 }
     default: return { x: 0, z: p === 'A' ? 1 : -1 }
   }
+}
+
+// ---------- terrain hazards (R9.8) ----------
+/** True when the model is immune to this hazard's damage type (Resistance or Immunity in its profile). */
+function hazardImmune(m: ModelState, type: string | undefined): boolean {
+  return !!type && (hasAbility(m, `core.a.resist-${type}`) || hasAbility(m, `core.a.immunity-${type}`))
+}
+/**
+ * Expected value lost to terrain hazards if `m` ends at `p` after walking straight from `from`: one hit for entering a
+ * hazard piece it was not in, one more for ending the activation inside. A hit is 2d6 + POW against its base ARM, as a
+ * share of its remaining boxes times its value. 0 when the table has no hazard piece.
+ */
+export function hazardCost(s: GameState, m: ModelState, from: Vec2, p: Vec2): number {
+  let cost = 0
+  const r = baseRadius(m.base)
+  const arm = (((rec(m.profileId)?.stats ?? {}) as Record<string, number>).ARM) ?? 14
+  for (const piece of terrainPieces(s)) {
+    const spec = piece.traits.hazardSpec
+    if (!piece.traits.hazard || !spec || hazardImmune(m, spec.damageType)) continue
+    const hit = Math.max(0, 7 + spec.pow - arm)
+    const per = Math.min(1, hit / boxesLeft(m)) * valueOf(s, m)
+    const n = Math.max(1, Math.ceil(dist(from, p) / 0.5))
+    let prev = circleOverlapsShape(from, r, piece.shape), entered = false
+    for (let k = 1; k <= n && !entered; k++) {
+      const t = k / n
+      const ins = circleOverlapsShape({ x: from.x + (p.x - from.x) * t, z: from.z + (p.z - from.z) * t }, r, piece.shape)
+      if (!prev && ins) entered = true
+      prev = ins
+    }
+    if (entered && spec.on.includes('enter')) cost += per
+    if (circleOverlapsShape(p, r, piece.shape) && spec.on.includes('endActivation')) cost += per
+  }
+  return cost
 }

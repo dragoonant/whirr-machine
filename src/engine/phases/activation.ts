@@ -30,6 +30,7 @@ import {
 import { raise, reject, type FlowOut, type FlowResult } from '../pending'
 import { resolvePowerAttack, resolveTrampleAttacks } from '../power-attacks'
 import { afterDeaths } from '../scenario'
+import { circleOverlapsShape, hazardsUnder, terrainPieces, type WorldShape } from '../terrain'
 import { anytimeOptions, castSpell, channel, heal, isAnytimeAction, useFeat } from '../spells'
 import { raiseChooseActivation } from '../turnflow'
 import type {
@@ -167,6 +168,17 @@ export function finishActivation(state0: GameState, b: B, events: GameEvent[], r
       }
     }
   }
+  // terrain hazards (R9.8): a model that ends its activation inside a hazard piece suffers it
+  for (const id of a.modelIds) {
+    const m = state.models[id]
+    if (!m || !isOnTable(m) || m.life !== 'active') continue
+    for (const p of hazardsUnder(state, m.pos, baseRadius(m.base))) {
+      const spec = p.traits.hazardSpec
+      if (!spec?.on.includes('endActivation') || state.models[id]!.life !== 'active') continue
+      const d = plainHazard(state, b, id, spec.pow, spec.damageType ? [spec.damageType] : [])
+      state = d.state; events.push(...d.events)
+    }
+  }
   for (const id of a.modelIds) if (state.models[id]) state = setModel(state, { ...state.models[id]!, activated: true })
   const u = state.units[a.activeId]
   if (u) state = { ...state, units: { ...state.units, [u.id]: { ...u, activated: true } } }
@@ -182,6 +194,7 @@ export function finishActivation(state0: GameState, b: B, events: GameEvent[], r
 }
 
 function plainHazard(state: GameState, b: B, id: ModelId, pow: number, types: DamageType[]): { state: GameState; events: GameEvent[] } {
+  if (types.length && resistsDamageType(state, b, id, types)) return { state, events: [] } // Resistance: immune to that damage type
   const look = lookups(state, b)
   const r = rollNd6(state, 2, 'damage', { ownerId: id, target: look.arm(id), flat: pow })
   const pts = Math.max(0, r.total - look.arm(id))
@@ -193,6 +206,52 @@ function plainHazard(state: GameState, b: B, id: ModelId, pow: number, types: Da
     s = d.state; events.push(...d.events)
   }
   return { state: s, events }
+}
+
+// ---------- terrain hazards on entry (R9.8, R5.11) ----------
+const HAZARD_STEP = 0.25
+const NO_ENTRY_KINDS = new Set(['fall', 'leastDisturbance'])
+/** True when a base walking the polyline goes from outside the shape to overlapping it at some point. */
+function entersShape(pts: Vec2[], r: number, shape: WorldShape): boolean {
+  let prev = circleOverlapsShape(pts[0]!, r, shape)
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const a = pts[i]!, c = pts[i + 1]!
+    const n = Math.max(1, Math.ceil(dist(a, c) / HAZARD_STEP))
+    for (let k = 1; k <= n; k++) {
+      const t = k / n
+      const inside = circleOverlapsShape({ x: a.x + (c.x - a.x) * t, z: a.z + (c.z - a.z) * t }, r, shape)
+      if (!prev && inside) return true
+      prev = inside
+    }
+  }
+  return false
+}
+/**
+ * R9.8: a model that enters a hazard piece during a move (advance, run, charge, slam, trample, push, placement) suffers it
+ * once per piece per move. Starting inside does not count; leaving and re-entering does. Returns the damage events and
+ * runs the end-of-game check when something died.
+ */
+function entryHazards(state0: GameState, b: B, moved: GameEvent[]): { state: GameState; events: GameEvent[]; ended: boolean } {
+  let state = state0
+  const events: GameEvent[] = []
+  for (const ev of moved) {
+    if (ev.type !== 'ModelMoved' || NO_ENTRY_KINDS.has(ev.kind)) continue
+    const r = state.models[ev.modelId] && baseRadius(state.models[ev.modelId]!.base)
+    if (r === undefined) continue
+    const pts = [ev.from, ...ev.path]
+    if (dist(pts[pts.length - 1]!, ev.to) > 1e-9) pts.push(ev.to)
+    for (const p of terrainPieces(state)) {
+      const spec = p.traits.hazardSpec
+      const m = state.models[ev.modelId]
+      if (!p.traits.hazard || !spec?.on.includes('enter') || !m || m.life !== 'active' || !isOnTable(m)) continue
+      if (!entersShape(pts, r, p.shape)) continue
+      const d = plainHazard(state, b, ev.modelId, spec.pow, spec.damageType ? [spec.damageType] : [])
+      state = d.state; events.push(...d.events)
+    }
+  }
+  if (!events.length) return { state: state0, events, ended: false }
+  const end = afterDeaths(state, b)
+  return { state: end.state, events: [...events, ...end.events], ended: end.ended || end.state.phase === 'ended' }
 }
 
 // ---------- Normal Movement ----------
@@ -386,9 +445,13 @@ function moveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
     ? { ok: true, state, events: [], forfeitCombat: pend.kind === 'run', endsActivation: pend.kind === 'run' }
     : resolveAdvance(state, { modelId: lead, waypoints: path, kind: pend.kind, info })
   if (!res.ok) return reject(res.code, res.message)
+  const hz = entryHazards(res.state, b, res.events)
+  const mevents = [...res.events, ...hz.events]
+  if (hz.ended) return ok(hz.state, mevents)
+  if (!alive(hz.state.models[lead])) return finishActivation(hz.state, b, mevents, 'forfeit')
   const cont: PlaceAfter = { kind: 'move', leadId: lead, from: state0.models[lead]!.pos, engagedBefore, run: pend.kind === 'run', forfeitCombat: res.forfeitCombat }
-  if (u && othersToPlace(res.state, u.id, lead).length > 0) return raisePlaceTroopers(res.state, b, [...res.events], cont)
-  return afterPlacement(res.state, b, [...res.events], cont, [])
+  if (u && othersToPlace(hz.state, u.id, lead).length > 0) return raisePlaceTroopers(hz.state, b, mevents, cont)
+  return afterPlacement(hz.state, b, mevents, cont, [])
 }
 
 // ---------- unit placement (R5.8): the moved trooper's unit-mates are placed within 2" of it, with LOS to it ----------
@@ -461,7 +524,10 @@ function placeTroopersAnswer(state0: GameState, b: B, a: import('../actions').Pl
   if (bad) return reject('E_BAD_PAYLOAD', `place every trooper (${bad} is missing)`)
   const info = moverInfo(state0, b, cont.leadId)
   const p = placeUnit(state0, u.id, cont.leadId, { engagedBefore: cont.engagedBefore, charge: cont.kind === 'charge', unstoppable: info.unstoppable, rangeOf: info.rangeOf, placed })
-  return afterPlacement(p.state, b, p.events, cont, p.forfeit)
+  const hz = entryHazards(p.state, b, p.events)
+  const pevents = [...p.events, ...hz.events]
+  if (hz.ended) return ok(hz.state, pevents)
+  return afterPlacement(hz.state, b, pevents, cont, p.forfeit)
 }
 
 /** The rest of the Normal Movement once the moved model (and its unit) stand in their final spots. */
@@ -546,13 +612,17 @@ function chargeMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
   const engagedBefore = u ? unitEngagement(state, u.id, info) : {}
   const r = resolveChargeTo(state, { modelId: lead, targetId, info, to })
   if (!r.ok) return reject(r.code, r.message)
-  const s1 = patchX(r.state, { chargeTo: undefined })
+  const hz = entryHazards(patchX(r.state, { chargeTo: undefined }), b, r.events)
+  const s1 = hz.state
+  const cevents = [...r.events, ...hz.events]
+  if (hz.ended) return ok(s1, cevents)
+  if (!alive(s1.models[lead])) return finishActivation(s1, b, cevents, 'forfeit')
   const cont: PlaceAfter = {
     kind: 'charge', leadId: lead, from: m.pos, engagedBefore,
     charge: { targetId, success: r.success, distance: r.distance, chargeAttack: r.chargeAttack },
   }
-  if (u && othersToPlace(s1, u.id, lead).length > 0) return raisePlaceTroopers(s1, b, [...r.events], cont)
-  return afterPlacement(s1, b, [...r.events], cont, [])
+  if (u && othersToPlace(s1, u.id, lead).length > 0) return raisePlaceTroopers(s1, b, cevents, cont)
+  return afterPlacement(s1, b, cevents, cont, [])
 }
 
 // ---------- slam and trample (R7.12, R7.14): power attacks that use Normal Movement and the Combat Action ----------
@@ -623,8 +693,11 @@ function slamMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result {
   const info = moverInfo(state, b, lead)
   const r = resolveChargeTo(state, { modelId: lead, targetId: sl.targetId, info, to, kind: 'slam', range: slamRange(m) })
   if (!r.ok) return reject(r.code, r.message)
-  const events = r.events.filter((e) => e.type !== 'ChargeDeclared')
-  state = setAct(r.state, { ...act(r.state), movement: 'slam', moved: r.distance })
+  const slamHz = entryHazards(r.state, b, r.events)
+  const events = [...r.events.filter((e) => e.type !== 'ChargeDeclared'), ...slamHz.events]
+  if (slamHz.ended) return ok(slamHz.state, events)
+  if (!alive(slamHz.state.models[lead])) return finishActivation(slamHz.state, b, events, 'forfeit')
+  state = setAct(slamHz.state, { ...act(slamHz.state), movement: 'slam', moved: r.distance })
   state = { ...state, window: 'movement.end' }
   if (!r.success) {
     // R7.12: the target is not in slam range: the slam fails and the activation ends
@@ -656,6 +729,10 @@ function trampleMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result 
     const r = resolveTrampleMove(state, { modelId: lead, dir: v, info, dist: L })
     if (!r.ok) return reject(r.code, r.message)
     state = r.state; events.push(...r.events); trampled = r.trampled
+    const hz = entryHazards(state, b, r.events)
+    state = hz.state; events.push(...hz.events)
+    if (hz.ended) return ok(state, events)
+    if (!alive(state.models[lead])) return finishActivation(state, b, events, 'forfeit')
   }
   state = setAct(state, { ...act(state), movement: 'trample', moved: L })
   state = patchX({ ...state, window: 'movement.end' }, { stage: 'combat', queue: [], cur: lead, powerKind: 'trample' })
@@ -1194,6 +1271,11 @@ function triggerMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result 
   if (dist(m.pos, chk.end) > 1e-9) {
     state = relocate(state, t.modelId, chk.end)
     events.push({ type: 'ModelMoved', modelId: t.modelId, kind: t.mode === 'place' ? 'place' : t.ctx === 'end' ? (t.abilityId.includes('reposition') ? 'reposition' : 'advance') : 'advance', from: m.pos, to: chk.end, path, distance: dist(m.pos, chk.end), elevAfter: state.models[t.modelId]!.elev })
+  }
+  if (events.length) {
+    const hz = entryHazards(state, b, events)
+    state = hz.state; events.push(...hz.events)
+    if (hz.ended) return ok(state, events)
   }
   return afterTriggerMove(state, b, events, t, true)
 }

@@ -1,0 +1,83 @@
+{
+  "id": "layout.outpost-1",
+  "name": "Frostline Redoubt",
+  "board": "board.outpost",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.outpost-sandbags",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.outpost-sandbags",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "f1",
+      "terrain": "terrain.outpost-snow-pines",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "f2",
+      "terrain": "terrain.outpost-snow-pines",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.outpost-blockhouse",
+      "pos": {
+        "x": -2.5,
+        "z": 5.75
+      },
+      "rot": 0
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.outpost-blockhouse",
+      "pos": {
+        "x": 2.5,
+        "z": -5.75
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "t1",
+      "terrain": "terrain.outpost-trench",
+      "pos": {
+        "x": 11.5,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "t2",
+      "terrain": "terrain.outpost-trench",
+      "pos": {
+        "x": -11.5,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    }
+  ]
+}

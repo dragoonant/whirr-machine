@@ -1,0 +1,74 @@
+{
+  "id": "layout.bog-2",
+  "name": "Gallows Hollow",
+  "board": "board.bog",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.bog-log-barrier",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.bog-log-barrier",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "h1",
+      "terrain": "terrain.bog-hummock",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "h2",
+      "terrain": "terrain.bog-hummock",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "r1",
+      "terrain": "terrain.bog-stumps",
+      "pos": {
+        "x": -1,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "r2",
+      "terrain": "terrain.bog-stumps",
+      "pos": {
+        "x": 1,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "p0",
+      "terrain": "terrain.bog-murk-pool",
+      "pos": {
+        "x": 0,
+        "z": 0
+      },
+      "rot": 1.570796326795
+    }
+  ]
+}

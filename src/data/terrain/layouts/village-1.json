@@ -1,0 +1,83 @@
+{
+  "id": "layout.village-1",
+  "name": "Chapel Square",
+  "board": "board.village",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "f1",
+      "terrain": "terrain.village-pines",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "f2",
+      "terrain": "terrain.village-pines",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.village-chapel",
+      "pos": {
+        "x": -2,
+        "z": 5.5
+      },
+      "rot": 1.570796326795
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.village-chapel",
+      "pos": {
+        "x": 2,
+        "z": -5.5
+      },
+      "rot": 4.712388980385
+    },
+    {
+      "id": "o1",
+      "terrain": "terrain.village-rail-fence",
+      "pos": {
+        "x": 10,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "o2",
+      "terrain": "terrain.village-rail-fence",
+      "pos": {
+        "x": -10,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    }
+  ]
+}

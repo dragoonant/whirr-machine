@@ -23,6 +23,7 @@ import {
   listSaves, loadGame, newGame, saveGame, setController, useGameStore,
   type ActionPayload, type ClientRejection, type Controller, type GameStoreState,
 } from './store/gameStore'
+import { useBoardStore } from './board/boardStore'
 import { SPEED_PRESETS, useSettingsStore, type Settings } from './store/settingsStore'
 import { installTestHooks, setupFromUrl } from './store/testHooks'
 import { ui, useUiStore, type MeasureEnd, type UiMode } from './store/uiStore'
@@ -138,7 +139,7 @@ export const useShowThreat = (): boolean => useUiStore((s) => s.showThreat)
 /** Open side panel id. */
 export const usePanel = (): string | null => useUiStore((s) => s.panel)
 /** Player settings (speed, graphics, narration, confirmEndTurn). */
-export const useSettings = (): Settings => useSettingsStore(useShallow((s) => ({ speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn })))
+export const useSettings = (): Settings => useSettingsStore(useShallow((s) => ({ speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn, showZones: s.showZones, battlefield: s.battlefield })))
 
 // =====================================================================================================
 // Actions
@@ -198,6 +199,10 @@ export const uiActions = {
   toggleThreat: ui.toggleThreat,
   openPanel: ui.openPanel,
 }
+
+/** The battlefield this game is on (70 section C): name, light, ground. */
+export { useBoard } from './board/boardStore'
+export const useBoardName = (): string => useBoardStore((s) => (s.boards.find((b) => b.id === s.boardId) ?? s.boards[0]!).name)
 
 export const settings = {
   set: (patch: Partial<Settings>) => useSettingsStore.getState().set(patch),
@@ -275,4 +280,5 @@ function installFollowDecision(): () => void {
 }
 
 // Additive changes after the M3 freeze:
-//   (none yet)
+//   M8 terrain: Settings gained `showZones` and `battlefield` (useSettings returns them); NewGameOptions gained `board`;
+//   ClientSave gained optional `board`; `useBoard` / `useBoardName` selectors added.

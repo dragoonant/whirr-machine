@@ -11,7 +11,6 @@ import {
 } from './terrain'
 import type { Cloud, GameState, Id, LosReason, LosVerdict, ModelState, Mod, Vec2 } from './types'
 
-const FOREST_PEEK = 3 // inches of forest a line may cross when it starts or ends inside one (R10)
 const STEALTH_REACH = 5
 
 export interface LosOptions {
@@ -84,7 +83,7 @@ function forestBlocksLine(p: TerrainPiece, l: Line): boolean {
   const L = dist(l.a, l.b)
   const inside = iv.reduce((s, [t0, t1]) => s + (t1 - t0) * L, 0)
   const endInside = pointInShape(l.a, p.shape) || pointInShape(l.b, p.shape)
-  return endInside ? inside > FOREST_PEEK + 1e-9 : inside > 1e-9
+  return endInside ? inside > p.traits.losThrough + 1e-9 : inside > 1e-9
 }
 
 interface Ctx {

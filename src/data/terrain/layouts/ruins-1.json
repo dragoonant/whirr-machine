@@ -1,0 +1,83 @@
+{
+  "id": "layout.ruins-1",
+  "name": "Fallen Court",
+  "board": "board.ruins",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.ruins-colonnade",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.ruins-colonnade",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "f1",
+      "terrain": "terrain.ruins-grove",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "f2",
+      "terrain": "terrain.ruins-grove",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "b1",
+      "terrain": "terrain.ruins-monolith",
+      "pos": {
+        "x": -2,
+        "z": 5.5
+      },
+      "rot": 0
+    },
+    {
+      "id": "b2",
+      "terrain": "terrain.ruins-monolith",
+      "pos": {
+        "x": 2,
+        "z": -5.5
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "r1",
+      "terrain": "terrain.ruins-masonry",
+      "pos": {
+        "x": 10,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "r2",
+      "terrain": "terrain.ruins-masonry",
+      "pos": {
+        "x": -10,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    }
+  ]
+}

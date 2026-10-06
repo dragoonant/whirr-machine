@@ -16,6 +16,9 @@ import { Pops } from '../vfx/Pops'
 import { CameraRig } from './Camera'
 import { THEME, cameraPose, proxyAttrs, tableOf } from './layout'
 import { Surface } from './Surface'
+import { loadBoardsJson, useBoard } from './boardStore'
+import { TerrainTooltip } from './TerrainTooltip'
+import * as THREE from 'three'
 import { Terrain } from './Terrain'
 import { ScenarioElements, Zones } from './Zones'
 import type { PlayerId } from '../../engine/index'
@@ -34,8 +37,9 @@ function Invalidator(): null {
   const staged = useInteractionStore((s) => s.staged)
   const placements = useInteractionStore((s) => s.placements)
   const weapon = useInteractionStore((s) => s.weaponId)
-  const { graphics } = useSettings()
-  useEffect(() => { invalidate() }, [invalidate, rev, mode, sel, hover, measure, threat, prompt?.id, ghost, staged, placements, weapon, graphics])
+  const { graphics, showZones } = useSettings()
+  const board = useBoard()
+  useEffect(() => { invalidate() }, [invalidate, rev, mode, sel, hover, measure, threat, prompt?.id, ghost, staged, placements, weapon, graphics, showZones, board])
   const animating = useAnimating()
   useFrame(() => { if (animating) invalidate() })
   return null
@@ -73,11 +77,16 @@ function Figures(): ReactElement {
 }
 const EMPTY: PlayerId[] = []
 
+/** Lighting from the board: key colour and intensity, a sky/ground ambient pair and a fog that matches the background. */
 function Lights({ shadows }: { shadows: boolean }): ReactElement {
+  const { light } = useBoard()
+  const sky = useMemo(() => '#' + new THREE.Color(light.ambient).lerp(new THREE.Color('#ffffff'), 0.55).getHexString(), [light.ambient])
   return (
     <>
-      <hemisphereLight args={['#e6ebf5', '#4a4c44', 1.5]} />
-      <directionalLight position={[16, 34, 12]} intensity={2.4} castShadow={shadows} shadow-mapSize={[1024, 1024]}
+      <color attach="background" args={[light.fog]} />
+      <fog attach="fog" args={[light.fog, light.fogNear, light.fogFar]} />
+      <hemisphereLight args={[sky, light.ambient, 1.5]} />
+      <directionalLight position={[16, 34, 12]} intensity={light.keyIntensity} color={light.key} castShadow={shadows} shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-26} shadow-camera-right={26} shadow-camera-top={26} shadow-camera-bottom={-26} shadow-camera-far={90} />
       <directionalLight position={[-18, 14, -16]} intensity={0.35} color="#b87333" />
     </>
@@ -89,6 +98,7 @@ function Scene(): ReactElement {
   const { graphics } = useSettings()
   const { w, d } = tableOf(state)
   const shadows = graphics === 'high'
+  useEffect(() => { loadBoardsJson() }, [])
   return (
     <>
       <Invalidator />
@@ -146,10 +156,10 @@ export function Battlefield(): ReactElement {
         gl={{ antialias: graphics === 'high', powerPreference: 'high-performance' }}
         onPointerMissed={() => { /* background clicks are handled by <Ground /> */ }}
       >
-        <color attach="background" args={[THEME.bg]} />
         <Scene />
       </Canvas>
       <ModelProxies />
+      <TerrainTooltip />
     </div>
   )
 }

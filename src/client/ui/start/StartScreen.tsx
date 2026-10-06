@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { settings, useSettings } from '../../contract'
+import { boardFromUrl, boardFor } from '../../board/boards'
 import { SoundSettings } from '../../audio/SoundSettings'
 import { TitleArt } from './TitleArt'
 import { openHelp } from '../help/HelpGuide'
 import { usePaint, usePaintStore, PAINT_PRESETS } from '../../figures/paintStore'
-import { BOT_TIERS, buildNewGame, type BotTierChoice, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
+import { BOT_TIERS, battlefieldChoices, buildNewGame, type BotTierChoice, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
 import './start.css'
 
 export interface StartScreenProps {
@@ -19,7 +20,9 @@ export interface StartScreenProps {
 export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenProps) {
   const sides = useMemo(sideChoices, [])
   const scenarios = useMemo(scenarioChoices, [])
-  const { speed } = useSettings()
+  const { speed, battlefield } = useSettings()
+  const boards = useMemo(battlefieldChoices, [])
+  const board = boardFor(battlefield)?.id ?? 'random'
   const [listId, setListId] = useState(sides[0]?.listId ?? '')
   const [scenario, setScenario] = useState(scenarios[0]?.id ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +37,8 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const start = () => {
     // ?seed= gives a repeatable game (tests, bug reports)
     const seed = new URLSearchParams(location.search).get('seed') ?? undefined
-    const opts = buildNewGame({ listId, scenario, tier, ...(seed ? { seed } : {}) }, sides)
+    const urlBoard = boardFromUrl() // ?board= beats the selector
+    const opts = buildNewGame({ listId, scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
     if (!opts) { setError('Pick a side first.'); return }
     setError(onStart(opts))
   }
@@ -95,6 +99,11 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
             </select>
           </label>
           {scn?.text && <p className="start-note">{scn.text}</p>}
+          <label>Battlefield
+            <select data-testid="start-battlefield" value={board} onChange={(e) => settings.set({ battlefield: e.target.value })}>
+              {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
           <div className="start-label">Animation speed</div>
           <div className="start-choices small">
             {SPEED_CHOICES.map((s) => (

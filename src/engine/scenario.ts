@@ -57,6 +57,34 @@ export function scenarioDef(bundle: DataBundle, scenarioId: Id): ScenarioDef {
   }
 }
 
+/**
+ * G6: a swapped layout must carry every terrain anchor the scenario's elements name (an element's `terrain` is a piece id of the
+ * scenario's own layout). The piece must have the same rules type, footprint and height as the scenario's own piece, at the same
+ * position and rotation, so control measures exactly as designed. Returns one message per problem; [] means the layout is usable.
+ */
+export function scenarioAnchorProblems(bundle: DataBundle, scenarioId: Id, layoutId: Id): string[] {
+  const sc = bundle.byId[scenarioId] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
+  const lay = bundle.byId[layoutId] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!sc) return [`unknown scenario '${scenarioId}'`]
+  if (!lay) return [`unknown layout '${layoutId}'`]
+  const own = bundle.byId[sc.terrainLayout as string] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
+  const problems: string[] = []
+  if (sc.table && lay.table && (sc.table.w !== lay.table.w || sc.table.d !== lay.table.d)) problems.push(`layout table ${lay.table.w}x${lay.table.d} does not match the scenario's ${sc.table.w}x${sc.table.d}`)
+  if (layoutId === sc.terrainLayout) return problems
+  const find = (l: Record<string, any> | undefined, id: string) => ((l?.pieces ?? []) as Record<string, any>[]).find((p) => p.id === id) // eslint-disable-line @typescript-eslint/no-explicit-any
+  for (const e of (sc.elements ?? []) as Record<string, any>[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (e.kind !== 'scenarioTerrain' || typeof e.terrain !== 'string') continue
+    const want = find(own, e.terrain), got = find(lay, e.terrain)
+    if (!got) { problems.push(`layout '${layoutId}' has no piece '${e.terrain}' (anchor of element '${e.id}')`); continue }
+    if (!want) continue
+    const a = bundle.byId[want.terrain] as Record<string, any> | undefined, c = bundle.byId[got.terrain] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
+    const same = a && c && a.rulesType === c.rulesType && a.height === c.height && JSON.stringify(a.footprint) === JSON.stringify(c.footprint)
+    if (!same) problems.push(`anchor '${e.terrain}' in '${layoutId}' differs in rules type, footprint or height`)
+    if (Math.abs(want.pos.x - got.pos.x) > 1e-9 || Math.abs(want.pos.z - got.pos.z) > 1e-9 || Math.abs((want.rot ?? 0) - (got.rot ?? 0)) > 1e-9) problems.push(`anchor '${e.terrain}' in '${layoutId}' is not at the scenario's position and rotation`)
+  }
+  return problems
+}
+
 export function initialScenarioState(def: ScenarioDef): ScenarioState {
   return {
     id: def.id, table: def.table, vp: { A: 0, B: 0 },

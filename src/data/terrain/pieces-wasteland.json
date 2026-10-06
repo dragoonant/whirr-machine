@@ -1,0 +1,291 @@
+[
+  {
+    "id": "terrain.wasteland-thorn-palisade",
+    "name": "Iron Thorn Palisade",
+    "rulesType": "obstruction",
+    "footprint": {
+      "rect": {
+        "w": 6,
+        "d": 1
+      }
+    },
+    "height": 3,
+    "mesh": "wt-wasteland-thorn-palisade"
+  },
+  {
+    "id": "terrain.wasteland-chain-barricade",
+    "name": "Chain-Strung Barricade",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
+    "height": 0.75,
+    "mesh": "wt-wasteland-chain-barricade"
+  },
+  {
+    "id": "terrain.wasteland-thornwood",
+    "name": "Thornwood",
+    "rulesType": "forest",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.125
+        },
+        {
+          "x": 1.5,
+          "z": 1.949
+        },
+        {
+          "x": 0,
+          "z": 2.25
+        },
+        {
+          "x": -1.5,
+          "z": 1.949
+        },
+        {
+          "x": -2.598,
+          "z": 1.125
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.125
+        },
+        {
+          "x": -1.5,
+          "z": -1.949
+        },
+        {
+          "x": 0,
+          "z": -2.25
+        },
+        {
+          "x": 1.5,
+          "z": -1.949
+        },
+        {
+          "x": 2.598,
+          "z": -1.125
+        }
+      ]
+    },
+    "height": 4,
+    "mesh": "wt-wasteland-thornwood"
+  },
+  {
+    "id": "terrain.wasteland-ritual-dais",
+    "name": "Ritual Dais",
+    "rulesType": "hill",
+    "footprint": {
+      "circle": {
+        "r": 3
+      }
+    },
+    "height": 1,
+    "mesh": "wt-wasteland-ritual-dais"
+  },
+  {
+    "id": "terrain.wasteland-ash-flats",
+    "name": "Cracked Ash Flats",
+    "rulesType": "rough",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 1
+        },
+        {
+          "x": 1.25,
+          "z": 1.732
+        },
+        {
+          "x": 0,
+          "z": 2
+        },
+        {
+          "x": -1.25,
+          "z": 1.732
+        },
+        {
+          "x": -2.165,
+          "z": 1
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -1
+        },
+        {
+          "x": -1.25,
+          "z": -1.732
+        },
+        {
+          "x": 0,
+          "z": -2
+        },
+        {
+          "x": 1.25,
+          "z": -1.732
+        },
+        {
+          "x": 2.165,
+          "z": -1
+        }
+      ]
+    },
+    "height": 0,
+    "mesh": "wt-wasteland-ash-flats"
+  },
+  {
+    "id": "terrain.wasteland-blight-pool",
+    "name": "Molten Blight Pool",
+    "rulesType": "hazard",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.25,
+          "z": 0
+        },
+        {
+          "x": 1.949,
+          "z": 0.75
+        },
+        {
+          "x": 1.125,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1.125,
+          "z": 1.299
+        },
+        {
+          "x": -1.949,
+          "z": 0.75
+        },
+        {
+          "x": -2.25,
+          "z": 0
+        },
+        {
+          "x": -1.949,
+          "z": -0.75
+        },
+        {
+          "x": -1.125,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1.125,
+          "z": -1.299
+        },
+        {
+          "x": 1.949,
+          "z": -0.75
+        }
+      ]
+    },
+    "height": 0,
+    "props": {
+      "hazard": {
+        "effect": [
+          {
+            "op": "damage",
+            "pow": 10,
+            "damageType": "fire"
+          }
+        ],
+        "on": [
+          "enter",
+          "endActivation"
+        ]
+      }
+    },
+    "mesh": "wt-wasteland-blight-pool"
+  },
+  {
+    "id": "terrain.wasteland-bone-spikes",
+    "name": "Bone Spike Field",
+    "rulesType": "rubble",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2,
+          "z": 0
+        },
+        {
+          "x": 1.732,
+          "z": 0.75
+        },
+        {
+          "x": 1,
+          "z": 1.299
+        },
+        {
+          "x": 0,
+          "z": 1.5
+        },
+        {
+          "x": -1,
+          "z": 1.299
+        },
+        {
+          "x": -1.732,
+          "z": 0.75
+        },
+        {
+          "x": -2,
+          "z": 0
+        },
+        {
+          "x": -1.732,
+          "z": -0.75
+        },
+        {
+          "x": -1,
+          "z": -1.299
+        },
+        {
+          "x": 0,
+          "z": -1.5
+        },
+        {
+          "x": 1,
+          "z": -1.299
+        },
+        {
+          "x": 1.732,
+          "z": -0.75
+        }
+      ]
+    },
+    "height": 0.5,
+    "mesh": "wt-wasteland-bone-spikes"
+  }
+]

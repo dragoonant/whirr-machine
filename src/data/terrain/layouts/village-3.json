@@ -1,0 +1,74 @@
+{
+  "id": "layout.village-3",
+  "name": "Millrace Lane",
+  "board": "board.village",
+  "table": {
+    "w": 36,
+    "d": 36
+  },
+  "pieces": [
+    {
+      "id": "w1",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": -6,
+        "z": -4
+      },
+      "rot": 0
+    },
+    {
+      "id": "w2",
+      "terrain": "terrain.village-stone-wall",
+      "pos": {
+        "x": 6,
+        "z": 4
+      },
+      "rot": 0
+    },
+    {
+      "id": "f1",
+      "terrain": "terrain.village-pines",
+      "pos": {
+        "x": -11.5,
+        "z": 2
+      },
+      "rot": 0
+    },
+    {
+      "id": "f2",
+      "terrain": "terrain.village-pines",
+      "pos": {
+        "x": 11.5,
+        "z": -2
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "p1",
+      "terrain": "terrain.village-pond",
+      "pos": {
+        "x": -1,
+        "z": -9.25
+      },
+      "rot": 0
+    },
+    {
+      "id": "p2",
+      "terrain": "terrain.village-pond",
+      "pos": {
+        "x": 1,
+        "z": 9.25
+      },
+      "rot": 3.14159265359
+    },
+    {
+      "id": "r0",
+      "terrain": "terrain.village-boulders",
+      "pos": {
+        "x": 0,
+        "z": 0
+      },
+      "rot": 0
+    }
+  ]
+}

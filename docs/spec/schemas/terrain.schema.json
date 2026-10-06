@@ -7,27 +7,32 @@
   "properties": {
     "id": { "$ref": "common.schema.json#/$defs/Id" },
     "name": { "$ref": "common.schema.json#/$defs/Name" },
-    "rulesType": { "enum": ["obstacle", "obstruction", "forest", "shallowWater", "rough", "hill", "trench", "building", "rubble", "hazard", "openGround"] },
+    "rulesType": { "enum": ["obstacle", "obstruction", "building", "forest", "shallowWater", "rough", "rubble", "hill", "trench", "hazard", "deepWater", "scenarioTerrain"], "description": "Mirrors TerrainRulesType in the engine. An obstacle is under 1 inch tall; an obstruction or building is 1 inch or taller (checked by the data loader)." },
     "footprint": { "$ref": "common.schema.json#/$defs/Shape" },
     "height": { "$ref": "common.schema.json#/$defs/Inches", "description": "Prism height for LOS; 0 = flat." },
     "props": {
       "type": "object", "additionalProperties": false,
-      "description": "Defaults come from rulesType (20-data-schema section 9); set only to override.",
+      "description": "Defaults come from rulesType (20-data-schema section 9). Every key here is read by the engine (terrainTraits and the LOS code); set only to override.",
       "properties": {
-        "blocksLos": { "type": "boolean" },
-        "losThrough": { "$ref": "common.schema.json#/$defs/Inches", "description": "Forest: LOS may pass through this much." },
-        "cover": { "type": "boolean" },
-        "concealment": { "type": "boolean" },
+        "blocksLos": { "type": "boolean", "description": "Override whether the prism blocks LOS by height." },
+        "losThrough": { "$ref": "common.schema.json#/$defs/Inches", "description": "Forest: a line that starts or ends inside may cross this much (default 3)." },
+        "cover": { "type": "boolean", "description": "false removes cover; true grants it (along a line for walls, buildings and obstructions, completely inside for the rest)." },
+        "concealment": { "type": "boolean", "description": "Grants concealment instead of cover (hedge, fence) unless cover is also true." },
         "rough": { "type": "boolean" },
         "impassable": { "type": "boolean" },
-        "crossable": { "type": "boolean", "description": "Obstacle: may be crossed with enough movement to clear it." },
-        "meleeDefBonus": { "type": "integer" },
-        "elevation": { "$ref": "common.schema.json#/$defs/Inches" },
-        "resistance": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/DamageType" } },
+        "elevation": { "$ref": "common.schema.json#/$defs/Inches", "description": "Hill: the surface height for models completely within." },
+        "resistance": { "type": "array", "uniqueItems": true, "items": { "$ref": "common.schema.json#/$defs/DamageType" }, "description": "A model completely inside resists these damage types." },
         "hazard": {
           "type": "object", "additionalProperties": false, "required": ["effect"],
-          "properties": { "effect": { "$ref": "common.schema.json#/$defs/EffectList" }, "trigger": { "enum": ["enter", "endActivation", "maintenance"] } }
-        }
+          "description": "R9.8: effect holds one damage node (pow, damageType). on defaults to both triggers.",
+          "properties": {
+            "effect": { "$ref": "common.schema.json#/$defs/EffectList" },
+            "on": { "type": "array", "uniqueItems": true, "minItems": 1, "items": { "enum": ["enter", "endActivation"] } }
+          }
+        },
+        "feature": { "enum": ["hedge"], "description": "Obstacle drawn and played as a hedge (concealment)." },
+        "baseType": { "enum": ["obstacle", "obstruction", "building", "forest", "shallowWater", "rough", "rubble", "hill", "trench", "hazard", "deepWater"], "description": "scenarioTerrain: the rules type it plays as (default obstacle)." },
+        "baseElev": { "$ref": "common.schema.json#/$defs/Inches", "description": "Height the prism's base sits above the table." }
       }
     },
     "mesh": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "GLB slug; procedural prism if absent." },

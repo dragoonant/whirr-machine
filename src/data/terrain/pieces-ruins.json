@@ -1,0 +1,214 @@
+[
+  {
+    "id": "terrain.ruins-monolith",
+    "name": "Root-Bound Monolith",
+    "rulesType": "obstruction",
+    "footprint": {
+      "rect": {
+        "w": 2.5,
+        "d": 2.5
+      }
+    },
+    "height": 5,
+    "mesh": "wt-ruins-monolith"
+  },
+  {
+    "id": "terrain.ruins-arch",
+    "name": "Broken Archway",
+    "rulesType": "obstruction",
+    "footprint": {
+      "rect": {
+        "w": 5,
+        "d": 1.25
+      }
+    },
+    "height": 4,
+    "mesh": "wt-ruins-arch"
+  },
+  {
+    "id": "terrain.ruins-colonnade",
+    "name": "Fallen Colonnade",
+    "rulesType": "obstacle",
+    "footprint": {
+      "rect": {
+        "w": 4,
+        "d": 0.75
+      }
+    },
+    "height": 0.75,
+    "mesh": "wt-ruins-colonnade"
+  },
+  {
+    "id": "terrain.ruins-crystal",
+    "name": "Crystal Outcrop",
+    "rulesType": "obstruction",
+    "footprint": {
+      "circle": {
+        "r": 1.25
+      }
+    },
+    "height": 2.5,
+    "mesh": "wt-ruins-crystal"
+  },
+  {
+    "id": "terrain.ruins-grove",
+    "name": "Shadowroot Grove",
+    "rulesType": "forest",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3,
+          "z": 0
+        },
+        {
+          "x": 2.598,
+          "z": 1.25
+        },
+        {
+          "x": 1.5,
+          "z": 2.165
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -1.5,
+          "z": 2.165
+        },
+        {
+          "x": -2.598,
+          "z": 1.25
+        },
+        {
+          "x": -3,
+          "z": 0
+        },
+        {
+          "x": -2.598,
+          "z": -1.25
+        },
+        {
+          "x": -1.5,
+          "z": -2.165
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 1.5,
+          "z": -2.165
+        },
+        {
+          "x": 2.598,
+          "z": -1.25
+        }
+      ]
+    },
+    "height": 4,
+    "mesh": "wt-ruins-grove"
+  },
+  {
+    "id": "terrain.ruins-dais",
+    "name": "Flagstone Dais",
+    "rulesType": "hill",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 3.5,
+          "z": 0
+        },
+        {
+          "x": 2.475,
+          "z": 1.768
+        },
+        {
+          "x": 0,
+          "z": 2.5
+        },
+        {
+          "x": -2.475,
+          "z": 1.768
+        },
+        {
+          "x": -3.5,
+          "z": 0
+        },
+        {
+          "x": -2.475,
+          "z": -1.768
+        },
+        {
+          "x": 0,
+          "z": -2.5
+        },
+        {
+          "x": 2.475,
+          "z": -1.768
+        }
+      ]
+    },
+    "height": 1,
+    "mesh": "wt-ruins-dais"
+  },
+  {
+    "id": "terrain.ruins-masonry",
+    "name": "Toppled Masonry",
+    "rulesType": "rubble",
+    "footprint": {
+      "polygon": [
+        {
+          "x": 2.5,
+          "z": 0
+        },
+        {
+          "x": 2.165,
+          "z": 0.875
+        },
+        {
+          "x": 1.25,
+          "z": 1.516
+        },
+        {
+          "x": 0,
+          "z": 1.75
+        },
+        {
+          "x": -1.25,
+          "z": 1.516
+        },
+        {
+          "x": -2.165,
+          "z": 0.875
+        },
+        {
+          "x": -2.5,
+          "z": 0
+        },
+        {
+          "x": -2.165,
+          "z": -0.875
+        },
+        {
+          "x": -1.25,
+          "z": -1.516
+        },
+        {
+          "x": 0,
+          "z": -1.75
+        },
+        {
+          "x": 1.25,
+          "z": -1.516
+        },
+        {
+          "x": 2.165,
+          "z": -0.875
+        }
+      ]
+    },
+    "height": 0.5,
+    "mesh": "wt-ruins-masonry"
+  }
+]

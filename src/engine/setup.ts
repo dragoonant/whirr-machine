@@ -11,7 +11,7 @@ import { baseRadius, edgeDistance, isLegalPlacement, surfaceElevation } from './
 import { raise, reject, type FlowOut, type FlowResult } from './pending'
 import { rollNd6 } from './dice'
 import { seedRng } from './rng'
-import { initialScenarioState, scenarioDef, type ScenarioDef } from './scenario'
+import { initialScenarioState, scenarioAnchorProblems, scenarioDef, type ScenarioDef } from './scenario'
 import { startGameplay } from './turnflow'
 import { handleActivationAction, raisePrey } from './phases/activation'
 import type {
@@ -135,7 +135,10 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
     if (!sc) return reject('E_BAD_SETUP', `unknown scenario '${setup.scenario}'`)
     const def = scenarioDef(bundle, setup.scenario)
     const armies = { A: buildArmy('A', setup.lists.A, bundle), B: buildArmy('B', setup.lists.B, bundle) }
-    const terrain = buildTerrain(bundle, setup.layout ?? (sc.terrainLayout as string))
+    const layoutId = setup.layout ?? (sc.terrainLayout as string)
+    const anchorProblems = scenarioAnchorProblems(bundle, setup.scenario, layoutId)
+    if (anchorProblems.length) return reject('E_BAD_SETUP', anchorProblems.join('; '))
+    const terrain = buildTerrain(bundle, layoutId)
     const players = Object.fromEntries((['A', 'B'] as PlayerId[]).map((p) => {
       const list = bundle.byId[setup.lists[p]] as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
       const ps: PlayerState = { id: p, faction: list.faction, listId: list.id, leaderId: armies[p].leaderId, edge: null, deployed: false, ambushIds: [] }

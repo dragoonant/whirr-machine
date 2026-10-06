@@ -208,3 +208,5 @@
 .over-table caption { color: var(--accent2); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding-bottom: 2px; }
 .over-table th, .over-table td { padding: 2px 12px; border-bottom: 1px solid #2a2e36; text-align: center; }
 .over-table td:first-child { text-align: left; color: var(--dim); }
+
+.top-board { font-size: 12px; white-space: nowrap; align-self: center; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }

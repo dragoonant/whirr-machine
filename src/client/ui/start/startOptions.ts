@@ -2,6 +2,7 @@
 import { loadBundle } from '../../../data/index'
 import type { Id } from '../../../engine/index'
 import type { NewGameOptions } from '../../contract'
+import { BOARDS } from '../../board/boards'
 
 export interface ArmyCard { profileId: Id; name: string; role: string; count: number }
 export interface SideChoice { listId: Id; factionId: Id; factionName: string; listName: string; points: number; models: ArmyCard[] }
@@ -50,7 +51,12 @@ export const BOT_TIERS = [
 export type BotTierChoice = (typeof BOT_TIERS)[number]['id']
 export const DEFAULT_BOT_TIER: BotTierChoice = 'normal'
 
-export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice }
+export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice; board?: Id | 'random' }
+
+/** Battlefield choices for the start screen: Random first, then each board's display name. */
+export const battlefieldChoices = (): { id: Id | 'random'; name: string }[] => [{ id: 'random', name: 'Random' }, ...BOARDS.map((b) => ({ id: b.id, name: b.name }))]
+
+const makeSeed = (): string => Math.random().toString(36).slice(2, 10)
 
 /** The side the player picked is A (human); the first other faction's list is B (bot). */
 export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewGameOptions | null {
@@ -62,7 +68,9 @@ export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewG
     lists: { A: mine.listId, B: theirs.listId },
     controllers: { A: 'human', B: 'bot' },
     bot: { tier: choices.tier ?? DEFAULT_BOT_TIER },
-    ...(choices.seed ? { seed: choices.seed } : {}),
+    // the seed is made here (not in the engine call) so the battlefield pick and the game share it: ?seed=X gives the same table
+    seed: choices.seed ?? makeSeed(),
+    board: choices.board ?? 'random',
   }
 }
 
