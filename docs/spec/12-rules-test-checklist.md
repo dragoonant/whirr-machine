@@ -425,3 +425,36 @@ the dice show 3 and 4.
 | ID | Case | Ref |
 |---|---|---|
 | GOLD-001 | **Quick Start worked turns (QS pp36–46), replayed on `scn-qs-demo` with bundle `qs-2025`.** The QS prints no coordinates, so the test authors positions that satisfy the narrative (who is in range, behind which wall, inside which cloud) and feeds the printed dice. Assert: Pall of Ashes d3 = 1 → 4 clouds; Vilkul focus 6→4→2; Razor run costs 1; Lazarenko 2+3+7 = 12 vs DEF 13 miss, blast 1+6+7 = 14 vs ARM 19 → 0; K 1 VP; Deuce Accumulator → 3 focus; Powerful Attack 1+3+4+7 = 15 hit, push 1", follow 1", damage 2+2+3+14 = 21 vs 21 → 0; Reload; 4+5+6+7 = 22 hit, 1+2+5+6+14 = 28 → 7 damage, column 5 → C5 full (5) then C6 r1–2; Caine Deflection 3 focus; Falk 5+6+7−2 = 16 vs 16 hit, 3+4+12 = 19 − 15 = 4 → Power Field → 0, Vilkul focus 1; Ryan 4+4+7 = 15 crit, push 1", knockdown, 1+2+10 = 13 vs 14 → 0; Glover Both Barrels 1+5+7 = 13 vs DEF 5 hit, 2+2+3+10+4 = 21 − 14 → 7; Watts 2+5+7+2 = 16 hit, 3+4+6+10+2 = 25 − 21 → 4, column 6 r3–4 then C1 r1–2 → R crippled; end of turn C 1 / K 2. Round 2: Avenging Force advance 3" + Slug Cannon miss; Razor 5+5+6 = 16 vs 15 hit, Deuce knocked down, 2+6+16 = 24 − 19 = 5 → column 3; grenade (L) 3+6+6+6 = 21 vs 21 hit, Ryan 4, Glover 1, Watts 0; Vilkul charge across the wall (Pathfinder), 1,1 miss, extra attack + boost 2+5+5+7 = 19 hit, 1+4+4+13 = 22 − 12 = 10 → Falk destroyed | all |
+
+## TER (M8: terrain boards)
+
+Spec: `70-terrain-boards.md`. Pieces, boards and layouts come from `src/data/terrain/` and must match
+`tools/terrain-catalog.json`. G-numbers are the gaps in 70 §A. TER-113 and TER-114 stay `todo` until G1 and G2
+are fixed.
+
+| ID | Case | Ref |
+|---|---|---|
+| TER-101 | Every catalog entry has a data piece with the same id, rulesType, footprint (vertex for vertex), height and `mesh` = slug; every board piece is in the catalog; the 37 pieces pass `terrain.schema.json` | 70 §B |
+| TER-102 | validate-data: an `obstacle` with height ≥ 1 or an `obstruction`/`building` with height < 1 is rejected; all 37 pieces pass | R5.13 R5.14 70 G5 |
+| TER-103 | Every board layout is point-symmetric: each piece has a twin of the same terrain at (−x, −z, rot + 180°), or sits at the origin with a half-turn-symmetric footprint | 70 §D.1 |
+| TER-104 | Every 36" board layout: footprint gaps ≥ 3", \|x\| ≤ 15, \|z\| ≤ 11, impassable \|z\| ≤ 8, 5–8 pieces (exact polygons; circles as 48-gons) | 70 §D.3–5 |
+| TER-105 | Every 36" board layout has `w1` (−6, −4) and `w2` (6, 4) at rot 0 with an obstacle `rect 4 × 0.75`, height 0.75; on `scn-ashwall-divide` with any board layout, `query.control` matches `layout.ashwall-divide` for the same model positions (20 seeded positions near each wall) | 70 §D.2 S1 |
+| TER-106 | 48" scale-up: `scaleLayout48(layout)` keeps the symmetry, gaps ≥ 3", impassable \|z\| ≤ 10.67 and all \|z\| ≤ 16 for all 15 layouts | 70 §D |
+| TER-107 | `pickBattlefield(seed, scn-ashwall-divide, 'random')` is deterministic (same seed → same board and layout), and over seeds `s0..s999` each board is picked 160–240 times and every layout of a board at least once | 70 §E.1–3 |
+| TER-108 | `?board=village` (or `board.village`) forces that board; `?board=random`, a missing value or an unknown value use the seed (an unknown value logs one warning); `?layout=layout.bog-2` with board bog is honoured; an ineligible `?layout=` is ignored | 70 §E.3, E.6 |
+| TER-109 | `scn-qs-demo` always gets `layout.ashwall-divide` on every board; GOLD-001 passes with each board selected | 70 §E.3 GOLD-001 |
+| TER-110 | Save on board ruins, layout `layout.ruins-2`, then load → same board and layout; a bare engine SaveFile with `setup.layout = layout.outpost-1` loads as the outpost board; replaying the save gives the same final state | 70 §E.5 |
+| TER-111 | `createGame` on `scn-ashwall-divide` with a layout that lacks `w1` → `E_BAD_SETUP` (after the G6 fix); the selection code never offers such a layout | 70 G6 |
+| TER-112 | `npm run sim` on each of the 15 board layouts (4 games each, normal vs normal): every game ends, 0 invariant violations, 0 stalls, 0 rejected AI actions | 70 §D, 60 §2 |
+| TER-113 | Molten Blight Pool: a model advances into it → one POW 10 fire damage roll; out and back in during the same advance → no second roll; ends its activation inside → one more roll; Resistance: Fire → no damage; placed into it → one roll (todo until G1) | R9.8 70 G1 |
+| TER-114 | Zig-Zag Trench behaves per the trench ruling in `docs/needs-rules-check.md` (todo until G2 is ruled and built) | 70 G2 |
+| TER-115 | Target within 1" behind the Split-Rail Fence → concealment +2, not cover; the same spot behind the Fieldstone Wall → cover +4 | R6.11 R10 |
+| TER-116 | 30 mm model completely on the Mossy Hummock vs a ground attacker → elevation +2; the same model half on it → no elevation; walking off it → no fall | R6.6 R5.19 R10 |
+| TER-117 | Pine Stand: viewer inside, line crosses 2.5" of forest → LOS; 3.5" → blocked; both ends outside, line clips 0.5" of forest → blocked; a 120 mm target behind it → LOS | R10 |
+| TER-118 | 40 mm model completely inside Toppled Masonry → cover +4 vs ranged; partly inside → none; advancing into it → −2" | R10 R5.12 |
+| TER-119 | Advance that enters the Frozen Pond (rough) → whole advance −2" (min 1"); Pathfinder → no penalty | R5.12 |
+| TER-120 | Path through the Crooked Stilt Hut → `E_PATH_BLOCKED`; placing a base overlapping it → `E_PLACEMENT`; a charge whose line meets the Iron Thorn Palisade stops on contact | R5.2 R5.11 R5.14 |
+| TER-121 | Client fit: for each of the 37 GLBs, the fitted bbox is within the footprint bbox ±5% (x, z) and `visualHeight` ±5% (y); each GLB ≤ 15k triangles and ≤ 1 MB; a missing GLB draws the procedural fallback with no page error | 70 §F |
+| TER-122 | Each board: the 3 mat maps exist at 2048 × 2048; the wood surround and brass trim render; the board's key, ambient and fog colours are applied; Low graphics drops the normal and roughness maps | 70 §C, §F |
+| TER-123 | `art.spec` on each board: all terrain GLBs load, no console errors, mean frame time ≤ M5 baseline + 3 ms | 70 §F |
+| TER-124 | IP lint: no board or piece name, prose or catalog prompt contains a faction, product or company name from the denylist in `tools/validate-data.ts`; catalog prompts are ≤ 60 words | 70 IP rule |
