@@ -76,7 +76,7 @@ describe('hands and setup', () => {
     expect(validateCardHands({ ...base, cards: { A: UNI } }, bundle)).toBeNull()
     expect(validateCardHands({ ...base, cards: { A: [...UNI, FTM] } }, bundle)?.code).toBe('E_BAD_SETUP')
     expect(validateCardHands({ ...base, cards: { A: [BH, BH] } }, bundle)?.code).toBe('E_BAD_SETUP')
-    expect(validateCardHands({ ...base, cards: { A: [FTM] } }, bundle)?.code).toBe('E_BAD_SETUP')
+    expect(validateCardHands({ ...base, cards: { A: [FTM] } }, bundle)).toBeNull() // the Khador lists carry army kha.winter-korps (M13), so they can take it
     expect(validateCardHands({ ...base, cards: { B: [FTM] } }, bundle)?.code).toBe('E_BAD_SETUP')
     expect(validateCardHands({ ...base, cards: { A: ['kha.vilkul'] } }, bundle)?.code).toBe('E_BAD_SETUP')
     const army = { ...bundle, byId: { ...bundle.byId, 'kha.l.qs-recon': { ...bundle.byId['kha.l.qs-recon']!, army: 'kha.old-umbrey' } } }

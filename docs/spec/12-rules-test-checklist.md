@@ -618,6 +618,30 @@ Spec: `91-cards-steamroller-clock.md` part C.
 | CLK-015 | E2E: `?clock=20&test=1`, `__clock.set('A', 500)` on the human's decision → "Out of time" banner, game-over screen names the clock | C.2 |
 
 
+## M13 AI: command cards and Steamroller scenarios (AIC)
+
+Spec: `40-ai.md` and `91-cards-steamroller-clock.md` part D. Tests: `tests/ai/cards.test.ts`, `tests/ai/scenario-decisions.test.ts`.
+
+| ID | Case | Ref |
+|---|---|---|
+| AIC-001 | The card threshold falls from 3.0 in round 1 by half a point a round to 1.0 from round 5 | D.3 |
+| AIC-002 | Duck and Cover: a unit on its objective under fire digs in (shots, not charges); a unit with only chargers to fear sets its defense instead; a unit nowhere near an element gets nothing | D.3 |
+| AIC-003 | Put the Fires Out: a burning Leader is put out, a Leader hurt for four boxes is healed; a trooper merely knocked down in round 1 is passed on; never a scratch | D.3 |
+| AIC-004 | Blessings: weapons are blessed for a war-engine about to meet an Incorporeal model, and for nothing else | D.3 |
+| AIC-005 | Sturdy is worth something only where a Cohort model can push a holder off its element | D.3 |
+| AIC-006 | Bite and Hold A: a unit that stays on its objective gets nothing from the card, one that would leave loses the element; nothing on a turn that does not score | D.3 |
+| AIC-007 | For the Motherland: a unit on its objective that the enemy can kill is toughened from round 2; never in round 1 | D.3 |
+| AIC-008 | The easy tier plays a random legal card in about a quarter of the activations that offer one, and never an illegal one | D.3 |
+| AIC-009 | Trench Warfare: the cheapest solo is the raider and is drawn toward the opponent's cache; no one else is, and its own cache is no prize | D.3 SR11 |
+| AIC-010 | A raider beside the uncontested cache on a scoring turn claims it rather than make a poor attack; a big attack on the enemy Leader still beats the claim; before the Defender's round 2 the claim is never offered or chosen | SR-007 SR-008 |
+| AIC-011 | High Stakes: the securer burns down what it holds, never the element the enemy sits on | SR-015 |
+| AIC-012 | Payload: the full move is taken, and the haul is a legal move or a pass | SR-018 SR-019 |
+| AIC-013 | Wolves at Our Heels: the third token is always taken; an earlier one only when the opponent's 3" pull would not lose the 40 | SR-012 SR-013 |
+| AIC-014 | Flag terrain: the pick is the offered piece that scores best (nearer our edge, more cover), and always legal | SR-003 |
+| AIC-015 | `chooseEdge` (normal tier): each edge is scored on the table it produces (terrain in each zone, cover at each side's elements, flag pieces, walls at the caches); the better one is always chosen and is always legal; the easy tier keeps the random pick | SR1 SR5 |
+| AIC-016 | The sensible random bot answers the scenario decisions (flag terrain, fuse, heel token and move, Payload, Maintenance card prompt, haul move, cache claim) by their code and never with a rejected action | SR-003 SR-015 SR-018 |
+| AIC-017 | Roles: an element that scores nothing for us and something for them (our own flag in Trench Warfare) gets no guard while every enemy is more than 2.5 turns away, and a guard once one is near | 40-ai |
+
 ## M12 Skirmish shared rules (SKC)
 
 | ID | Case | Ref |

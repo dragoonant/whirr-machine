@@ -5,6 +5,7 @@
   "level": "skirmish",
   "points": 49,
   "leader": "kha.vilkul",
+  "army": "kha.winter-korps",
   "entries": [
     {
       "profile": "kha.razor"

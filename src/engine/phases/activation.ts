@@ -1238,9 +1238,11 @@ function blessedWeapons(state: GameState, id: ModelId, spell: boolean): boolean 
 }
 
 /** M13 (91 B.1 SR11): the cache claims on offer to the model choosing its Combat Action; none unless the scenario has caches (WP3's scenarioSpecialActions). */
-function cacheOptions(state: GameState, b: B, id: ModelId): DecisionOption[] {
+function cacheOptions(state: GameState, b: B, id: ModelId, did?: string): DecisionOption[] {
   if (!scenarioDef(b, state.scenario.id).elements.some((el) => (el.kind as string) === 'cache')) return []
-  return scenarioSpecialActions(state, b, id)
+  const opts = scenarioSpecialActions(state, b, id)
+  // scenarioSpecialActions stamps state.pending.id (the previous decision while this one is being raised): restamp to the decision being raised
+  return did ? opts.map((o) => ({ ...o, action: { ...o.action, decisionId: did } as Action })) : opts
 }
 
 function raiseCombatChoice(state0: GameState, b: B, events: GameEvent[]): Out {
@@ -1258,7 +1260,7 @@ function raiseCombatChoice(state0: GameState, b: B, events: GameEvent[]): Out {
     action: { type: 'chooseCombatAction', decisionId: did, player: m.owner, modelId: id, choice: c.choice, ...(c.abilityId ? { abilityId: c.abilityId } : {}), ...(c.targetId ? { targetId: c.targetId } : {}), ...(c.powerAttack ? { powerAttack: c.powerAttack } : {}) } as Action,
     ...(c.choice === 'powerAttack' && (m.type === 'warEngine' || m.type === 'beast') ? { cost: costFor(m, 1) } : {}),
   }))
-  options.push(...anytimeOptions(state, b, id, did), ...activationCardOptions(state, b), ...cacheOptions(state, b, id))
+  options.push(...anytimeOptions(state, b, id, did), ...activationCardOptions(state, b), ...cacheOptions(state, b, id, did))
   const r = raise(state, { player: m.owner, kind: 'chooseCombatAction', window: 'combat.choose', context: { modelId: id, unitId: state.units[act(state).activeId]?.id }, options, canPass: false })
   return ok(r.state, events)
 }

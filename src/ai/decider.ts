@@ -13,6 +13,7 @@ import { forcePenalty, furyWrapUp, leechAction, spendCost, transferAction, ventA
 import { actKey, activationPriority, anytimeSpecial, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, specialActionValue, specialAttackValue, type ActPlan, type Env } from './plan'
 import { damageDist, expected } from './prob'
 import { pickSensible } from './random'
+import { edgePick } from './edge'
 import { pickScenario } from './scenario'
 import { TIERS, type AiTierId, type TierParams } from './tiers'
 import { legalMoveCandidates } from './moves'
@@ -734,6 +735,7 @@ function route(env: Env, pd: PendingDecision, legal: Action[], brain: Brain): Ac
   if (pre) return pre
   switch (pd.kind) {
     case 'gameOver': return legal[0]!
+    case 'chooseEdge': return (env.tier.id === 'normal' ? edgePick(env, legal) : null) ?? pickSensible(env.s, pd, legal, `${env.ctx.s.seed}:ai`) // M13: terrain-aware table edge (normal tier)
     case 'chooseTurnOrder': return legal.find((a) => a.type === 'chooseTurnOrder' && a.order === 'first') ?? legal[0]!
     case 'deploy': case 'advanceDeploy': return deployAction(env.s, legal) ?? legal[0]!
     case 'chooseActivation': return chooseActivation(env, legal, brain)

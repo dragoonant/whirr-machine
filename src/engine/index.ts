@@ -25,7 +25,7 @@ import { controlReport } from './scenario'
 import { answerSetup, createInitialState, isSetupDecision, setupLegalActions } from './setup'
 import { housekeeping } from './housekeeping'
 import { cardsView, handlePlayCard } from './cards'
-import { resolveClockExpired } from './clock'
+import { isClockedOut, resolveClockExpired, settleClockOut } from './clock'
 import { answerControlDecision, answerMaintenanceDecision, endTurn, flowLegalActions, isControlDecision, isMaintenanceDecision } from './turnflow'
 
 export * from './types'
@@ -111,7 +111,13 @@ export function step(state: GameState, action: Action): StepResult {
   const r = guarded(state, action)
   if ('rejection' in r) return rejectedResult(state, action, r.rejection)
   if (r.state === state) return { state, events: r.events, pending: state.pending } // gameOver ack: nothing changes
-  return finish(housekeeping({ ...r.state, log: [...state.log, action] }), r.events)
+  const done = finish(housekeeping({ ...r.state, log: [...state.log, action] }), r.events)
+  // M13 (91 C.2): while a player's clock is out, their later decisions are answered with the defaults at once (the answers are not logged; a replay reaches the same state)
+  if (isClockedOut(done.state) && done.state.pending.kind !== 'gameOver') {
+    const settled = settleClockOut({ state: done.state, events: done.events, pending: done.state.pending }, bundleFor(done.state))
+    if (settled.state !== done.state) return finish(housekeeping(settled.state), settled.events)
+  }
+  return done
 }
 
 export function validate(state: GameState, action: Action): Rejection | null {

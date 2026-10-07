@@ -6,9 +6,16 @@
 import type { GameState, ModelId, ModelState, PlayerId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
 import { elementSpecs, groupCanHold } from './scenario'
-import { baseRadius, distToElement, elementsOf, enemiesOf, forwardOf, modelsOf, type Element } from './world'
+import { baseRadius, distToElement, elementsOf, enemiesOf, forwardOf, modelsOf, other, type Element } from './world'
 
 export interface Role { kind: 'hold' | 'contest' | 'free'; element?: Element; goal?: Vec2 }
+
+/**
+ * An element that scores nothing for us and something for them (our own flag in Trench Warfare) is guarded only once an enemy is within this many
+ * turns of it (at 7" a turn, minus the hold distance). Guarding it from the start tied four models to a flag nobody was near and lost games
+ * (bench, Trench Warfare normal vs easy, 160 games a row: guard always 58%, 5 turns 58%, 3.5 66%, 2.5 73%, 1.5 64%, never 63%; 64% on 160 fresh seeds).
+ */
+export const DENY_TURNS = 2.5
 
 const cache = new WeakMap<GameState, Map<PlayerId, Map<ModelId, Role>>>()
 
@@ -87,7 +94,10 @@ export function rolesFor(s: GameState, me: PlayerId): Map<ModelId, Role> {
     return t - prefer
   }
   const unstaffed: Element[] = []
+  const denyOnly = (el: Element): boolean => !!el.vpFor && el.vpFor[me] <= 0 && el.vpFor[other(me)] > 0
+  const foeTurns = (el: Element): number => Math.min(...foes.map((e) => turns(el, e.pos, e.base, 7)), 99)
   for (const el of order) {
+    if (denyOnly(el) && foeTurns(el) > DENY_TURNS) continue // an element that only denies them points: no guard until they are close
     const tokens = tok.get(el.id) ?? ['any']
     let need = bodiesNeeded(el)
     let staffed = false

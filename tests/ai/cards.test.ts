@@ -6,7 +6,7 @@ import { cardScore, cardThreshold, keepsElement, pickPlay } from '../../src/ai/c
 import { newCtx } from '../../src/ai/damage'
 import { decideSync, newBrain } from '../../src/ai/decider'
 import type { Env } from '../../src/ai/plan'
-import { cacheTerm, cachesOf, pieceScore, raiderOf } from '../../src/ai/scenario'
+import { cacheTerm, cachesOf, pieceScore, RAID_REACH, raiderOf } from '../../src/ai/scenario'
 import { TIERS } from '../../src/ai/tiers'
 import { distToElement, elementsOf } from '../../src/ai/world'
 import type { PlayCardAction } from '../../src/engine/actions'
@@ -241,9 +241,10 @@ describe('cache raid (Trench Warfare)', () => {
     const m = s.models[raider!]!
     const theirs = cacheOf(s, 'B').pos
     const near = cacheTerm(s, m, ahead(s, 'A', theirs, 1.9))
-    const far = cacheTerm(s, m, ahead(s, 'A', theirs, -16))
+    const far = cacheTerm(s, m, ahead(s, 'A', theirs, -(RAID_REACH - 1)))
     expect(near).toBeGreaterThan(far)
-    expect(far).toBeGreaterThan(0)
+    expect(far).toBeGreaterThan(0) // a short pull within a run of the cache
+    expect(cacheTerm(s, m, ahead(s, 'A', theirs, -(RAID_REACH + 4)))).toBe(0) // none from further off
     const other = Object.values(s.models).find((x) => x.owner === 'A' && x.id !== raider && x.type !== 'leader')!
     expect(cacheTerm(s, other, ahead(s, 'A', theirs, 1.9))).toBe(0)
     expect(cacheTerm(s, m, ahead(s, 'A', cacheOf(s, 'A').pos, 1.9))).toBeLessThan(near)

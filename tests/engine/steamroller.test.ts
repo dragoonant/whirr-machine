@@ -1,6 +1,7 @@
 // 91 B and 12 SR-: Steamroller 2026 scenario rules in the engine (WP3). The seven scenarios are built here from the 91 B.4 tables (the shipped
 // data files are WP7's), on an ad hoc 48" layout, with skirmish lists made of existing profiles as in skirmish.test.ts.
 import { describe, expect, it } from 'vitest'
+import { droppedPieces } from '../../src/data/battlefields'
 import { loadBundle } from '../../src/data/index'
 import type { Action } from '../../src/engine/actions'
 import type { GameEvent } from '../../src/engine/events'
@@ -804,5 +805,46 @@ describe('SR runtime element state', () => {
     expect(s.state.scenario.elementState).toBeUndefined()
     expect(s.state.scenario.killBoxDepth).toBeUndefined()
     expect(s.state.scenario.cachesClaimed).toBeUndefined()
+  })
+})
+
+describe('SR cache claims through step()', () => {
+  it('SR-007 a human claim of the cache from the Combat Action decision is accepted by step() (the option carries the open decision id)', () => {
+    const s0 = table('scn-t-trench', 'D')
+    const F = s0.firstPlayer!, D = other(F)
+    const e = mid(D, 'e2')
+    let s = stand(s0, e, 'el-cache-red', 2)
+    s = { ...s, phase: 'activation', activePlayer: D, pending: { ...s.pending, kind: 'chooseActivation', player: D, id: 'd:900', options: [], canPass: false }, decisionSeq: 900 }
+    const go = (st: StepResult, a: Record<string, unknown>): StepResult => {
+      const r = step(st.state, { ...a, decisionId: st.state.pending.id, player: st.state.pending.player } as unknown as Action)
+      if (r.rejection) throw new Error(`rejected ${JSON.stringify(r.rejection)} on ${String(a.type)}`)
+      return r
+    }
+    let r: StepResult = { state: s, events: [], pending: s.pending }
+    r = go(r, { type: 'chooseActivation', activate: e })
+    r = go(r, { type: 'chooseMovement', option: 'forfeit', modelId: e })
+    expect(r.state.pending.kind).toBe('chooseCombatAction')
+    const claim = r.state.pending.options!.find((o) => (o.action as Any).abilityId === CLAIM_CACHE_ABILITY)
+    expect(claim, 'the claim is offered').toBeDefined()
+    expect(claim!.action.decisionId).toBe(r.state.pending.id)
+    expect(legalActions(r.state).some((a) => (a as Any).abilityId === CLAIM_CACHE_ABILITY)).toBe(true)
+    const done = step(r.state, claim!.action)
+    expect(done.rejection).toBeUndefined()
+    expect(types(done.events)).toContain('CacheClaimed')
+    expect(done.state.scenario.cachesClaimed).toHaveLength(1)
+  })
+})
+
+describe('SR terrain drops at setup', () => {
+  it('SR-010 setup omits the layout pieces droppedPieces names (an impassable piece within the clearance of an objective), and keeps the rest', () => {
+    const scn = 'scn-sr26-trench-warfare'
+    const layout = 'layout.bog-1-48'
+    const dropped = droppedPieces(real, scn, layout)
+    expect(dropped.length).toBeGreaterThan(0)
+    const r = createGame({ scenario: scn, lists: { A: 'kha.l.skirmish', B: 'cyg.l.skirmish' }, layout }, 'sr-drop', real)
+    expect(r.rejection).toBeUndefined()
+    const ids = r.state.terrain.map((t) => t.id)
+    for (const d of dropped) expect(ids).not.toContain(d)
+    expect(ids.length).toBe((real.byId[layout] as Any).pieces.length - dropped.length)
   })
 })

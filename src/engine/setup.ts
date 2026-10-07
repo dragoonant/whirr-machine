@@ -11,6 +11,7 @@ import { baseRadius, edgeDistance, isLegalPlacement, surfaceElevation } from './
 import { raise, reject, type FlowOut, type FlowResult } from './pending'
 import { rollNd6 } from './dice'
 import { seedRng } from './rng'
+import { droppedPieces } from '../data/battlefields'
 import { initialScenarioState, scenarioAnchorProblems, scenarioDef, type ScenarioDef } from './scenario'
 import { startGameplay } from './turnflow'
 import { handleActivationAction, raisePrey } from './phases/activation'
@@ -131,10 +132,12 @@ export function buildArmy(player: PlayerId, listId: string, bundle: DataBundle):
   return { models, units, leaderId }
 }
 
-function buildTerrain(bundle: DataBundle, layoutId: string): TerrainInstance[] {
+/** The layout's pieces as instances, minus the ones setup removes for the scenario (91 B.5, SR: impassable pieces too near an objective or cache; edge independent, see `droppedPieces`). */
+function buildTerrain(bundle: DataBundle, layoutId: string, scenarioId: string): TerrainInstance[] {
   const layout = bundle.byId[layoutId] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!layout) throw new Error(`terrain layout '${layoutId}' not found`)
-  return ((layout.pieces ?? []) as Record<string, any>[]).map((pc) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const dropped = new Set<string>(droppedPieces(bundle, scenarioId, layoutId))
+  return ((layout.pieces ?? []) as Record<string, any>[]).filter((pc) => !dropped.has(pc.id)).map((pc) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const t = (bundle.byId[pc.terrain] ?? {}) as Profile
     return { id: pc.id, pieceId: pc.terrain, rulesType: t.rulesType, pos: pc.pos, rot: pc.rot ?? 0, footprint: t.footprint, height: t.height ?? 0, props: t.props ?? {} }
   })
@@ -164,7 +167,7 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
     const layoutId = setup.layout ?? (sc.terrainLayout as string)
     const anchorProblems = scenarioAnchorProblems(bundle, setup.scenario, layoutId)
     if (anchorProblems.length) return reject('E_BAD_SETUP', anchorProblems.join('; '))
-    const terrain = buildTerrain(bundle, layoutId)
+    const terrain = buildTerrain(bundle, layoutId, setup.scenario)
     const players = Object.fromEntries((['A', 'B'] as PlayerId[]).map((p) => {
       const list = bundle.byId[setup.lists[p]] as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
       const ps: PlayerState = { id: p, faction: list.faction, listId: list.id, leaderId: armies[p].leaderId, edge: null, deployed: false, ambushIds: [] }

@@ -75,8 +75,15 @@ describe('start screen: command cards', () => {
     expect(cardPool('cyg.l.qs-recon').map((c) => c.id)).toEqual(UNIVERSAL)
     expect(defaultHand('cyg.l.qs-recon')).toEqual(UNIVERSAL)
     expect(armyOf('cyg.l.qs-recon')).toBeUndefined()
-    // For the Motherland is open to two Khador armies only: a list without that army cannot take it
-    expect(handFor('kha.l.qs-recon', ['kha.card.for-the-motherland', UNIVERSAL[0]!])).toEqual([UNIVERSAL[0]])
+    // For the Motherland is open to two Khador armies only: a list without that army cannot take it, the Khador lists (army kha.winter-korps) can
+    expect(handFor('cyg.l.qs-recon', ['kha.card.for-the-motherland', UNIVERSAL[0]!])).toEqual([UNIVERSAL[0]])
+    for (const l of ['kha.l.qs-recon', 'kha.l.skirmish']) {
+      expect(armyOf(l)).toBe('kha.winter-korps')
+      expect(cardPool(l).map((c) => c.id)).toEqual([...UNIVERSAL, 'kha.card.for-the-motherland'])
+      expect(cardPool(l).length).toBeGreaterThan(HAND_LIMIT) // the start screen's "Your five" picker shows when the pool is bigger than the hand
+      expect(handFor(l, ['kha.card.for-the-motherland', UNIVERSAL[0]!])).toEqual(['kha.card.for-the-motherland', UNIVERSAL[0]])
+      expect(defaultHand(l)).toEqual(UNIVERSAL)
+    }
     expect(handFor('cyg.l.qs-recon', [])).toEqual(UNIVERSAL)
     expect(handFor('cyg.l.qs-recon', [...UNIVERSAL, UNIVERSAL[0]!]).length).toBeLessThanOrEqual(HAND_LIMIT)
   })

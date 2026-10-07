@@ -268,3 +268,43 @@ describe('CLK clockExpired through step()', () => {
     expect(back.state.pending.id).toBe(marked.state.pending.id)
   })
 })
+
+describe('CLK step() settles a clocked-out player\'s later decisions (CLK6)', () => {
+  const go = (s: GameState, a: Record<string, unknown>) => {
+    const r = step(s, { ...a, decisionId: s.pending.id, player: s.pending.player } as unknown as Action)
+    if (r.rejection) throw new Error(`rejected ${JSON.stringify(r.rejection)} on ${String(a.type)}`)
+    return r
+  }
+
+  it('CLK-013 after the expiry, a decision the clocked-out player is later asked is answered at once by step()', () => {
+    for (let i = 0; i < 80; i++) {
+      let s = startState('clk-st' + i).state
+      let k = 0
+      for (const m of Object.values(s.models)) {
+        if (m.id === 'A:L' || m.id === 'B:e0') continue
+        s = place(s, m.id, { x: -16 + (k % 8) * 4, z: 16 - Math.floor(k / 8) * 3 }); k++
+      }
+      s = place(place(s, 'A:L', { x: 0, z: 0 }), 'B:e0', { x: 0, z: 8 })
+      s = { ...s, activePlayer: 'B', pending: { ...s.pending, kind: 'chooseActivation', player: 'B', id: 'd:900', options: [] }, decisionSeq: 900 }
+      // B moves first; A's clock runs out while B is mid-turn, then B shoots Vilkul
+      let r = go(s, { type: 'chooseActivation', activate: 'B:e0' })
+      r = go(r.state, { type: 'chooseMovement', option: 'forfeit', modelId: 'B:e0' })
+      r = go(r.state, expire(r.state, 'A') as unknown as Record<string, unknown>)
+      expect(r.state.scenario.clockOut).toBe('A')
+      r = go(r.state, { type: 'chooseCombatAction', modelId: 'B:e0', choice: 'ranged' })
+      r = go(r.state, { type: 'chooseAttack', modelId: 'B:e0', weaponId: 'cyg.w.spellstorm-cannon', targetId: 'A:L', additional: false })
+      const seen: GameEvent[] = [...r.events]
+      for (let j = 0; j < 12 && r.state.pending.player === 'B' && ['boostAttack', 'abilityChoice', 'boostDamage'].includes(r.state.pending.kind); j++) {
+        r = r.state.pending.kind === 'abilityChoice' ? go(r.state, { type: 'abilityChoice', optionId: 'no' }) : go(r.state, { type: r.state.pending.kind, boost: false })
+        seen.push(...r.events)
+      }
+      expect(r.state.pending.player === 'A' && r.state.pending.kind === 'powerField').toBe(false)
+      if (seen.some((e) => e.type === 'DecisionAutoResolved' && e.kind === 'powerField')) {
+        expect(r.state.phase).not.toBe('ended')
+        expect(r.state.pending.player).toBe('B')
+        return
+      }
+    }
+    throw new Error('no powerField decision raised in 80 seeds')
+  })
+})

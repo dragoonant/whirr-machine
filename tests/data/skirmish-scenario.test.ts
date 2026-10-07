@@ -1,6 +1,6 @@
 // 90-skirmish E: derived 48" layouts (SKM-006), the Copperline Crossing data (S3), TER-110 objective clearance, and the sim size helpers.
 import { describe, expect, it } from 'vitest'
-import { BOARDS, boardOfLayout, eligibleLayouts, pickBattlefield } from '../../src/data/battlefields'
+import { BOARDS, boardOfLayout, droppedPieces, eligibleLayouts, pickBattlefield } from '../../src/data/battlefields'
 import { derivedLayouts, loadBundle, type TypedRecord } from '../../src/data/index'
 import { isLayout48Id, layout48Id, layout48Source, scaleLayout48 } from '../../src/data/layout48'
 import { createGame } from '../../src/engine/index'
@@ -109,7 +109,7 @@ describe('SKM skirmish scenario data', () => {
     for (const id of boardLayouts.map(layout48Id)) {
       const r = createGame({ scenario: S3, lists: { A: 't.a', B: 't.b' }, layout: id }, 'lay', B)
       expect(r.rejection, id).toBeUndefined()
-      expect(r.state.terrain.length).toBe(rec(id).pieces.length)
+      expect(r.state.terrain.length).toBe(rec(id).pieces.length - droppedPieces(bundle, S3, id).length) // setup drops the impassable pieces near an objective
       expect(r.state.scenario.table).toEqual({ w: 48, d: 48 })
     }
     const bad = createGame({ scenario: S3, lists: { A: 't.a', B: 't.b' }, layout: boardLayouts[0]! }, 'lay', B)

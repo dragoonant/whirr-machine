@@ -2,6 +2,7 @@
 // Run: npm run sim -- --games 50 --seed 1 [--size recon|skirmish] [--scenario scn-ashwall-divide|scn-qs-demo] [--cap 5000] [--json] [--lists trl.l.starter-recon,kha.l.qs-recon]
 // --lists A,B plays those two lists (A and B swap sides on odd games); each may be a list id or a faction id (cyg kha trl cir cry men),
 // which means that faction's list of the chosen size. Without --lists the Khador and Cygnar lists of the size play.
+// --cards gives both sides a five-card command hand (the universal cards, plus For the Motherland for a Khador list), so playCard and the Maintenance prompt are exercised.
 // --size skirmish (90-skirmish E6): 50-point *-skirmish lists on Copperline Crossing, 48" table; --scenario still overrides the scenario.
 import { loadBundle } from '../src/data/index'
 import type { DataBundle } from '../src/engine/types'
@@ -39,14 +40,15 @@ export function sizeProblem(bundle: DataBundle, size: GameSize, scenario: string
   return null
 }
 
-interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean; lists?: [string, string]; size: GameSize; scenarioGiven: boolean }
+interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean; lists?: [string, string]; size: GameSize; scenarioGiven: boolean; cards: boolean }
 function parseArgs(argv: string[]): Args {
-  const a: Args = { games: 20, seed: '1', scenario: SIZE_DEFAULTS.recon.scenario, cap: 5000, json: false, stall: 200, wallMs: 60_000, quiet: false, size: 'recon', scenarioGiven: false }
+  const a: Args = { games: 20, seed: '1', scenario: SIZE_DEFAULTS.recon.scenario, cap: 5000, json: false, stall: 200, wallMs: 60_000, quiet: false, size: 'recon', scenarioGiven: false, cards: false }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!, v = argv[i + 1]
     if (k === '--games' && v) { a.games = Number(v); i++ } else if (k === '--seed' && v) { a.seed = v; i++ } else if (k === '--scenario' && v) { a.scenario = v; a.scenarioGiven = true; i++ } else if (k === '--size' && v) { if (!(GAME_SIZES as readonly string[]).includes(v)) { console.error(`--size must be one of ${GAME_SIZES.join(', ')}`); process.exit(2) } a.size = v as GameSize; i++ } else if (k === '--cap' && v) { a.cap = Number(v); i++ } else if (k === '--stall' && v) { a.stall = Number(v); i++ } else if (k === '--json') a.json = true
     else if (k === '--lists' && v) { const [x, y] = v.split(','); if (x && y) a.lists = [x, y]; i++ }
     else if (k === '--quiet') a.quiet = true
+    else if (k === '--cards') a.cards = true
   }
   if (!a.scenarioGiven) a.scenario = SIZE_DEFAULTS[a.size].scenario
   if (a.lists) a.lists = [resolveList(a.lists[0], a.size), resolveList(a.lists[1], a.size)]
@@ -111,14 +113,24 @@ const signature = (s: GameState): string => {
 }
 const short = (a: Action): string => {
   const r = a as unknown as Record<string, unknown>
-  const extra = ['activate', 'option', 'modelId', 'targetId', 'weaponId', 'choice', 'boost', 'spend'].filter((k) => r[k] !== undefined).map((k) => `${k}=${String(r[k])}`)
+  const extra = ['activate', 'option', 'modelId', 'targetId', 'weaponId', 'choice', 'abilityId', 'elementId', 'optionId', 'boost', 'spend'].filter((k) => r[k] !== undefined).map((k) => `${k}=${String(r[k])}`)
   return `${a.decisionId} ${a.player} ${a.type} ${extra.join(' ')}`
 }
 
-export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs' | 'lists'> & { size?: GameSize }, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
+/** --cards: a hand for a list, the universal command cards (91 A.3) with the army's cards in place of the last ones, five at most. */
+export function handOf(bundle: DataBundle, listId: string): string[] {
+  const army = (bundle.byId[listId] as { army?: string } | undefined)?.army
+  const cards = Object.values(bundle.byId).filter((r) => r.recordType === 'card') as unknown as { id: string; armies?: string[] }[]
+  const universal = cards.filter((c) => !(c.armies ?? []).length).map((c) => c.id)
+  const own = army ? cards.filter((c) => (c.armies ?? []).includes(army)).map((c) => c.id) : []
+  return [...universal.slice(0, 5 - own.length), ...own].slice(0, 5)
+}
+
+export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs' | 'lists'> & { size?: GameSize; cards?: boolean }, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
   const seed = `${args.seed}:g${game}`
   const [la, lb] = args.lists ?? SIZE_DEFAULTS[args.size ?? 'recon'].lists
-  const setup: GameSetup = { scenario: args.scenario, lists: game % 2 === 0 ? { A: la, B: lb } : { A: lb, B: la } }
+  const lists = game % 2 === 0 ? { A: la, B: lb } : { A: lb, B: la }
+  const setup: GameSetup = { scenario: args.scenario, lists, ...(args.cards ? { cards: { A: handOf(bundle, lists.A), B: handOf(bundle, lists.B) } } : {}) }
   const violations: Violation[] = []
   const t0 = Date.now()
   const v = (index: number, kind: string, message: string, log?: Action[]) => violations.push({ game, seed, index, kind, message, lastActions: log?.slice(-20).map(short) })

@@ -4,6 +4,8 @@
 import { loadBundle } from '../data/index'
 import type { Action, Decider, GameState, ModelId, PendingDecision, PlayerView, Vec2 } from '../engine/index'
 import { deriveSeed, nextFloat, query } from '../engine/index'
+import { CLAIM_CACHE_ABILITY } from '../engine/scenario-rules'
+import { pieceScore } from './scenario'
 
 export interface SensibleRandomOptions {
   /** 0 = always the best-scored action, 1 = close to uniform. Default 0.35. */
@@ -50,6 +52,30 @@ const nearestObjectiveDist = (state: GameState, pos: Vec2): number => {
   return best
 }
 
+/**
+ * M13 scenario decisions (91 B): the abilityChoice codes raised by flag picks, end-of-turn scoring and the Maintenance card prompt. The same
+ * instincts as the planner in ai/scenario.ts, without the lookahead: take the flag terrain near our edge with cover, burn down what we hold,
+ * add heel tokens, pull the opponent's objective, move the 50 as far as allowed, take any card play.
+ */
+function scenarioChoiceScore(state: GameState, pending: PendingDecision, optionId: string, rnd: Rng): number {
+  const data = (pending.context.data ?? {}) as { code?: string }
+  switch (data.code) {
+    case 'flagTerrain': {
+      const t = state.terrain.find((x) => x.id === optionId.split('|')[1])
+      return t ? 5 + pieceScore(state, pending.player, t) + rnd() * 0.1 : 1
+    }
+    case 'fuse': {
+      const c = query.control(state).elements[optionId]?.controller ?? null
+      return 3 + (c === pending.player ? 2 : c === null ? 0 : -2) + rnd() * 0.1
+    }
+    case 'heelToken': return optionId === 'yes' ? 3 : 1
+    case 'heelMove': return optionId === 'move' ? 2.5 : 1.5
+    case 'payload': { const k = Number(optionId.slice(1)); return 1 + (Number.isFinite(k) ? k : 0) }
+    case 'card': return optionId === 'pass' ? 1 : 3 + rnd()
+    default: return 1 + rnd()
+  }
+}
+
 /** Higher is better. Every action passed in is already legal. */
 function score(state: GameState, pending: PendingDecision, a: Action, rnd: Rng): number {
   switch (a.type) {
@@ -72,11 +98,15 @@ function score(state: GameState, pending: PendingDecision, a: Action, rnd: Rng):
       return a.reroll === (own ? bad : !bad) ? 3 : 1
     }
     case 'chooseGrid': return 1 + rnd()
+    case 'abilityChoice': return scenarioChoiceScore(state, pending, a.optionId, rnd)
+    case 'playCard': return 3 + rnd() // a card play on offer: the engine only lists plays that help (91 A.5)
     case 'moveModel': {
       const id = a.modelId
       const end = a.path[a.path.length - 1] ?? state.models[id]?.pos
       const m = state.models[id]
       if (!m || !end) return 1
+      const toward = (pending.context.data as { code?: string; toward?: Vec2 } | undefined)
+      if (toward?.code === 'haul' && toward.toward) return 20 - Math.hypot(end.x - toward.toward.x, end.z - toward.toward.z) // Made To Haul: bring the Cohort model up to the 50
       const isLeader = m.type === 'leader'
       const dE = nearestEnemyDist(state, id, end)
       const dO = nearestObjectiveDist(state, end)
@@ -92,6 +122,7 @@ function score(state: GameState, pending: PendingDecision, a: Action, rnd: Rng):
     }
     case 'placeTroopers': return 1
     case 'chooseCombatAction': {
+      if (a.choice === 'specialAction' && a.abilityId === CLAIM_CACHE_ABILITY) return 9 // a cache is worth 2 VP: worth more than a Combat Action
       const w: Record<string, number> = { melee: 5, ranged: 5, dual: 5, specialAttack: 4, powerAttack: 2, specialAction: 2, standUp: 3, forfeit: 0.2 }
       return w[a.choice] ?? 1
     }

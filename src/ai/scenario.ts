@@ -266,6 +266,8 @@ export function raiderOf(s: GameState, p: PlayerId): ModelId | null {
  * Pull toward the opponent's cache for the raider (value units of the shaped scenario term): the claim itself when it ends within 3" of an
  * uncontested cache on a scoring turn, a smaller one when it would only be set up for the next, and a gentle gradient from afar.
  */
+/** The raider is drawn toward a cache only from this close (about a run): a longer pull sent it on lonely marches and lost games (bench: Trench Warfare normal vs easy, 160 games, 52% with the pull from anywhere, 57% from 11", 59% with none). */
+export const RAID_REACH = 10
 export function cacheTerm(s: GameState, m: ModelState, pos: Vec2): number {
   const caches = cachesOf(s)
   if (!caches.length || raiderOf(s, m.owner) !== m.id) return 0
@@ -278,7 +280,7 @@ export function cacheTerm(s: GameState, m: ModelState, pos: Vec2): number {
     const el = def.elements.find((e) => e.id === c.id)
     const d = Math.max(0, dist(pos, c.pos) - c.r - baseRadius(m.base))
     const blocked = el ? contesters(s, el, other(m.owner)).length > 0 : false
-    const gain = d <= 2.95 ? (now ? 1.9 : 0.9) : 0.02 * Math.max(0, 48 - d) // a steady pull from afar (about 0.25 score a inch), the claim itself inside 3 inches
+    const gain = d <= 2.95 ? (now ? 1.9 : 0.9) : 0.025 * Math.max(0, RAID_REACH - d) // a short pull within a run of it, the claim itself inside 3 inches
     best = Math.max(best, vp * gain * (blocked ? 0.35 : 1))
   }
   return best
@@ -470,7 +472,7 @@ function fightValue(env: Env, m: ModelState): number {
   return best
 }
 function claimPick(env: Env, pd: PendingDecision, legal: Action[]): Action | null {
-  // the engine stamps the claim option with the previous decision's id (activation.ts cacheOptions does not restamp it), so legalActions drops it: read the option itself
+  // the claim option is stamped with the open decision's id since the M13 seams fix; the pending's own options are read as well in case legalActions was not given them
   const claims = [...legal, ...(pd.options ?? []).map((o) => o.action)]
     .filter((a): a is Extract<Action, { type: 'chooseCombatAction' }> => a.type === 'chooseCombatAction' && a.abilityId === CLAIM_CACHE_ABILITY)
     .map((a) => ({ ...a, decisionId: pd.id }))
