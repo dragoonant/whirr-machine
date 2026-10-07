@@ -1,7 +1,7 @@
 // Per-decision pointer/keyboard controllers (50 section 5). Pure functions over the stores: the R3F layer
 // (BoardInteraction.tsx) only forwards left-button clicks here, so right/middle clicks can never move or answer.
 import type { Action, DecisionOption, ModelId, ModelState, PendingDecision, Vec2 } from '../../engine/index'
-import { game, uiActions, type ClientRejection } from '../contract'
+import { game, queryMoveCheck, uiActions, type ClientRejection } from '../contract'
 import { useUiStore } from '../store/uiStore'
 import { currentPrompt, truthState } from './adapter'
 import { interactionActions, useInteractionStore } from './store'
@@ -52,6 +52,37 @@ export function defaultStraightPath(p: PendingDecision | null): Vec2[] | null {
   if (p?.kind !== 'moveModel' || !p.constraints?.straightLine) return null
   const first = (p.options ?? []).map(act).find((a) => a.type === 'moveModel' && a.path?.length)
   return first?.path ?? null
+}
+
+// ---------- move clamping ----------
+const sub = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.z - b.z)
+const lerp = (a: Vec2, b: Vec2, t: number): Vec2 => ({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t })
+
+/**
+ * Pulls a pointer point for a free move back to the farthest legal end point on the line from the leg's start,
+ * so the ghost and a click can never land outside the move. `prefix` is the already-staged waypoints when
+ * appending a leg (shift-click), else empty. Geometry first (cheap), then the engine's own moveCheck refines it
+ * (rough terrain, obstructions, models, table edge) by bisection along the leg.
+ */
+export function clampMovePoint(p: PendingDecision | null, at: Vec2, prefix: Vec2[] = []): Vec2 {
+  const c = p?.kind === 'moveModel' ? p.constraints : undefined
+  if (!c || c.straightLine) return at
+  const from = prefix.length ? prefix[prefix.length - 1]! : c.from
+  let used = 0
+  let prev = c.from
+  for (const w of prefix) { used += sub(prev, w); prev = w }
+  let end = at
+  const left = c.maxDist - used
+  if (Number.isFinite(left)) {
+    if (left <= 0) return from
+    const d = sub(from, at)
+    if (d > left) end = lerp(from, at, (left - 1e-3) / d)
+  }
+  const ok = (q: Vec2): boolean => !!queryMoveCheck(c.modelId, [...prefix, q])?.ok
+  if (ok(end)) return end
+  let lo = 0, hi = 1
+  for (let i = 0; i < 14; i++) { const mid = (lo + hi) / 2; if (ok(lerp(from, end, mid))) lo = mid; else hi = mid }
+  return lo > 0 ? lerp(from, end, lo) : from
 }
 
 // ---------- commit / cancel ----------
@@ -122,9 +153,11 @@ export function handleGroundClick(at: Vec2, shift = false): void {
   if (p.kind === 'moveModel') {
     if (p.constraints?.straightLine) return // the engine's own straight-line option is staged by the overlay
     // clicking on the staged end point commits it
+    const append = shift && st.staged.length > 0
+    const q = clampMovePoint(p, at, append ? st.staged : [])
     const end = st.staged[st.staged.length - 1]
-    if (end && Math.hypot(end.x - at.x, end.z - at.z) < 0.6) { commitStaged(); return }
-    interactionActions.setStaged(shift && st.staged.length ? [...st.staged, at] : [at])
+    if (end && Math.hypot(end.x - q.x, end.z - q.z) < 0.6) { commitStaged(); return }
+    interactionActions.setStaged(append ? [...st.staged, q] : [q])
     return
   }
   if (PLACEMENT_KINDS.has(p.kind)) {

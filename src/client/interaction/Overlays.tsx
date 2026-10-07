@@ -10,7 +10,9 @@ import {
 } from '../contract'
 import { SIDE_COLOURS, losReasonText, moveReasonText, tableOf, threatRings } from '../board/layout'
 import { GEO, lineMaterial } from '../figures/kit'
-import { handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
+import { useUiStore } from '../store/uiStore'
+import { currentPrompt } from './adapter'
+import { clampMovePoint, handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
 import { interactionActions, useInteractionStore } from './store'
 
 const Y = 0.08
@@ -45,7 +47,9 @@ export function Ground(): ReactElement {
         const now = performance.now()
         if (now - last < 33) return // <= 30 Hz
         last = now
-        interactionActions.setGhost({ x: e.point.x, z: e.point.z })
+        const at = { x: e.point.x, z: e.point.z }
+        // in move mode the ghost never leaves the legal move: it sticks to the farthest reachable point
+        interactionActions.setGhost(useUiStore.getState().mode === 'move' ? clampMovePoint(currentPrompt(), at) : at)
       }}
       onPointerOut={() => interactionActions.setGhost(null)}
       onClick={(e) => {

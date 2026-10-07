@@ -6,7 +6,7 @@ import { memoryStorage, setStorage } from '../../src/client/store/storage'
 import { useSettingsStore } from '../../src/client/store/settingsStore'
 import { setDirectorClock, setPaused } from '../../src/client/presentation/director'
 import { createBotDriver } from '../../src/client/bot/botDriver'
-import { uiActions, queryThreat } from '../../src/client/contract'
+import { uiActions, queryMoveCheck, queryThreat } from '../../src/client/contract'
 import { useUiStore } from '../../src/client/store/uiStore'
 import {
   CAMERA_TRANSITION_MS, cameraPose, controllerColour, elementViews, losReasonText, moveReasonText, proxyAttrs, SIDE_COLOURS,
@@ -14,7 +14,7 @@ import {
 } from '../../src/client/board/layout'
 import { archetypeOf, damageFraction, meshHeight } from '../../src/client/figures/kit'
 import {
-  activationOption, commitStaged, defaultStraightPath, handleGroundClick, handleModelClick, placementIds, TARGET_KINDS,
+  activationOption, cancelStaged, clampMovePoint, commitStaged, defaultStraightPath, handleGroundClick, handleModelClick, placementIds, TARGET_KINDS,
 } from '../../src/client/interaction/controller'
 import { onBoardKey } from '../../src/client/interaction/keys'
 import { interactionActions, useInteractionStore } from '../../src/client/interaction/store'
@@ -160,6 +160,24 @@ describe('interaction controllers', () => {
       expect(commitStaged()).toBeNull()
     }
     expect(useGameStore.getState().pending!.id).not.toBe(p.id)
+  })
+
+  it('BRD-024 a click or ghost far outside the move range is clamped to a legal end point inside it', () => {
+    playUntil((s) => s.pending.kind === 'moveModel' && !s.pending.constraints?.straightLine)
+    const p = useGameStore.getState().pending!
+    const c = p.constraints!
+    uiActions.setMode('move')
+    for (const dir of [{ x: 1, z: 0 }, { x: -0.6, z: 0.8 }, { x: 0, z: -1 }]) {
+      const far = { x: c.from.x + dir.x * 200, z: c.from.z + dir.z * 200 }
+      const q = clampMovePoint(p, far)
+      expect(Math.hypot(q.x - c.from.x, q.z - c.from.z)).toBeLessThanOrEqual(c.maxDist + 1e-6)
+      if (q.x !== c.from.x || q.z !== c.from.z) expect(queryMoveCheck(c.modelId, [q])!.ok).toBe(true)
+    }
+    handleGroundClick({ x: c.from.x + 200, z: c.from.z })
+    const staged = useInteractionStore.getState().staged
+    expect(staged).toHaveLength(1)
+    expect(Math.hypot(staged[0]!.x - c.from.x, staged[0]!.z - c.from.z)).toBeLessThanOrEqual(c.maxDist + 1e-6)
+    cancelStaged()
   })
 
   it('BRD-023 target decisions are the ones the board maps to clicks; placement ids come from the engine', () => {
