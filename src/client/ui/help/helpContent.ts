@@ -38,6 +38,7 @@ export const HELP_TABS: HelpTab[] = [
         'Unit: a group of troopers that activate together and stay close to each other. Individually weak, they win by numbers.',
       ] },
       { kind: 'p', text: 'Each model has a card on the side. Hover or click a model to see its stats, weapons, abilities and damage boxes. The stats you will use most: SPD (movement), MAT and RAT (melee and ranged skill), DEF (how hard it is to hit) and ARM (how hard it is to hurt).' },
+      { kind: 'p', text: 'Prey (Cygnar\'s Black 13th): after deployment the unit picks one enemy model to hunt. Its attack and damage rolls against that model get +2, and when the prey is destroyed you pick a new one. Pick something the unit can actually reach and kill, such as a solo or a warjack.' },
       { kind: 'tip', text: 'Your starter army has four entries: a caster, a war-engine, a solo and a unit. That is the whole toolbox, so learn what each is good at.' },
     ],
   },
