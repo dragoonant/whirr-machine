@@ -1,0 +1,34 @@
+{
+  "id": "cyg.l.skirmish",
+  "name": "Storm Legion Skirmish",
+  "faction": "cyg",
+  "level": "skirmish",
+  "points": 50,
+  "leader": "cyg.caine",
+  "entries": [
+    {
+      "profile": "cyg.deuce"
+    },
+    {
+      "profile": "cyg.falk",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "cyg.black13",
+      "size": 3,
+      "advanceDeploy": true
+    },
+    {
+      "profile": "cyg.tempest-assailers",
+      "size": 3
+    },
+    {
+      "profile": "cyg.storm-vanes",
+      "size": 3
+    },
+    {
+      "profile": "cyg.courser-sg"
+    }
+  ],
+  "source": "Quick Start Cygnar plus Assailers, Vanes, Courser (Shield Guard build); 90-skirmish B.1"
+}

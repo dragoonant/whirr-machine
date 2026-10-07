@@ -1,0 +1,33 @@
+{
+  "id": "kha.arkanist",
+  "name": "Arkanist",
+  "faction": "kha",
+  "type": "trooper",
+  "keywords": [
+    "winter-korps"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "AAT": 4,
+    "MAT": 0,
+    "RAT": 0,
+    "DEF": 13,
+    "ARM": 13
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 1
+  },
+  "abilities": [
+    "kha.a.magic-ability",
+    "kha.a.empower",
+    "kha.a.sigil-of-power",
+    "kha.a.razor-wind"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "CD and WA stat tables agree (SPD 6 AAT 4 DEF 13 ARM 13, 1 box, small base 30 mm, unarmed). WA strategy prose says AAT 5; table values kept. MAT and RAT 0: no weapons (schema needs them)."
+}

@@ -67,3 +67,33 @@ html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(-
 .start-paint { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: #a9a699; }
 .start-paint input[type="color"] { width: 30px; height: 24px; padding: 0; border: 1px solid #4a505c; border-radius: 4px; background: var(--bg); }
 .start-card .start-paint select { display: inline-block; width: auto; flex: 1; margin-top: 0; padding: 3px 6px; }
+
+/* game size: one compact row above the side cards (90-skirmish C1) */
+.start-card.start-size { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 330px) minmax(0, 1fr); gap: 4px 14px; align-items: center; padding-top: 8px; padding-bottom: 8px; }
+.start-size h2, .start-size .start-note { margin: 0; }
+.start-card.start-size select { margin-top: 0; }
+@media (max-width: 640px), (max-height: 520px) {
+  .start-card.start-size { grid-template-columns: auto minmax(0, 1fr); }
+  .start-size .start-note { display: none; }
+}
+
+/* 1280x760 and similar: tighten the title block and the cards so Start stays above the fold with the Game size row */
+@media (max-height: 900px) and (min-width: 641px) {
+  .start { gap: 6px; padding-top: 6px; padding-bottom: 6px; }
+  .title-art { height: clamp(30px, 6.5vh, 96px); margin-bottom: -2px; }
+  .start-title h1 { font-size: clamp(26px, 5.4vh, 64px); }
+  .start-title p { margin-top: 0; font-size: 11px; }
+  .start-grid { gap: 8px; }
+  .start-card { padding: 8px 14px; }
+  .start-card h2 { margin-bottom: 5px; }
+  .start-card label { margin-bottom: 5px; }
+  .start-card select { padding: 4px 6px; }
+  .start-note { margin-top: 5px; line-height: 1.3; }
+  .start-choices button { padding: 5px 10px; }
+  .start-choices.small button { padding: 4px 8px; }
+  .start-models { margin-top: 6px; gap: 4px; }
+  .start-models li { padding: 3px 8px; }
+  .start-actions button { padding: 9px 30px; }
+  .start-foot { display: none; }
+  .start-card.start-size { padding-top: 5px; padding-bottom: 5px; }
+}

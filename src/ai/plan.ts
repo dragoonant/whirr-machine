@@ -3,19 +3,19 @@
 //   U = offense (expected damage value + pKill value) + wS * scenario - wT * threat exposure + progress
 // with the Leader's safety as a hard filter (40-ai §6). Plans are cached per activation and recomputed on a miss.
 import type { Action, GameState, ModelId, ModelState, MovementOption, PlayerId, Vec2 } from '../engine/index'
-import { legalActions, query, step } from '../engine/index'
+import { legalActions, query, step, validate } from '../engine/index'
 import type { AssassinLine } from './assassin'
 import { contactPoint, killChance, planSequence, profileOf, type Ctx } from './damage'
 import { attackValueWithFocus, smartReserve } from './focus'
-import { legalMoveCandidates, type MoveCand } from './moves'
-import type { SeqAttack } from './prob'
+import { rawCandidates, type MoveCand } from './moves'
+import { damageDist, expected, type SeqAttack } from './prob'
 import { edgeGap, roleGap, rolesFor } from './roles'
-import { nearestOpenElement, scenarioValue } from './scenario'
-import { forcePenalty } from './fury'
+import { nearestOpenElement, scenarioValueMoved } from './scenario'
+import { forcePenalty, spendCost } from './fury'
 import { exposureValue, threatAt, type ThreatReport } from './threat'
 import type { TierParams } from './tiers'
 import {
-  baseRadius, boxesTotal, dist, distToElement, isBeast, resourceOf, hazardCost, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
+  baseRadius, boxesLeft, boxesTotal, dist, distToElement, isBeast, resourceOf, hazardCost, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, weaponsOf, withPositions, rec,
 } from './world'
 
 export interface ActPlan {
@@ -144,6 +144,19 @@ export function fastThreat(env: Env, me: ModelState, p: Vec2, ignore?: Set<strin
   return { exp, pKill, seqs, attackers }
 }
 
+/**
+ * Margin on every hit chance in the Leader's threat. The projection reads the board as it stands, but the enemy still has its
+ * feat, spells and auras to play before it shoots (Pall of Ashes takes 2 off DEF, Superiority and Avenging Force add attacks and
+ * accuracy), and a Leader that looked 0.2% to die at 3% a shot was dying at 17%. Without the margin a four-objective table
+ * lured the Leader onto an objective (it is a legal holder of both kinds) at one assassination loss in ten games; 0.12 cut that
+ * to about one in thirty while keeping Normal ahead of Easy (bench seeds 1-4, 40 games each, 69% against 60% with no margin).
+ */
+export const LEADER_PAD = 0.12
+export function padThreat(rep: ThreatReport, pad = LEADER_PAD): ThreatReport {
+  if (pad <= 0 || !rep.seqs.length) return rep
+  return { ...rep, seqs: rep.seqs.map((q) => ({ ...q, p: q.p + (1 - q.p) * pad })) }
+}
+
 // ---------- positions ----------
 export interface PosEval { score: number; off: number; pos: Vec2; targetId?: ModelId; mode: 'melee' | 'ranged' | 'none'; risk: number; focusUse: number }
 
@@ -189,7 +202,7 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
   // Leader: exact threat, reserve and hard risk
   let risk = 0, reserve = 0, exposure = 0
   if (isLeader) {
-    const rep = threatAt(env.ctx, s, m, p)
+    const rep = padThreat(threatAt(env.ctx, s, m, p))
     reserve = leaderAllIn(env, m) ? 0 : env.tier.minReserve
     if (rep.seqs.length && !leaderAllIn(env, m)) {
       const r = env.tier.knapsack ? smartReserve(m, rep.seqs, env.tier.tauSafe, env.tier.minReserve) : null
@@ -210,8 +223,7 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
   const committedAll = env.committed && env.line?.steps.some((x) => x.modelId === m.id) && (!isLeader || env.line.useLeader)
   const off = offenseAt(env, m, p, modes, committedAll ? resourceOf(m) : usable, mates)
   // scenario: the engine's control on a hypothetical board with the unit shifted
-  const hs = withPositions(s, shiftedMates(s, m, p))
-  const scen = scenarioValue(hs, hs.models[m.id]!, p)
+  const scen = scenarioValueMoved(s, m, shiftedMates(s, m, p))
   // progress toward something useful when nothing scores yet
   let prog = 0
   if (isLeader) {
@@ -235,6 +247,7 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
     }
   }
   prog -= 0.25 * Math.max(0, 3 - edgeGap(s, p, m.base))
+  prog += supportPull(env, m, p)
   // terrain hazards: entering one on the way or ending the activation in it costs expected damage (R9.8)
   const hz = hazardCost(s, m, m.pos, p)
   const score = off.v + env.tier.wScenario * scen - env.tier.wThreat * exposure - hz - (isLeader && env.tier.wThreat === 0 ? risk * 60 : 0) + prog
@@ -306,9 +319,9 @@ export function planMovement(env: Env, lead: ModelState, legal: Action[]): { act
     }
     if (opt !== 'advance' && opt !== 'run') continue
     const maxDist = s1.pending.constraints?.maxDist ?? 0
-    const cands: MoveCand[] = s1.pending.kind === 'moveModel' ? legalMoveCandidates(s1, s1.models[lead.id]!, maxDist, env.tier.moveSamples) : [{ pos: lead.pos, tag: 'stay' }]
+    const cands: MoveCand[] = s1.pending.kind === 'moveModel' ? candidatePool(env, s1, s1.models[lead.id]!, maxDist, opt === 'advance') : [{ pos: lead.pos, tag: 'stay' }]
     const evals = cands.map((c) => evalPosition(env, lead, c.pos, { melee: opt === 'advance', ranged: opt === 'advance' }))
-    const pick = pickBest(env, lead, evals)
+    const pick = s1.pending.kind === 'moveModel' ? bestLegal(env, s1, s1.models[lead.id]!, evals) : pickBest(env, lead, evals)
     if (pick) consider(o, { key, lead: lead.id, option: opt, dest: pick.pos, targetId: pick.targetId, mode: opt === 'run' ? 'none' : pick.mode, score: pick.score - (opt === 'run' && lead.type === 'warEngine' ? 0.4 : 0) - (opt === 'run' ? forced(1) : 0), risk: pick.risk })
   }
   if (!all.length) return null
@@ -320,14 +333,56 @@ export function planMovement(env: Env, lead: ModelState, legal: Action[]): { act
   }
   return pool.reduce((a, b) => (b.plan.score > a.plan.score ? b : a))
 }
+/**
+ * End points worth scoring for a move of up to maxDist. The raw sampler offers a contact point and a range point per enemy,
+ * so with 15 or more enemies on the table most of them lie beyond anything this move can reach and only repeat the ring
+ * candidates; those are kept only for the two nearest enemies, and a move that will not attack (a run) drops them all.
+ * Points that sit on another base are dropped here; everything else is checked by the engine only for the point that wins
+ * (bestLegal), because asking the engine to resolve every sample was most of a decision's cost.
+ */
+function candidatePool(env: Env, s: GameState, m: ModelState, maxDist: number, attack: boolean): MoveCand[] {
+  const r = baseRadius(m.base)
+  const rng = Math.max(0, ...rangedWeapons(m).map((w) => w.rng))
+  const foes = new Map(enemiesOf(s, m.owner).map((e) => [e.id, Math.max(0, dist(e.pos, m.pos) - r - baseRadius(e.base))]))
+  const nearest = new Set([...foes.entries()].sort((a, b) => a[1] - b[1]).slice(0, 2).map(([id]) => id))
+  const others = Object.values(s.models).filter((o) => o.id !== m.id && live(o))
+  const out: MoveCand[] = []
+  for (const c of rawCandidates(s, m, maxDist, env.tier.moveSamples)) {
+    const mm = /^(melee|range):(.+)$/.exec(c.tag)
+    if (mm) {
+      if (!attack) continue
+      const gap = foes.get(mm[2]!) ?? 99
+      const reach = mm[1] === 'melee' ? 1.5 : rng + 0.5
+      if (gap - maxDist > reach + 1 && !nearest.has(mm[2]!)) continue
+    }
+    if (others.some((o) => dist(o.pos, c.pos) < r + baseRadius(o.base) - 0.01)) continue
+    out.push(c)
+  }
+  return out
+}
+
+const moveAction = (s: GameState, m: ModelState, pos: Vec2): Action => ({ type: 'moveModel', decisionId: s.pending.id, player: s.pending.player, modelId: m.id, path: [pos] }) as Action
+
+/** The best scored point the engine accepts on the open moveModel decision: try the winner, then the next, a few times. */
+function bestLegal(env: Env, s: GameState, m: ModelState, evals: PosEval[]): PosEval | null {
+  let pool = evals
+  for (let i = 0; i < 8 && pool.length; i++) {
+    const pick = pickBest(env, m, pool)
+    if (!pick) return null
+    if (validate(s, moveAction(s, m, pick.pos)) === null) return pick
+    pool = pool.filter((e) => e !== pick)
+  }
+  return null
+}
+
 /** legalActions for a planning state (never throws). */
 const legalOf = (s: GameState): Action[] => { try { return legalActions(s) } catch { return [] } }
 
 /** Best end point for an open moveModel decision (no plan, or the plan's point is not legal). */
 export function bestMove(env: Env, m: ModelState, maxDist: number, modes: { melee: boolean; ranged: boolean }): PosEval | null {
-  const cands = legalMoveCandidates(env.s, m, maxDist, env.tier.moveSamples)
+  const cands = candidatePool(env, env.s, m, maxDist, modes.melee || modes.ranged)
   const evals = cands.map((c) => evalPosition(env, m, c.pos, modes))
-  return pickBest(env, m, evals)
+  return bestLegal(env, env.s, m, evals)
 }
 
 // ---------- activation order ----------
@@ -345,6 +400,7 @@ export function activationPriority(env: Env, id: string, leaderBuffs: boolean): 
     if (idx >= 0) return { id, priority: idx * 0.01, value: 100 }
   }
   if (lead.type === 'leader') return { id, priority: leaderBuffs ? 1 : 9, value: 0 }
+  if (isEnabler(env, lead)) return { id, priority: 1.5, value: 0 }
   const th = query.threat(s, lead.id)
   let rangedV = 0, meleeV = 0
   for (const t of enemiesOf(s, lead.owner)) {
@@ -360,3 +416,221 @@ export function activationPriority(env: Env, id: string, leaderBuffs: boolean): 
 }
 
 export { leaderOf, other }
+
+// ---------- special actions and special attacks ----------
+// A special action or attack is a Combat Action choice: it gives up the model's own attacks, so it is worth taking only when its
+// value beats what the model would otherwise hit for. Values are in the same units as seqValue (expected damage value plus kill
+// value). The anytime ones (Galvanic Capacitor effects, Soul Phase) cost no Combat Action and are used whenever they pay.
+type CombatPick = Extract<Action, { type: 'chooseCombatAction' }>
+const abTail = (id: string): string => id.slice(id.indexOf('.a.') + 3)
+const keywordsOf = (m: ModelState): string[] => ((rec(m.profileId)?.keywords ?? []) as string[])
+const edge = (a: ModelState, b: ModelState): number => Math.max(0, dist(a.pos, b.pos) - baseRadius(a.base) - baseRadius(b.base))
+const markedBoxes = (m: ModelState): number => Math.max(0, boxesTotal(m) - boxesLeft(m))
+
+/** Value of one basic attack by `m` from where it stands (the Ancillary Attack it would be given). */
+function singleAttackValue(env: Env, m: ModelState): number {
+  let best = 0
+  const reach = query.threat(env.s, m.id).meleeRange
+  for (const e of enemiesOf(env.s, m.owner)) {
+    const d = edge(m, e)
+    for (const w of weaponsOf(m)) {
+      if (w.melee ? d > reach + 0.02 : d > w.rng) continue
+      const pr = profileOf(env.ctx, env.s, m, w, e)
+      if (pr) best = Math.max(best, seqValue(env, e, [{ p: pr.p, onHit: pr.onHit }], pr.p * expected(pr.onHit)))
+    }
+  }
+  return best
+}
+
+/** How much the models of `t` (and nearby) would gain from magical weapons: incorporeal enemies close to them. */
+function magicNeed(env: Env, t: ModelState): number {
+  const n = enemiesOf(env.s, t.owner).filter((e) => dist(e.pos, t.pos) < 12 && ((rec(e.profileId)?.abilities ?? []) as string[]).some((x) => x.includes('incorporeal'))).length
+  return n > 0 ? Math.min(2.5, 0.9 * n) : 0.08
+}
+
+/** Friendly models a targeted action could name, when the engine has not named one (the code hook picks). */
+function friendsIn(s: GameState, m: ModelState, range: number, pred: (x: ModelState) => boolean): ModelState[] {
+  return modelsOf(s, m.owner).filter((x) => x.id !== m.id && edge(m, x) <= range && pred(x))
+}
+
+export function specialActionValue(env: Env, m: ModelState, a: CombatPick): number {
+  const s = env.s
+  if (!a.abilityId) return 0.02
+  const ab = rec(a.abilityId) as { effect?: { params?: { dice?: string; flat?: number } }[]; scope?: { range?: number } } | undefined
+  if (!ab) return 0.02
+  const explicit = a.targetId ? s.models[a.targetId] : undefined
+  if (a.targetId && !live(explicit)) return 0
+  const range = ab.scope?.range ?? 6
+  const foes = enemiesOf(s, m.owner)
+  const foesNear = (p: Vec2, r: number): number => foes.filter((e) => dist(e.pos, p) - baseRadius(e.base) <= r).length
+  const over = (cands: ModelState[], f: (t: ModelState) => number): number => (explicit ? f(explicit) : cands.reduce((b, t) => Math.max(b, f(t)), 0))
+  switch (abTail(a.abilityId)) {
+    case 'empower': {
+      const jacks = friendsIn(s, m, range, (x) => x.type === 'warEngine')
+      return over(jacks, (t) => {
+        const focusPart = t.crippled.includes('C') || t.focus >= 3 ? 0 : t.activated ? 0.6 : 1.7
+        const disrupted = t.conditions.includes('disrupted') ? 1.2 : 0
+        return focusPart + disrupted
+      })
+    }
+    case 'sigil-of-power': return over(friendsIn(s, m, range, () => true).concat(m), (t) => magicNeed(env, t))
+    case 'guidance': return over(friendsIn(s, m, range, () => true), (t) => 0.2 + magicNeed(env, t))
+    case 'necrosurgery': case 'repair': case 'regeneration': {
+      const p = ab.effect?.find((n) => n.params)?.params
+      const avg = (p?.dice ? 2 : 0) + (p?.flat ?? 0) || 2
+      const self = abTail(a.abilityId) === 'regeneration'
+      const heal = (t: ModelState): number => {
+        const k = Math.min(markedBoxes(t), avg)
+        return k <= 0 ? 0 : (k / boxesTotal(t)) * valueOf(s, t) * (t.type === 'leader' ? 1.5 : 1) * 1.2
+      }
+      let v = self ? heal(m) : over(friendsIn(s, m, Math.max(1, range), () => true), heal)
+      if (self && v > 0) { const sc = spendCost(s, m, 1, 0); v = sc.ok ? v - 0.4 - sc.pen : 0 }
+      return v
+    }
+    case 'grim-returns': {
+      const units = new Map<string, ModelState>()
+      for (const t of explicit ? [explicit] : friendsIn(s, m, range, (x) => !!x.unitId)) if (t.unitId) units.set(t.unitId, t)
+      let best = 0
+      for (const [uid, t] of units) {
+        const u = s.units[uid]
+        if (!u || !u.troopers.some((id) => !live(s.models[id]))) continue
+        best = Math.max(best, 1.2 + 0.6 * valueOf(s, t) + (elementsOf(s).some((el) => distToElement(el, t.pos, t.base) < 8) ? 0.8 : 0))
+      }
+      return best
+    }
+    case 'enliven': {
+      const cohort = friendsIn(s, m, range, (x) => x.type === 'warEngine' || x.type === 'beast')
+      return over(cohort, (t) => { const n = foesNear(t.pos, 16); return n ? Math.min(1.1, 0.4 + 0.1 * n) : 0.1 })
+    }
+    case 'ancillary-attack': return over(friendsIn(s, m, range, (x) => x.type === 'warEngine'), (t) => singleAttackValue(env, t) * 0.9)
+    case 'power-of-death': {
+      let v = 0
+      for (const x of modelsOf(s, m.owner)) if (edge(m, x) <= 10 && !x.activated && keywordsOf(x).includes('undead') && meleeWeapons(x).length) v += foesNear(x.pos, 12) ? 0.4 : 0.05
+      return Math.min(3, v)
+    }
+    case 'soul-phase': return foesNear(m.pos, 12) ? 0.4 : 0
+    case 'hunters-grace': {
+      const n = friendsIn(s, m, 5, (x) => keywordsOf(x).includes('tharn')).length + 1
+      return foesNear(m.pos, 16) ? 0.3 + 0.1 * n : 0.1
+    }
+    case 'sky-shaker': case 'wind-weaver': {
+      const shooters = foes.filter((e) => dist(e.pos, m.pos) < 18 && rangedWeapons(e).length > 0).length
+      const mates = modelsOf(s, m.owner).filter((x) => x.id !== m.id && edge(m, x) <= 3).length
+      return Math.min(2.2, shooters * 0.3 * Math.min(1, (mates + 1) / 3))
+    }
+    case 'polarity-field-generator': {
+      const constructs = foes.filter((e) => (e.type === 'warEngine' || e.type === 'beast') && dist(e.pos, m.pos) < 16).length
+      return 0.6 * Math.min(3, constructs)
+    }
+    case 'lightning-wreath': {
+      const melee = friendsIn(s, m, 3, (x) => meleeWeapons(x).length > 0).concat(meleeWeapons(m).length ? [m] : [])
+      if (!melee.length) return 0
+      return 0.5 + (melee.some((x) => foesNear(x.pos, 5) > 0) ? 0.4 : 0)
+    }
+    case 'harmonious-exaltation': {
+      const L = leaderOf(s, m.owner)
+      return L && live(L) && !L.activated && edge(m, L) <= range && resourceOf(L) >= 2 ? 0.7 : 0
+    }
+    default: return 0.02
+  }
+}
+
+/** The weapon a star attack uses, when it is one of the model's own. */
+function starWeaponOf(m: ModelState, abilityId: string): ReturnType<typeof weaponsOf>[number] | undefined {
+  return weaponsOf(m).find((w) => ((rec(w.id)?.abilities ?? []) as string[]).includes(abilityId))
+}
+
+/** Best single attack the engine offers once star attack `a` is chosen (previewed with the star active), as a value; null when it cannot be opened. */
+function starPreviewValue(env: Env, a: CombatPick): number | null {
+  let s1: GameState
+  try { const r = step(env.s, a); if (r.rejection) return null; s1 = r.state } catch { return null }
+  if (s1.pending.kind !== 'chooseAttack') return null
+  let best = 0
+  for (const x of legalOf(s1)) {
+    if (x.type !== 'chooseAttack' || x.additional) continue
+    const t = s1.models[x.targetId]
+    if (!live(t)) continue
+    let pv
+    try { pv = query.attackPreview(s1, a.modelId!, x.weaponId, x.targetId, {}) } catch { continue }
+    if (pv.legal) continue
+    const v = valueOf(s1, t), bt = boxesTotal(t), isL = t.type === 'leader'
+    const val = (Math.min(pv.expectedDamage, bt) / bt) * v * (isL ? 0.6 : 1) + pv.pKill * (isL ? 400 : v * 0.7)
+    if (val > best) best = val
+  }
+  return best > 0 ? best : null
+}
+
+/** Value of a special attack choice (melee or ranged), given what the model's plain melee and ranged choices are worth. */
+export function specialAttackValue(env: Env, m: ModelState, a: CombatPick, meleeV: number, rangedV: number): number {
+  const s = env.s
+  const fallback = rangedV * 0.85 - 0.1
+  if (!a.abilityId) return fallback
+  const name = abTail(a.abilityId)
+  const w = starWeaponOf(m, a.abilityId)
+  // a star attack whose weapon is not on the card (Razor Wind, Stygian Abyss, Chain Lightning): open it in the engine and read the attacks it offers
+  if (!w) return starPreviewValue(env, a) ?? fallback
+  if (!['smite', 'combo-strike', 'both-barrels'].includes(name)) return w.melee ? meleeV * 0.85 - 0.1 : fallback
+  const reach = query.threat(s, m.id).meleeRange
+  let best = 0
+  for (const t of enemiesOf(s, m.owner)) {
+    const d = edge(m, t)
+    if (w.melee ? d > reach + 0.02 : d > w.rng) continue
+    const charge = w.melee && !!s.activation?.charge && s.activation.charge.targetId === t.id && !s.activation.perModel[m.id]?.chargeAttackUsed
+    const pr = profileOf(env.ctx, s, m, w, t, { charge })
+    if (!pr) continue
+    const onHit = name === 'smite' ? pr.onHit : damageDist(pr.k, pr.x + 4)
+    let v = seqValue(env, t, [{ p: pr.p, onHit }], pr.p * expected(onHit))
+    if (name === 'smite') {
+      // the slam: a knocked-down, shoved model and collateral damage behind it; shoving a holder off an element is worth more
+      const onEl = elementsOf(s).some((el) => distToElement(el, t.pos, t.base) <= el.contestWithin + 0.75)
+      v += pr.p * (0.3 * valueOf(s, t) + (onEl ? 0.9 : 0))
+    }
+    if (v > best) best = v
+  }
+  return best > 0 ? best : -1
+}
+
+/** An anytime special action worth using right now (Galvanic Capacitor effect, Soul Phase), or null. */
+export function anytimeSpecial(env: Env, m: ModelState, legal: Action[], floor = 0.35): Action | null {
+  let best: Action | null = null, bv = floor
+  for (const a of legal) {
+    if (a.type !== 'chooseCombatAction' || a.choice !== 'specialAction' || !a.abilityId) continue
+    if (env.s.effects.some((e) => e.sourceId === a.abilityId && e.casterId === m.id && (!a.targetId || e.targetIds.includes(a.targetId)))) continue
+    const v = specialActionValue(env, m, a)
+    if (v > bv) { bv = v; best = a }
+  }
+  return best
+}
+
+// ---------- supports ----------
+const SUPPORT_RANGE: Record<string, number> = { empower: 6, 'ancillary-attack': 3, 'power-of-death': 10 }
+const supportOf = (m: ModelState): [string, number] | null => {
+  for (const id of (rec(m.profileId)?.abilities ?? []) as string[]) { const k = id.slice(id.indexOf('.a.') + 3); const r = SUPPORT_RANGE[k]; if (r !== undefined) return [k, r] }
+  return null
+}
+
+/** A support model (Empower, Ancillary Attack, Power of Death) acts before the friends it will help, if one of them is within its reach. */
+function isEnabler(env: Env, lead: ModelState): boolean {
+  const sup = supportOf(lead)
+  if (!sup) return false
+  const reach = sup[1] + (query.threat(env.s, lead.id).advance || 5)
+  return modelsOf(env.s, lead.owner).some((x) => x.id !== lead.id && !(x.unitId ? env.s.units[x.unitId]?.activated : x.activated)
+    && (sup[0] === 'power-of-death' ? meleeWeapons(x).length > 0 && ((rec(x.profileId)?.keywords ?? []) as string[]).includes('undead') : x.type === 'warEngine')
+    && Math.max(0, dist(x.pos, lead.pos) - baseRadius(x.base) - baseRadius(lead.base)) <= reach)
+}
+
+/** A small pull toward standing where the support's action will reach a friend that has not acted (so Empower happens at all). */
+function supportPull(env: Env, m: ModelState, p: Vec2): number {
+  const sup = supportOf(m)
+  if (!sup || sup[0] === 'power-of-death') return 0
+  const gap = (x: ModelState): number => Math.max(0, dist(x.pos, p) - baseRadius(x.base) - baseRadius(m.base))
+  let best = 0
+  for (const x of modelsOf(env.s, m.owner)) {
+    if (x.id === m.id || x.type !== 'warEngine' || x.activated) continue
+    if (sup[0] === 'empower' && (x.focus >= 3 || x.crippled.includes('C'))) continue
+    const g = gap(x)
+    if (g <= sup[1] - 0.4) { best = 0.9; break }
+    best = Math.max(best, 0.9 - 0.06 * (g - sup[1]))
+  }
+  return Math.max(0, best)
+}

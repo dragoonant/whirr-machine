@@ -1,0 +1,36 @@
+{
+  "id": "men.l.skirmish",
+  "name": "Covenant of the Flame Skirmish",
+  "faction": "men",
+  "level": "skirmish",
+  "points": 50,
+  "leader": "men.feora",
+  "entries": [
+    {
+      "profile": "men.crusader"
+    },
+    {
+      "profile": "men.revenger-arc"
+    },
+    {
+      "profile": "men.valeria",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "men.pyrrhus"
+    },
+    {
+      "profile": "men.defenders",
+      "size": 5
+    },
+    {
+      "profile": "men.cleanser-sanctifiers",
+      "size": 3
+    },
+    {
+      "profile": "men.vassals",
+      "size": 3
+    }
+  ],
+  "source": "Defenders of the Flame set + Revenger, Cleanser Sanctifiers, Vassals (Longshanks Feora lists, 2026-09)"
+}

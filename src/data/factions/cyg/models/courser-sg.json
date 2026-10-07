@@ -1,0 +1,59 @@
+{
+  "id": "cyg.courser-sg",
+  "name": "Courser",
+  "faction": "cyg",
+  "type": "warEngine",
+  "engineClass": "light",
+  "keywords": [
+    "construct",
+    "storm-legion"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 6,
+    "MAT": 5,
+    "RAT": 6,
+    "DEF": 14,
+    "ARM": 16
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "--L",
+      "--LLM",
+      "--HMM",
+      "--HCC",
+      "--RRC",
+      "--R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.heavy-stormthrower",
+      "location": "R"
+    },
+    {
+      "weapon": "cyg.w.stormthrower-blade",
+      "location": "R"
+    },
+    {
+      "weapon": "cyg.w.voltaic-punching-spike",
+      "location": "L"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "cyg.a.resist-electricity",
+    "cyg.a.insulated-cortex",
+    "cyg.a.shield-guard"
+  ],
+  "cost": 6,
+  "fa": 4,
+  "figure": {
+    "archetype": "lightEngine"
+  },
+  "verify": "Fixed build Shield Guard head (1) + Heavy Stormthrower (2) + Voltaic Punching Spike (3) = 6. Chassis, grid, option costs: CD app dump 2026-07-10, WA 2026-06-06, Jan and June 2026 changelogs. The Voltaic Blade POW is 10 in CD and 12 in WA (CD used). Base 40 from the WA light-warjack entry."
+}

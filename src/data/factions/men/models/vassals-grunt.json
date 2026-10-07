@@ -1,0 +1,34 @@
+{
+  "id": "men.vassal",
+  "name": "Vassal of Menoth",
+  "faction": "men",
+  "type": "trooper",
+  "keywords": [
+    "menoth"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 5,
+    "MAT": 0,
+    "RAT": 0,
+    "DEF": 13,
+    "ARM": 13
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [],
+  "abilities": [
+    "men.a.penance-of-the-corrupted",
+    "men.a.repair",
+    "men.a.enliven",
+    "men.a.ancillary-attack"
+  ],
+  "cost": 0,
+  "figure": {
+    "slug": "wm-vassal",
+    "archetype": "infantry"
+  },
+  "verify": "Card values from WA (Vassals of Menoth page rev 2026-09-09, WA3): SPD 5 DEF 13 ARM 13, 5 boxes, Small Base, Penance of the Corrupted, Magic Ability (Enliven, Ancillary Attack), Repair [d3+1]. The card prints no MAT, RAT or weapon, so MAT 0 and RAT 0 (the Valeria convention)."
+}

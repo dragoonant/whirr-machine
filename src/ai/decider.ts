@@ -9,7 +9,7 @@ import { newCtx, planSequence, profileOf, type Ctx } from './damage'
 import { deployAction } from './deploy'
 import { allocate, reserveNeeded } from './focus'
 import { forcePenalty, furyWrapUp, leechAction, spendCost, transferAction, ventAction } from './fury'
-import { actKey, activationPriority, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, type ActPlan, type Env } from './plan'
+import { actKey, activationPriority, anytimeSpecial, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, specialActionValue, specialAttackValue, type ActPlan, type Env } from './plan'
 import { damageDist, expected } from './prob'
 import { pickSensible } from './random'
 import { TIERS, type AiTierId, type TierParams } from './tiers'
@@ -228,6 +228,8 @@ function chooseMovement(env: Env, legal: Action[], brain: Brain): Action {
     const pick = anytimePick(env, legal, lead.type === 'leader' ? leaderReserve(env) : 0)
     if (pick) return pick
   }
+  const sp = anytimeSpecial(env, lead, legal)
+  if (sp) return sp
   const r = planMovement(env, lead, legal)
   if (!r) return legal.find((a) => a.type === 'chooseMovement' && (a as { option: string }).option === 'advance') ?? legal[0]!
   brain.plans.set(r.plan.key, r.plan)
@@ -372,14 +374,14 @@ function chooseCombatAction(env: Env, legal: Action[], brain: Brain): Action {
       case 'melee': v = mv.v; break
       case 'ranged': v = rv.v; break
       case 'dual': v = mv.v + rv.v * 0.8 - (mv.v > 0 && rv.v > 0 ? 0 : 0.5); break
-      case 'specialAttack': v = rv.v * 0.85 - 0.1; break
+      case 'specialAttack': v = specialAttackValue(env, m, a, mv.v, rv.v); break
       case 'powerAttack': {
         const k = ((pd.options ?? []).find((o) => o.action === a)?.cost?.forced) ?? 0
         v = mv.v * (isBeast(m) ? 0.55 : 0.3) - 0.2 - (isBeast(m) ? forcePen(env, m, k || 1) : 0)
         break
       }
       case 'standUp': v = 0.05; break
-      case 'specialAction': v = 0.02; break
+      case 'specialAction': v = specialActionValue(env, m, a); break
       case 'forfeit': v = 0; break
     }
     if (v > bv) { bv = v; best = a }
@@ -403,6 +405,8 @@ function chooseAttack(env: Env, legal: Action[], brain: Brain): Action {
     const pick = anytimePick(env, legal, m.type === 'leader' ? leaderReserve(env) : 0)
     if (pick) return pick
   }
+  const sp = anytimeSpecial(env, m, legal)
+  if (sp) return sp
   const reserve = m.type === 'leader' && !leaderAllIn(env, m) ? leaderReserve(env) : 0
   let best: Action | null = null, bv = 0.0001
   const extra = spendCost(s, m, 1, reserve)

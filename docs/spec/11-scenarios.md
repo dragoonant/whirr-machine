@@ -114,7 +114,7 @@ along (1, 1) in `{x, z}`; with the right-handed, y-up rotation that is `rot: −
 
 ## S2 Quick Start demo (`scn-qs-demo`, tests and tutorial only)
 
-S1 with the QS's fixed setup, for GOLD-001 (`13-golden-first-turn.md`). Not in the skirmish menu.
+S1 with the QS's fixed setup, for GOLD-001 (`13-golden-first-turn.md`). Not in the Recon menu.
 
 | Setting | Value |
 |---|---|
@@ -122,6 +122,54 @@ S1 with the QS's fixed setup, for GOLD-001 (`13-golden-first-turn.md`). Not in t
 | Players | Khador = player A = first player, back edge z = −18; Cygnar = player B = second, back edge z = +18. No roll-off and no edge choice |
 | Command cards | none (the QS skips them, p35) |
 | Data | pinned bundle `qs-2025` (the values marked verified in `factions/*.md`, plus the community values the turns rely on) |
+
+## S3 Skirmish scenario: **Copperline Crossing** (`scn-copperline-crossing`)
+
+Our own scenario for the 50-point game size, built only from features the engine already has (V1, V2.1, V2.2,
+V1.7). It is the default Skirmish scenario; the Steamroller 2026 scenarios of M13 join the Skirmish list later and
+this one stays as the learner's choice. Sources and rulings: `90-skirmish.md` A.1 to A.3. Skirmish level only
+(`levels: ['skirmish']`): a recon list cannot be played on it and a skirmish list cannot be played on S1 or S2
+(`createGame` answers `E_BAD_SETUP`, SKM-002).
+
+| Setting | Value |
+|---|---|
+| Table | 48"×48" (RB p116; SR p15 splits it into four 24" quadrants) |
+| Rounds | 7 |
+| Turn order | R11.4 as S1: the roll-off winner picks first or second, the second player picks the edge |
+| Deployment | first player completely within 6" of their back edge (z ∈ [−24, −18] on the north edge), second within 11" (z ∈ [13, 24]); Advance Deployment 3" deeper (z ≤ −15 and z ≥ 10); a unit's models within 3" of each other. Every SR 2026 map uses 6/11 (91 SR2) |
+| Scoring | `{fromRound: 2, fromPlayer: 'second', winMargin: 3, winOnOpponentTurnOnly: true, leaderPresence: 10}`: both players score at the end of every turn from the second player's round-2 turn (V1.2) |
+| Kill Box | `{fromRound: 2, fromPlayer: 'first', depth: 12, vp: 2}` (V1.7); the 12" is the SR value, measured from the edge of the 48" table |
+| Terrain | a board layout's 48" twin (`<layout id>-48`, below); the scenario's own fallback is `layout.village-2-48` |
+
+**Objectives** (centres, `{x, z}`, origin = table centre, +z toward player B; point-symmetric about the origin; each is
+worth 1 VP per scoring point while held):
+
+| ID | Kind | Centre | Held when |
+|---|---|---|---|
+| `el-50-w` | 50 mm objective | (−10, −3) | a friendly Leader, warjack, warbeast or battle engine is within 3" and no eligible enemy is within 3" (V2.1) |
+| `el-50-e` | 50 mm objective | (10, 3) | as `el-50-w` |
+| `el-40-w` | 40 mm objective | (−10, 3) | a friendly Leader is within 3", or every remaining trooper of one friendly unit is (V2.2) |
+| `el-40-e` | 40 mm objective | (10, −3) | as `el-40-w` |
+
+So each player has a 50 mm close on their left and a 40 mm close on their right: the big one wants a Leader or Cohort
+model, the small one a whole unit, and a lone solo secures neither. Enemy Leaders do not contest (SR p3).
+
+**Victory:** assassination (V1.1), lead-by-3 after the opponent's turn (V1.3), or the most VP after round 7 and then
+V1.5 to V1.6.
+
+**Why these positions:** the first draft at (±12, ±3) clipped six flank forests and hills and sat 0.96" from the Outpost
+3 blockhouse. At (±10, ±3) no footprint of any of the 15 scaled layouts touches an objective base, and the nearest
+impassable footprint is 2.96" from a base edge (TER-110 keeps it that way).
+
+**Terrain at 48" (E2, E3).** Every board layout has a derived twin in the data bundle, `<layout id>-48`, equal to
+`scaleLayout48` (70 §D: every centre times 4/3, footprints and rotations unchanged, so symmetry holds and every gap
+grows). `src/data/layout48.ts` is the pure helper and `loadBundle` adds the twins before checking references; the board
+records still list the 36" ids. For a 48" scenario `eligibleLayouts` returns the board's twins, for a 36" one the
+originals. The Ashwall Divide (no board) has no twin.
+
+**Game size (E1).** A list that names a `level` is capped by it (recon 30, skirmish 50, pitched 75, grand melee 100) and
+must cost at least 4 under the cap (RB p118); the declared `points` is not trusted. Both lists must share a level and the
+scenario's `levels` must include it.
 
 ## Test fixture `scn-test-sr`
 

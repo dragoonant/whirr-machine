@@ -236,3 +236,108 @@ Faction id `trl` (engine file key `trollbloods`: `src/engine/factions/trollblood
 - RULING: Highwaymen keyword | treat as Trollkin | both app dumps (S1, S10) list only United Kriels, Trollblood and Unit on the card; it matters only for keyword-scoped rules, and none in this list uses it.
 - RULING: Gunnbjorn AAT | none | S1, S2 and S10 show no arcane attack stat, and all his spells are non-offensive.
 - RULING: Fortification cover | +4 DEF against ranged and arcane attacks as normal cover (R6) | the feat grants "cover" with no number; MK4 cover is +4 DEF.
+
+---
+
+# Skirmish section (50 points, WP-D-trl)
+
+List `trl.l.skirmish` (file `src/data/lists/trl-skirmish.json`), spec `90-skirmish.md` B.3. The starter's Gunnbjorn, Bomber, Braylen
+and Highwaymen are unchanged (see above). Three entries are new: **Dozer & Smigg**, **Krielstone Bearer & Stone Scribes** and
+**Trollkin Runebearer**. Evidence for the picks: the four public Captain Gunnbjorn (United Kriels) lists on Longshanks (Krielstone 4/4,
+Runebearer 4/4, Dozer & Smigg 3/4).
+
+## Skirmish sources (tags continue the audit in `trollbloods-sources.md`)
+
+| Tag | Source | Used for |
+|---|---|---|
+| S1 | `isorna/wardice-warmachine-data` raw `mk4/profiles/trollbloods.united-kriels.profiles.json`, `mk4/spells/spells.json`, `mk4/abilities/abilities.json`, `mk4/advantages/advantages.json` (read 2026-10-07; commit "app data dump", 2026-07-10), https://github.com/isorna/wardice-warmachine-data | every stat, weapon, advantage, ability and spell of the three new entries, points, FA, keywords |
+| S10 | `tate4490/Warmachine` `Data_Structure/{cards,models,weapons,model_abilities,model_advantages,weapon_abilities,weapon_qualities,spells,keywords}.json` (read 2026-10-07; last data commit 2026-07-01), https://github.com/tate4490/Warmachine/tree/main/Data_Structure | independent copy of the same cards; unit size line (Stone Bearer and 3 Grunts); 40 mm and 50 mm base advantages; spiral aspect totals 9/12/9 |
+| S2 | Warmachine Academy wiki through the MediaWiki API: https://warmachineacademy.miraheze.org/wiki/Dozer_%26_Smigg (rev 2026-02-08), https://warmachineacademy.miraheze.org/wiki/Trollkin_Runebearer (rev 2026-02-21), https://warmachineacademy.miraheze.org/wiki/Kriel_Stone_Bearer_%26_Stone_Scribes_(United_Kriels) (rev 2026-02-21; a second copy exists for Storm of the North) | third copy of Dozer & Smigg and the Runebearer (agree with S1 and S10 except the Bond wording); Krielstone points, FA, unit of 1 + 3, Tough, medium base |
+| LS | Longshanks scan in `90-skirmish-sources.md` section 2 (https://warmachine.longshanks.org/) | which add-ons players field |
+| WS | Web searches for MK4 card text of the three models (Steamforged, Bell of Lost Souls and similar) | nothing usable: results were MK2/MK3 era or store pages. No Steamforged free card PDF covers the United Kriels (see S5 in the audit) |
+
+Conflicts: (1) Bond on Dozer & Smigg: S1 and S10 say boosted ranged attack **damage** rolls, S2 says attack rolls: app wording kept
+(RULING). (2) The S2 Krielstone table shows SPD 3, ARM 14 and DEF 13 grunts, which matches no app copy and looks like a placeholder:
+S1 + S10 kept (RULING). (3) S1 and S10 name the Scribe weapon "Hand Weapon", S2 "Axe": both POW 10, app name kept. Every value is in at
+least two sources except the Scribe's Tough, which S1 and S10 both show (two sources too).
+
+## New models
+
+| id | Source model | Type | Pts | FA | Base | Boxes | conf |
+|---|---|---|---|---|---|---|---|
+| trl.dozer-smigg | Dozer & Smigg | Heavy warbeast, character | 14 | C | 50 | spiral 30 (6/3/7/5/6/3) | pts, FA, stats, spiral S1+S2+S10; base S10 + rulebook p65 |
+| trl.krielstone | Krielstone Bearer & Stone Scribes | Unit: 1 Stone Bearer + 3 Stone Scribes | 5 | 1 | 40 | 1 each (Tough) | pts, FA S1+S2+S10; size S10 + S2 |
+| trl.stone-bearer | Stone Bearer | Trooper (unit lead) | - | - | 40 | 1 | S1+S10 (S2 values are a placeholder) |
+| trl.stone-scribe | Grunt (we call it Stone Scribe) | Trooper | - | - | 40 | 1 | S1+S10 |
+| trl.runebearer | Trollkin Runebearer | Solo | 3 | 1 | 40 | 5 | S1+S2+S10 |
+
+Keywords (S1+S10): Dozer & Smigg are United Kriels, Trollblood, Dire Troll, Heavy Warbeast; the Krielstone unit United Kriels,
+Trollblood, Trollkin, Unit (Storm of the North on its twin card); the Runebearer Trollblood, Storm of the North, Solo, United Kriels.
+
+| id | SPD | AAT | MAT | RAT | DEF | ARM | FURY | THR | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| trl.dozer-smigg | 5 | - | 7 | 5 | 12 | 19 | 4 | 10 | S1+S2+S10 |
+| trl.stone-bearer | 5 | - | - | - | 12 | 13 | - | - | S1+S10 (no weapon, so no MAT or RAT) |
+| trl.stone-scribe | 5 | - | 5 | - | 12 | 13 | - | - | S1+S10 |
+| trl.runebearer | 6 | 6 | - | - | 12 | 14 | - | - | S1+S2+S10 (no weapon) |
+
+## Weapons
+
+| id | Weapon | Qty | Type | Stat | RNG | ROF | AOE | POW | Rules (summary) | conf |
+|---|---|---|---|---|---|---|---|---|---|---|
+| trl.dozer-smigg | Bombard (`trl.w.bombard`) | 1 | ranged | RAT 5 | 14 | 1 | 3 | 14 (blast 8) | Arcing Fire (shoot past intervening models); also carries the Guided Fire boost rider | S1+S2+S10 |
+| trl.dozer-smigg | Claw (`trl.w.claw`, shared with the Bomber) | 2 | melee | MAT 7 | 1 | - | - | 15 | Throw power attack | S1+S2+S10 |
+| trl.stone-scribe | Hand Weapon (`trl.w.hand-weapon`) | 1 | melee | MAT 5 | 1 | - | - | 10 | - | S1+S10 (S2 calls it an Axe) |
+
+## Abilities (our summaries; ids `trl.a.*` unless core)
+
+| Model | Ability | What it does | Built as | conf |
+|---|---|---|---|---|
+| Dozer & Smigg | Gunfighter, Dual Attack, Headbutt, Slam, Trample (`core.a.*`) | as the core cards | core | S1+S2+S10 |
+| Dozer & Smigg | Regeneration [d3], Snacking | as the Bomber's | existing hooks | S1+S2+S10 |
+| Dozer & Smigg | Bond [Gunnbjorn] `bond-gunnbjorn` | free boosted damage rolls on ranged attacks while bonded and in his CTRL | `coreFlag bondGunnbjorn`, read by a `beforeHits` plugin that sets the attack's auto-boost | S1+S10 (S2 differs, RULING) |
+| Dozer & Smigg | Bulldoze `bulldoze` | shove touched enemies up to 2" at the end of a Normal Movement, once each per turn | `movement.end` code hook `bulldoze` (R5.15 push) | S1+S2+S10 |
+| Dozer & Smigg | Animus: Lucky Shot `trl.s.lucky-shot` | COST 1, RNG 6, Turn: a friendly Faction model rerolls its next missed ranged attack roll this turn | turn effect from the spell engine; reroll in the plugin | S1+S10 |
+| Stone Bearer | Protective Aura `protective-aura` | friendly Faction (Trollblood) models within 8" gain +2 ARM, itself included | passive aura `modStat ARM +2` | S1+S10 |
+| Stone Bearer | Serenity `serenity` | start of Control, before leeching: remove 1 fury from a friendly warbeast within 1" | `coreFlag serenity` + `serenityStep()` | S1+S10 |
+| Stone Bearer | Take Up `take-up` | a Scribe within 1" is destroyed instead of the Bearer | `coreFlag takeUp` + `adjustPoints` plugin | S1+S10 |
+| Runebearer | Attached `attached` | joins a friendly Leader for the game | `coreFlag attached`; Leader lookups use the owner's Leader | S1+S2+S10 |
+| Runebearer | Arcane Repeater `arcane-repeater` | the Leader within 5" has +2 CTRL | passive aura `modStat CTRL +2`, filter Leader | S1+S2+S10 |
+| Runebearer | Magic Ability `magic-ability` | its special actions count as casting a spell | `coreFlag magicAbility` | S1+S2+S10 |
+| Runebearer | Guidance `guidance` (star action, RNG 6) | a friendly model gains Eyeless Sight and magical weapons for a turn | `combat.choose` code hook; picks its own target | S1+S10 |
+| Runebearer | Harmonious Exaltation `harmonious-exaltation` (star action, RNG 5) | the Leader's next spell this turn costs 1 less | marker effect + `harmoniousDiscount` helper | S1+S2+S10 |
+| Runebearer | Spell Slave `spell-slave` | casts a COST 3 or less Leader spell that is not Up, SELF or CTRL | flag only: Gunnbjorn has no such spell | S1+S10 |
+| (granted) | Eyeless Sight `eyeless-sight` | ignores clouds for line of sight | passive `ignore clouds` | S1 advantage text |
+
+## Dozer & Smigg spiral
+
+Same branch table as the Bomber: 6 / 3 / 7 / 5 / 6 / 3 boxes, branches 1-2 Mind, 3-4 Body, 5-6 Spirit (S1 branch sizes, S10 totals 9/12/9;
+the order is a RULING).
+
+## The Skirmish list (50 points)
+
+| Entry | Pts | Notes |
+|---|---|---|
+| Captain Gunnbjorn | 0 | Leader (warlock) |
+| Dire Troll Bomber | 17 | in his battlegroup |
+| Dozer & Smigg | 14 | in his battlegroup; bonded to him |
+| Braylen Wanderheart (AD) | 4 | |
+| Trollkin Highwaymen x5 (AD) | 7 | |
+| Krielstone Bearer & Stone Scribes | 5 | 1 + 3 models |
+| Trollkin Runebearer | 3 | |
+| **Total** | **50** | |
+
+## Tests (`tests/data/trl-skirmish.test.ts`)
+
+SKM-001 and SKM-001b (list cost, Cohort, FA, builds a game on Copperline Crossing); DATA-TRL-010 to 014 (values and ids); FAC-TRL-020
+Protective Aura; 021 Arcane Repeater; 022 Bond (a hit boosts for free in CTRL, not outside it); 023 Lucky Shot; 024 Take Up; 025 Bulldoze;
+026 Serenity; 027 Harmonious Exaltation and Guidance; 028 Spell Slave has no legal spell on Gunnbjorn's card.
+
+## Not built in the engine (owned elsewhere)
+
+- Serenity: `control.ts` must call `serenityStep(state, bundle, player)` (exported from `factions/trollbloods.ts`) after the casters refill.
+- Harmonious Exaltation: `spells.ts` `castCost` must subtract `harmoniousDiscount(state, casterId)` and call `useHarmoniousExaltation` after paying.
+- Lucky Shot: `spells.ts` `beastOptions` and `warlockOptions` cast an animus with no target, so a RNG 6 animus is never offered.
+- Guidance's magical weapons: `activation.ts` reads `wraithbaneOn` (Circle) only; it should also read a `magicalWeapons` effect. Its target is auto-picked because `needsTarget` lists only a few codes.
+- Attached: `setup.ts` gives no controller to solos; if the Runebearer should join the battlegroup it needs one.
+- Figures: slugs `wm-dozer-smigg`, `wm-krielstone-bearer`, `wm-stone-scribe`, `wm-runebearer` are WP-FIG's; `src/client/weaponFlavour.ts` has no flavour for `trl.w.bombard` and `trl.w.hand-weapon` (a figures-m9 test fails on the Bombard).

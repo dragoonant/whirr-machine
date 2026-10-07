@@ -520,5 +520,201 @@
     },
     "duration": "continuous",
     "verify": "Not built: needs a maintenance-phase choice and targeting bans in core."
+  },
+  {
+    "id": "men.a.arc-node",
+    "name": "Arc Node",
+    "text": "Head option: this warjack can carry its Leader's spells, so the Leader may channel a spell through it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "arcNode"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Channelling (spells.ts channelers) looks for core.a.arc-node, which core/abilities.json does not define yet; WP-CORE: accept coreFlag arcNode (or define core.a.arc-node and switch this record to a grantAbility). The model carries arcNode: true too."
+  },
+  {
+    "id": "men.a.repel",
+    "name": "Repel",
+    "text": "When this weapon hits an enemy model, that model is pushed 1 inch directly away. When an enemy hits this model with a melee attack, after the attack resolves the attacker is pushed 1 inch directly away from this model. Lost while the weapon's arm is crippled.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "repel"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Run by the menothPlugins onResolved seam (menoth.ts), not by the descriptors."
+  },
+  {
+    "id": "men.a.chain",
+    "name": "Chain",
+    "text": "Damage beyond the target's ARM is doubled, and a model this attack disables cannot make a Tough roll (Decapitation).",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "chainDecapitation"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Run by the menothPlugins adjustPoints and onBoxed seams (menoth.ts). Not the same rule as Chain Weapon (men.a.chain-weapon), which ignores shields."
+  },
+  {
+    "id": "men.a.ashen-veil",
+    "name": "Ashen Veil",
+    "text": "Light Immolator arm: this model has concealment, and living enemy models without Resistance: Fire take -2 on attack rolls while within 2 inches of it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "ashenVeil"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Not run yet: needs an attack-roll modifier seam for enemy models near the carrier and granted concealment in core (WP-CORE). The grid does not drop it when the right arm is crippled either."
+  },
+  {
+    "id": "men.a.righteous-intervention",
+    "name": "Righteous Intervention",
+    "text": "Once per game during its activation this unit can call on Righteous Intervention for a round: when an enemy attack destroys a friendly Faction model within 6 inches that is not a Cleanser Sanctifier, after the attack resolves a model in this unit advances 2 inches and makes a basic melee attack.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "righteousIntervention"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "limit": "oncePerGame",
+    "verify": "Not run yet: needs a once-per-game unit action that arms a round-long reaction to a friendly death (an advance and an out-of-activation attack). Entered as a passive so no empty action is offered (WP-CORE)."
+  },
+  {
+    "id": "men.a.penance-of-the-corrupted",
+    "name": "Penance of the Corrupted",
+    "text": "While allocating focus in the Control Phase, a model in its Leader's CTRL may suffer any amount of damage (up to its unmarked boxes) to give a friendly Faction warjack in that CTRL 1 focus per damage point.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "penanceOfTheCorrupted"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Not run yet: needs a damage-for-focus step in the Control Phase focus allocation (focus.ts, WP-CORE)."
+  },
+  {
+    "id": "men.a.repair",
+    "name": "Repair [d3+1]",
+    "text": "Special action, range 1: remove d3+1 damage points from a friendly Faction construct.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "repair",
+        "params": {
+          "dice": "d3",
+          "flat": 1
+        }
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 1,
+      "filter": {
+        "test": "keyword",
+        "value": "construct"
+      }
+    },
+    "duration": "instant",
+    "verify": "Uses the shared repair hook (factions/cryx.ts), whose flat part comes from the params."
+  },
+  {
+    "id": "men.a.enliven",
+    "name": "Enliven",
+    "text": "Magic Ability special action, range 3: for a round, the next time the chosen friendly Faction cohort model is damaged by an enemy attack, after that attack resolves it may make a full advance, then Enliven ends.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 5,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3,
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "duration": "round",
+    "verify": "RULING: the full advance is a flat 5 inches (the SPD of the fastest Menoth cohort model here, the Revenger); the Crusader (SPD 4) gets 1 inch extra until core reads the target's SPD."
+  },
+  {
+    "id": "men.a.ancillary-attack",
+    "name": "Ancillary Attack",
+    "text": "Magic Ability special action, range 3: a friendly Faction warjack in range immediately makes one basic melee or ranged attack. Each model can be given this only once per turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "makeAttack",
+        "target": "target",
+        "weaponFilter": "any",
+        "basic": true
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3,
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "duration": "instant",
+    "limit": "oncePerTurn"
   }
 ]

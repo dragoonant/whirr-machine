@@ -563,5 +563,296 @@
       "range": 1
     },
     "duration": "instant"
+  },
+  {
+    "id": "cyg.a.resist-electricity",
+    "name": "Resistance: Electricity",
+    "text": "Electrical damage rolls against this model lose one die. Lightning never arcs from it, and it is skipped when lightning looks for the nearest model to leap to.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "grantResistance",
+        "damageType": "electricity"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.shield-wall",
+    "name": "Shield Wall",
+    "text": "While in base contact with a unit-mate, this model has +2 ARM and cannot be knocked down.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": {
+      "test": "b2b"
+    },
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 2
+      },
+      {
+        "op": "forbid",
+        "what": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.repulsor-field",
+    "name": "Repulsor Field",
+    "text": "When an enemy hits this model with a melee attack, the attacker is pushed 1 inch directly away from this model once the attack is resolved.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "test": "attackKind",
+          "value": "melee"
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "code": "repulsorField"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.smite",
+    "name": "Smite (★Attack)",
+    "text": "A melee attack choice: make one attack with this weapon instead of the usual initial attacks. A model it hits is slammed d6 inches directly away, or half that if its base is larger than the attacker's.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "smiteAttack"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.smite-slam",
+    "name": "Smite (slam)",
+    "text": "After a Smite attack resolves, the model hit that is still standing is slammed and knocked down. Collateral damage uses the weapon's POW.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "effect": [
+      {
+        "code": "smite"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cyg.a.galvanic-capacitor",
+    "name": "Galvanic Capacitor",
+    "text": "Once per turn, at any time in its activation, this model may use one of the capacitor effects below. No two models of the unit may pick the same effect, and each lasts one round.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "galvanicCapacitor"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cyg.a.lightning-wreath",
+    "name": "Lightning Wreath",
+    "text": "Capacitor effect, RNG 3: a friendly model chosen within 3 inches has Electro Leap on its melee weapons until the end of the turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "lightningWreath"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "turn",
+    "limit": "oncePerTurn"
+  },
+  {
+    "id": "cyg.a.polarity-field-generator",
+    "name": "Polarity Field Generator",
+    "text": "Capacitor effect: for a round, no model of this unit can be the target of a charge or a slam power attack made by a construct.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "polarityField"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round",
+    "limit": "oncePerTurn",
+    "verify": "Recorded as an effect; the charge and slam target lists must read polarityFieldBlocks (see issues)."
+  },
+  {
+    "id": "cyg.a.wind-weaver",
+    "name": "Wind Weaver",
+    "text": "Capacitor effect: this model gains Warping Winds for a round. A friendly Cygnar model within 3 inches of it that is targeted by a ranged attack makes that attack lose 3 RNG, and friendly Cygnar models within 3 inches resist blast damage.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "windWeaver"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round",
+    "limit": "oncePerTurn",
+    "verify": "Blast resistance is a snapshot of the models within 3 inches at use; the RNG loss needs core to read warpingWindsRngPenalty (see issues)."
+  },
+  {
+    "id": "cyg.a.electro-leap",
+    "name": "Electro Leap",
+    "text": "When a basic melee attack with this weapon hits a model directly, lightning may arc to the nearest model within 3 inches of it (never the attacker) for an unboostable POW 10 electrical damage roll that is not caused by an attack.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "electroLeap"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Auto-resolved: the arc is taken only when the nearest legal model is an enemy."
+  },
+  {
+    "id": "cyg.a.plasma-nimbus",
+    "name": "Plasma Nimbus",
+    "text": "When an enemy hits this model with a melee attack, after the attack is resolved the owner may have the attacker suffer an unboostable POW 10 electrical damage roll, unless this model was destroyed or removed from play by the attack.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "test": "attackKind",
+          "value": "melee"
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "code": "plasmaNimbus"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cyg.a.insulated-cortex",
+    "name": "Insulated Cortex",
+    "text": "This warjack cannot be disrupted.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "insulatedCortex"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "No Cygnar content applies Disruption yet; core must honour the insulatedCortex flag when adding the disrupted condition."
+  },
+  {
+    "id": "cyg.a.shield-guard",
+    "name": "Shield Guard",
+    "text": "Once per round, when a friendly model within 3 inches is hit directly by a ranged attack that is not a spray, this model may take the hit in its place, suffering every damage roll and effect. Not while knocked down or stationary.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "shieldGuard"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Uses the shared shieldGuard flag the Menoth plugin resolves (leaders, war-engines and solos only until core generalizes it)."
+  },
+  {
+    "id": "cyg.a.critical-armor-piercing",
+    "name": "Critical Armor-Piercing",
+    "text": "On a critical hit, halve the target's base ARM for this weapon's damage.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "when": {
+      "test": "crit"
+    },
+    "effect": [
+      {
+        "code": "cygCriticalArmorPiercing"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
   }
 ]

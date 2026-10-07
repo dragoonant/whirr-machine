@@ -22,7 +22,7 @@ export const FLAVOURS: readonly Flavour[] = [
   { id: 'spellstorm-cannon', slugs: ['spellstorm-cannon'], sfx: 'gun-spellstorm-cannon', vfx: 'spark-burst', melee: false },
   { id: 'rifle', slugs: ['magelock-rifle', 'rifle'], sfx: 'gun-magelock-rifle', vfx: 'tracer', melee: false },
   { id: 'scattergun', slugs: ['scattergun'], sfx: 'gun-scattergun', vfx: 'spray', melee: false },
-  { id: 'cannon', slugs: ['cannon'], sfx: 'gun-cannon', sfxAlt: 'gun-cannon-blast', vfx: 'shell', melee: false },
+  { id: 'cannon', slugs: ['cannon', 'bombard'], sfx: 'gun-cannon', sfxAlt: 'gun-cannon-blast', vfx: 'shell', melee: false },
   { id: 'slug-cannon', slugs: ['slug-cannon'], sfx: 'gun-slug-cannon', vfx: 'shell', melee: false },
   { id: 'assault-cannon', slugs: ['assault-cannon'], sfx: 'gun-assault-cannon', vfx: 'tracer', melee: false },
   { id: 'grenade-launcher', slugs: ['grenade-launcher', 'powder-bomb'], sfx: 'gun-grenade-launcher', vfx: 'lob', melee: false },

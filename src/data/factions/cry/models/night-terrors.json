@@ -1,0 +1,24 @@
+{
+  "faction": "cry",
+  "id": "cry.night-terrors",
+  "name": "Night Terrors",
+  "type": "unit",
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead"
+  ],
+  "cost": 10,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "cry.night-terror",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 10
+    }
+  },
+  "verify": "10 points for 3 (S1, S2, S4). FA 2 from the app data dump (S1) and Asmoridin (S4); Warmachine Academy shows 3, see the RULING in docs/needs-rules-check.md."
+}

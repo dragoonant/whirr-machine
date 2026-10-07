@@ -3,19 +3,19 @@
 // Data codes: cirWraithbane, cirWraithbaneWeapons, cirControlledWarping, cirWarpGhostly, cirRegeneration, cirBloodRage,
 // cirMeatForTheBeast, cirDeathFeast, cirDeathPowered, cirRapidHealing, cirTreewalkerDef, cirCriticalConsume, cirShifter,
 // cirBloodReaper, cirGrievousWounds, cirRitesOfTheWurm, cirVitalMagic, cirAdmonition, cirAffliction, cirRift,
-// cirScythingTouch, cirVeilOfMists.
+// cirScythingTouch, cirVeilOfMists. Skirmish (WP-D-cir) adds cirUnyielding, cirChainLightning, cirHuntersGrace, cirSkyShaker, cirDopplerBark.
 // Plain helpers at the bottom (circleSpellCost, scythingTouchArmPenalty, ...) are the seams core calls (spells.ts, code-hooks.ts statOf,
 // activation.ts); the data `verify` strings say where.
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
-import { applyDamage, healDamage, type GridLayout } from '../damage'
-import { rollD3 } from '../dice'
+import { applyDamage, healDamage, resolveDeath, type GridLayout } from '../damage'
+import { rollD3, rollNd6 } from '../dice'
 import { applyEffect, effectsOn, removeEffect } from '../effects'
 import type { GameEvent } from '../events'
 import { baseRadius, dist, fromAngle, angleOf, sub, isLegalPlacement, isOnTable } from '../geometry'
 import { inCtrl, modelDistance } from '../measure'
 import { movedEvent, relocate } from '../movement'
 import { circleInsideShape, effectiveType, terrainPieces } from '../terrain'
-import { abilitiesOf, actOf, atkOf, envOf, hasFlag, noop, prof, setAtk, setModel, statOf, type AtkCtx, type AttackPlugin } from '../code-hooks'
+import { abilitiesOf, actOf, armOf, atkOf, envOf, hasFlag, isLivingModel, lookups, noop, prof, resistsDamageType, setAtk, setModel, statOf, type AtkCtx, type AttackPlugin } from '../code-hooks'
 import { force } from '../fury'
 import type { DataBundle, EffectInstance, GameState, Id, ModelId, ModelState } from '../types'
 
@@ -308,6 +308,58 @@ const veilOfMists = (c: HookContext): HookResult => {
   return { state: { ...c.state, effectSeq: c.state.effectSeq + 1, clouds: [...c.state.clouds, cloud] }, events: [{ type: 'CloudCreated', cloudId: id, pos, diameter: 3, owner: me.owner }] }
 }
 
+// ---------- Skirmish additions (WP-D-cir): Wolf Riders, Ravager Shaman, Wild Argus ----------
+const keywordsOf = (b: DataBundle, m: ModelState): string[] => (prof(b, m).keywords ?? []) as string[]
+const nearAlive = (state: GameState, me: ModelState, m: ModelState, d: number): boolean => isOnTable(m) && m.life === 'active' && modelDistance(me, m) <= d + 1e-6
+
+/** Doppler Bark (animus): living and undead enemy models within 2" of the caster drop to base DEF 5 and cannot run, charge, slam or trample for a round. */
+const dopplerBark = (c: HookContext): HookResult => {
+  const b = envOf(c).bundle
+  const me = c.state.models[c.selfId]
+  if (!me || !isOnTable(me)) return noop(c)
+  const ids = Object.values(c.state.models)
+    .filter((m) => m.owner !== me.owner && nearAlive(c.state, me, m, 2) && (isLivingModel(c.state, b, m.id) || keywordsOf(b, m).includes('undead')))
+    .map((m) => m.id)
+  if (!ids.length) return noop(c)
+  const r = applyEffect(c.state, {
+    sourceId: 'cir.s.doppler-bark', name: 'Doppler Bark', owner: me.owner, casterId: me.id, targetIds: ids,
+    mods: [{ stat: 'DEF', value: 5, mode: 'set' }], forbid: ['run', 'charge', 'slam', 'trample'], duration: 'round',
+  })
+  return { state: r.state, events: r.events }
+}
+
+/** Hunter's Grace (action): Tharn models of the user's side within 5" (itself included) cannot be knocked down for a round. Fixed when used. */
+const huntersGrace = (c: HookContext): HookResult => {
+  const b = envOf(c).bundle
+  const me = c.state.models[c.selfId]
+  if (!me || !isOnTable(me)) return noop(c)
+  const ids = Object.values(c.state.models).filter((m) => m.owner === me.owner && nearAlive(c.state, me, m, 5) && keywordsOf(b, m).includes('tharn')).map((m) => m.id)
+  if (!ids.length) return noop(c)
+  const r = applyEffect(c.state, { sourceId: 'cir.a.hunters-grace', name: "Hunter's Grace", owner: me.owner, casterId: me.id, targetIds: ids, mods: [], forbid: ['knockDown'], duration: 'round' })
+  return { state: r.state, events: r.events }
+}
+
+/**
+ * Sky Shaker (action): the user gains Warping Winds for a round (the effect warpingWindsRngPenalty / warpingWindsBlastResist read), and the Faction
+ * models of its side within 3" get Resistance: Blast, fixed when the action is used.
+ */
+const skyShaker = (c: HookContext): HookResult => {
+  const b = envOf(c).bundle
+  const me = c.state.models[c.selfId]
+  if (!me || !isOnTable(me)) return noop(c)
+  const faction = prof(b, me).faction
+  let s = c.state
+  const events: GameEvent[] = []
+  const w = applyEffect(s, { sourceId: 'cir.a.sky-shaker', name: 'Warping Winds', owner: me.owner, casterId: me.id, targetIds: [me.id], mods: [], duration: 'round' })
+  s = w.state; events.push(...w.events)
+  const ids = Object.values(s.models).filter((m) => m.owner === me.owner && nearAlive(s, me, m, 3) && prof(b, m).faction === faction).map((m) => m.id)
+  if (ids.length) {
+    const r = applyEffect(s, { sourceId: 'cir.a.sky-shaker', name: 'Warping Winds: Blast Resistance', owner: me.owner, casterId: me.id, targetIds: ids, mods: [], resist: ['blast'], duration: 'round' })
+    s = r.state; events.push(...r.events)
+  }
+  return { state: s, events }
+}
+
 export const circleHooks: CodeHookRegistry = {
   conditions: {},
   effects: {
@@ -316,7 +368,8 @@ export const circleHooks: CodeHookRegistry = {
     cirDeathPowered: marker, cirRapidHealing: rapidHealing, cirTreewalkerDef: marker, cirCriticalConsume: criticalConsume,
     cirShifter: shifter, cirBloodReaper: bloodReaper, cirGrievousWounds: grievousWounds, cirRitesOfTheWurm: ritesOfTheWurm,
     cirVitalMagic: vitalMagic, cirAdmonition: marker, cirAffliction: affliction, cirRift: rift, cirScythingTouch: marker,
-    cirVeilOfMists: veilOfMists,
+    cirVeilOfMists: veilOfMists, cirUnyielding: marker, cirChainLightning: marker, cirHuntersGrace: huntersGrace, cirSkyShaker: skyShaker,
+    cirDopplerBark: dopplerBark,
   },
 }
 
@@ -352,7 +405,64 @@ const meleeBonuses: AttackPlugin = {
   },
 }
 
-export const circlePlugins: AttackPlugin[] = [bodySnatcher, meleeBonuses]
+/**
+ * Unyielding (Wolf Riders): +2 ARM against melee damage rolls, done as 2 fewer points on a melee or power-attack roll (the same number once
+ * ARM is taken off). Affliction's one-point floor is applied again afterwards.
+ */
+const unyielding: AttackPlugin = {
+  id: 'cir.unyielding',
+  adjustPoints(state, b, atk, job, points) {
+    if ((atk.kind !== 'melee' && atk.kind !== 'power') || !has(state, b, job.targetId, 'cir.a.unyielding')) return null
+    const next = afflictionFloor(state, job.targetId, Math.max(0, points - 2), job.kind === 'direct')
+    return next === points ? null : { state, events: [], points: next }
+  },
+}
+
+/** The nearest model (base edge to base edge) within 3" of `from` that the lightning has not touched; ties go to the lower id. */
+function nextArc(state: GameState, from: ModelState, used: Set<ModelId>): ModelState | undefined {
+  return Object.values(state.models)
+    .filter((m) => !used.has(m.id) && m.life === 'active' && isOnTable(m) && modelDistance(from, m) <= 3 + 1e-6)
+    .sort((x, y) => modelDistance(from, x) - modelDistance(from, y) || (x.id < y.id ? -1 : 1))[0]
+}
+/**
+ * Chain Lightning (Ravager Shaman): once the star attack has hit and everything is applied, the lightning arcs from the model hit to d3 more
+ * models, each the nearest one not yet touched within 3" of the last (the Shaman is skipped, friends are not). Each arc is a POW 10
+ * electrical damage roll that is not an attack: 2d6 + 10 against ARM, one die fewer when the model resists electricity.
+ */
+const chainLightning: AttackPlugin = {
+  id: 'cir.chain-lightning',
+  onResolved(state, b, atk) {
+    const origin = state.models[atk.targetId]
+    if (atk.x.star !== 'cir.a.chain-lightning' || !origin || !atk.x.results[atk.targetId]?.hit) return { state, events: [] }
+    const d = rollD3(state)
+    let s = d.state
+    const events: GameEvent[] = [d.event]
+    const used = new Set<ModelId>([atk.attackerId, origin.id])
+    const arcs: ModelId[] = []
+    let last = origin
+    for (let i = 0; i < d.value; i++) {
+      const n = nextArc(s, last, used)
+      if (!n) break
+      used.add(n.id); arcs.push(n.id); last = n
+    }
+    for (const id of arcs) {
+      const look = lookups(s, b)
+      const arm = armOf(s, b, id)
+      const dice = resistsDamageType(s, b, id, ['electricity']) ? 1 : 2
+      const r = rollNd6(s, dice, 'damage', { ownerId: id, target: arm, flat: 10 })
+      s = r.state; events.push(r.event)
+      const ap = applyDamage(s, id, Math.max(0, r.total - arm), { source: 'other', layouts: look.layouts?.(id), damageTypes: ['electricity', 'magical'], attackId: atk.attackId })
+      s = ap.state; events.push(...ap.events)
+      if (s.models[id]!.life === 'disabled') {
+        const dd = resolveDeath(s, id, { tough: look.tough?.(id), layouts: look.layouts?.(id), cause: atk.attackId })
+        s = dd.state; events.push(...dd.events)
+      }
+    }
+    return { state: s, events }
+  },
+}
+
+export const circlePlugins: AttackPlugin[] = [bodySnatcher, meleeBonuses, unyielding, chainLightning]
 
 // ---------- seams for core (pure, tested; called from core) ----------
 /** Death-Powered ARM bonus: +1 per corpse token. statOf should add it. */
@@ -432,6 +542,31 @@ export function circleSpellCost(state: GameState, b: DataBundle, casterId: Model
 export function circleAnimusCostForWarlock(state: GameState, b: DataBundle, warlockId: ModelId, base: number): number {
   void b
   return featOn(state, warlockId) ? Math.max(1, base - 1) : base
+}
+
+/**
+ * Annoyance (Wolf Riders): -1 on the attack rolls of living enemy models within 1" of a model with it (a seam for core's attack-roll
+ * mods: it never stacks). Returns 0 or -1.
+ */
+export function annoyancePenalty(state: GameState, b: DataBundle, attackerId: ModelId): number {
+  const a = state.models[attackerId]
+  if (!a || !isOnTable(a) || !isLivingModel(state, b, attackerId)) return 0
+  return Object.values(state.models).some((m) => m.owner !== a.owner && m.life === 'active' && isOnTable(m) && hasFlag(state, b, m.id, 'annoyance') && modelDistance(m, a) <= 1 + 1e-6) ? -1 : 0
+}
+
+/** Models carrying Warping Winds right now (Sky Shaker): the ones whose effect is live. */
+export const warpingWindsCarriers = (state: GameState): ModelState[] =>
+  state.effects.filter((e) => e.name === 'Warping Winds' && e.casterId).map((e) => state.models[e.casterId!]).filter((m): m is ModelState => !!m && isOnTable(m) && m.life === 'active')
+/** Warping Winds, ranged half: a ranged attack at a Faction model of the carrier's side within 3" of it has -3 RNG (a seam for the range check). Returns 0 or -3. */
+export function warpingWindsRngPenalty(state: GameState, b: DataBundle, targetId: ModelId): number {
+  const t = state.models[targetId]
+  if (!t || !isOnTable(t)) return 0
+  return warpingWindsCarriers(state).some((w) => w.owner === t.owner && prof(b, w).faction === prof(b, t).faction && modelDistance(w, t) <= 3 + 1e-6) ? -3 : 0
+}
+/** Warping Winds, blast half: Faction models of the carrier's side within 3" resist blast damage (a seam for resistsDamageType, live as the models move). */
+export const warpingWindsBlastResist = (state: GameState, b: DataBundle, targetId: ModelId): boolean => {
+  const t = state.models[targetId]
+  return !!t && warpingWindsCarriers(state).some((w) => w.owner === t.owner && prof(b, w).faction === prof(b, t).faction && modelDistance(w, t) <= 3 + 1e-6)
 }
 
 /** Tanith's and Nekane's Vital Magic are the same rule. */

@@ -172,5 +172,56 @@
     "type": "melee",
     "rng": 1,
     "pow": 12
+  },
+  {
+    "id": "kha.w.cannon",
+    "name": "Cannon",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "pow": 15,
+    "location": "R",
+    "abilities": [
+      "core.a.beat-back",
+      "core.a.critical-knockdown"
+    ]
+  },
+  {
+    "id": "kha.w.heavy-chain-gun",
+    "name": "Heavy Chain Gun",
+    "type": "ranged",
+    "rng": 10,
+    "rof": "d3+1",
+    "pow": 12,
+    "location": "L",
+    "abilities": [
+      "kha.a.volley-fire"
+    ]
+  },
+  {
+    "id": "kha.w.hunting-rifle",
+    "name": "Hunting Rifle",
+    "type": "ranged",
+    "rng": 14,
+    "rof": 1,
+    "pow": 10
+  },
+  {
+    "id": "kha.w.hand-weapon",
+    "name": "Hand Weapon",
+    "type": "melee",
+    "rng": 1,
+    "pow": 9
+  },
+  {
+    "id": "kha.w.razor-wind",
+    "name": "Razor Wind",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ]
   }
 ]

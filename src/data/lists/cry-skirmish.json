@@ -1,0 +1,32 @@
+{
+  "id": "cry.l.skirmish",
+  "name": "Necrofactorium Skirmish",
+  "faction": "cry",
+  "level": "skirmish",
+  "points": 50,
+  "leader": "cry.nekane",
+  "entries": [
+    {
+      "profile": "cry.hades"
+    },
+    {
+      "profile": "cry.chatterbane"
+    },
+    {
+      "profile": "cry.furies",
+      "size": 3
+    },
+    {
+      "profile": "cry.night-terrors",
+      "size": 3
+    },
+    {
+      "profile": "cry.raptor-arc"
+    },
+    {
+      "profile": "cry.initiates",
+      "size": 3
+    }
+  ],
+  "source": "Necrofactorium Command Starter plus Night Terrors, Raptor and Necrosurgeon Initiates (50 points)"
+}

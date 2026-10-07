@@ -1,0 +1,17 @@
+{
+  "id": "cir.l.skirmish",
+  "name": "Devourer's Host Skirmish",
+  "faction": "cir",
+  "level": "skirmish",
+  "points": 47,
+  "leader": "cir.tanith",
+  "entries": [
+    { "profile": "cir.pureblood" },
+    { "profile": "cir.wild-argus" },
+    { "profile": "cir.lord-of-the-feast", "advanceDeploy": true },
+    { "profile": "cir.ravagers", "size": 3 },
+    { "profile": "cir.wolf-riders", "size": 3 },
+    { "profile": "cir.ravager-shaman" }
+  ],
+  "source": "Our Skirmish list: the starter plus Wolf Riders, Ravager Shaman and Wild Argus (47 points; 7 Devourer's Host lists)"
+}

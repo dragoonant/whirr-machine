@@ -1,0 +1,65 @@
+{
+  "id": "trl.dozer-smigg",
+  "name": "Dozer & Smigg",
+  "faction": "trl",
+  "type": "beast",
+  "beastClass": "heavy",
+  "character": true,
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "dire-troll",
+    "warbeast",
+    "heavy-warbeast"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 5,
+    "MAT": 7,
+    "RAT": 5,
+    "DEF": 12,
+    "ARM": 19,
+    "FURY": 4,
+    "THR": 10
+  },
+  "damage": {
+    "track": "spiral",
+    "branches": [
+      "MMMMMM",
+      "MMM",
+      "BBBBBBB",
+      "BBBBB",
+      "SSSSSS",
+      "SSS"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "trl.w.bombard",
+      "location": "-"
+    },
+    {
+      "weapon": "trl.w.claw",
+      "location": "-",
+      "count": 2
+    }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "core.a.gunfighter",
+    "trl.a.bond-gunnbjorn",
+    "trl.a.bulldoze",
+    "trl.a.regeneration",
+    "trl.a.snacking"
+  ],
+  "animus": "trl.s.lucky-shot",
+  "cost": 14,
+  "fa": "C",
+  "figure": {
+    "archetype": "beast"
+  },
+  "verify": "Card values agree in S1 and S10 (app dumps) and S2 (wiki, rev 2026-02-08) except Bond: both app dumps say boosted ranged attack DAMAGE rolls, the wiki says attack rolls (RULING: app wording). Base 50 (S10 z_50mm). Spiral branches 6/3/7/5/6/3 (S1) = aspect totals 9/12/9 (S10); Mind, Body, Spirit order is our RULING, as for the Bomber. Skirmish list evidence: S-LS 3 of 4 Captain Gunnbjorn lists."
+}

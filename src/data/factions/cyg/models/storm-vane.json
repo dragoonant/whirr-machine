@@ -1,0 +1,39 @@
+{
+  "id": "cyg.storm-vane",
+  "name": "Storm Vane",
+  "faction": "cyg",
+  "type": "trooper",
+  "keywords": [
+    "storm-forge-cadre"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 5,
+    "MAT": 0,
+    "RAT": 5,
+    "DEF": 12,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.storm-surge"
+    }
+  ],
+  "abilities": [
+    "cyg.a.resist-electricity",
+    "cyg.a.galvanic-capacitor",
+    "cyg.a.lightning-wreath",
+    "cyg.a.polarity-field-generator",
+    "cyg.a.wind-weaver",
+    "cyg.a.plasma-nimbus"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Stats and abilities WA 2026-09-30 and CD agree; RAT 6 to 5 and the Galvanic Capacitor rewrite are in the Jan 2026 changelog. Boxes (5) are WA only. No melee weapon (MAT 0)."
+}

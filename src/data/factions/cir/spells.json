@@ -123,5 +123,24 @@
       "who": "friendly"
     },
     "verify": "Blessed is applied by the Wraithbane Weapons ability on the attacker; core adds the magical damage type while the animus is on the attacker. Card (S1): COST 2, RNG 6, DUR Turn, OFF No."
+  },
+  {
+    "id": "cir.s.doppler-bark",
+    "name": "Doppler Bark",
+    "text": "Animus. Living and undead enemy models within 2 inches of the caster have their base DEF dropped to 5 and cannot run, charge, slam or trample for a round.",
+    "cost": 2,
+    "rng": "SELF",
+    "dur": "RND",
+    "offensive": false,
+    "animus": true,
+    "effect": [
+      {
+        "code": "cirDopplerBark"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "verify": "App card (S1, S2, S10 agree): COST 2, RNG Self, DUR Rnd, OFF No, 2 inch reach. Core does not yet stop run, charge, slam or trample from a forbid list (only a frenzied beast's charge reads it); DEF 5 works."
   }
 ]

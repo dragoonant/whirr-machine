@@ -1,0 +1,23 @@
+{
+  "id": "cyg.tempest-assailers",
+  "name": "Tempest Assailers",
+  "faction": "cyg",
+  "type": "unit",
+  "keywords": [
+    "legionnaire",
+    "storm-legion"
+  ],
+  "cost": 9,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "cyg.tempest-assailer",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 9
+    }
+  },
+  "verify": "Unit of 3 for 9 points, FA 2 (WA, CD, Longshanks lists)."
+}

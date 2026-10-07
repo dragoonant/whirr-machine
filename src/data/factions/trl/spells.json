@@ -74,7 +74,9 @@
     "scope": {
       "who": "friendly",
       "count": 1,
-      "filter": { "code": "wholeUnit" }
+      "filter": {
+        "code": "wholeUnit"
+      }
     },
     "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10. Model or unit: wholeUnit makes a cast on a trooper cover its whole unit."
   },
@@ -98,5 +100,25 @@
       "who": "self"
     },
     "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
+  },
+  {
+    "id": "trl.s.lucky-shot",
+    "name": "Lucky Shot",
+    "text": "Animus. A friendly Faction model may reroll its next missed ranged attack roll this turn. No roll is rerolled by this more than once.",
+    "cost": 1,
+    "rng": 6,
+    "dur": "TURN",
+    "offensive": false,
+    "animus": true,
+    "effect": [
+      {
+        "code": "luckyShot"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "count": 1
+    },
+    "verify": "COST 1, RNG 6, DUR Turn, OFF No: S1 and S10 agree."
   }
 ]

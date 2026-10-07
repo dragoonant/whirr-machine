@@ -10,17 +10,18 @@
 //  - Lawgiver's Judgement: lawgiverStrips (resistsDamageType and the maintenance fire roll).
 //  - Attack plugins: Chain Weapon, Armor-Piercing arrow, Conflagration and Incendiary fire, Debilitating Heat, Heroic Inspiration, Holy Martyrs,
 //    Shield Guard, Cleansing Volley.
+//  - Skirmish (WP-D-men): Repel (Repulsor Shield) in onResolved, Chain / Decapitation (Light Immolator flail) in adjustPoints and onBoxed.
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
 import {
   actOf, appliedPassives, atkOf, envOf, isMelee, lookups, meleeReach, noop, ownFlag, prof, rec, resistsDamageType, setAtk, statOf,
-  weaponsOf, type AttackPlugin, type Rec,
+  weaponCrippled, weaponsOf, type AtkCtx, type AttackPlugin, type Rec,
 } from '../code-hooks'
 import { applyDamage, healDamage, resolveDeath } from '../damage'
 import { addCondition, applyEffect, hasCondition, removeCondition } from '../effects'
 import type { GameEvent } from '../events'
 import { baseRadius, dist, isLegalPlacement, isOnTable } from '../geometry'
 import { inCtrl, modelDistance, within } from '../measure'
-import { movedEvent, relocate } from '../movement'
+import { movedEvent, push, relocate } from '../movement'
 import type { DataBundle, DamageType, EffectInstance, GameState, Id, ModelId, ModelState, PlayerId, Rejection, Vec2 } from '../types'
 
 const bundleOf = (c: HookContext): DataBundle => envOf(c).bundle
@@ -334,6 +335,50 @@ const VOLLEY_KEY = `${VOLLEY_ID}:oncePerTurn`
 const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe'
 const isMeleeKind = (k: string): boolean => k === 'melee' || k === 'power'
 
+const REPEL_ID = 'men.a.repel'
+const CHAIN_ID = 'men.a.chain'
+const weaponHas = (w: Rec | undefined, abilityId: Id): boolean => ((w?.abilities ?? []) as Id[]).includes(abilityId)
+/** Does the weapon this attack used carry Chain (Decapitation)? Spells and power attacks never do. */
+const usesChain = (b: DataBundle, atk: AtkCtx): boolean => !!atk.weaponId && !atk.spellId && weaponHas(rec(b, atk.weaponId), CHAIN_ID)
+
+/**
+ * Repel, both halves, once the attack has resolved (melee weapon attacks only; RULING in docs/needs-rules-check.md):
+ *  1. the attacker's own Repel weapon pushes every enemy it hit 1" directly away from the attacker;
+ *  2. a hit model carrying an uncrippled Repel weapon pushes the attacker 1" directly away from itself.
+ * A model that was destroyed, or is no longer on the table, is not pushed.
+ */
+function repelResolved(state: GameState, b: DataBundle, atk: AtkCtx): { state: GameState; events: GameEvent[] } {
+  if (atk.kind !== 'melee' || !atk.weaponId || atk.spellId) return { state, events: [] }
+  const at = state.models[atk.attackerId]
+  if (!at) return { state, events: [] }
+  const hit = atk.x.rollTargets.filter((t) => atk.x.results[t]?.hit && state.models[t] && state.models[t]!.owner !== at.owner)
+  if (!hit.length) return { state, events: [] }
+  let s = state
+  const events: GameEvent[] = []
+  const look = lookups(s, b)
+  // 1. the attacker's weapon
+  const own = weaponsOf(b, at).find((w) => w.weaponId === atk.weaponId && w.loc === (atk.x.wloc ?? w.loc))
+  if (own && weaponHas(own.w, REPEL_ID) && !weaponCrippled(at, own.loc)) {
+    for (const t of hit) {
+      const tm = s.models[t]
+      if (!liveOnTable(tm)) continue
+      const r = push(s, t, s.models[at.id]!.pos, 1, look)
+      s = r.state; events.push(...r.events)
+    }
+  }
+  // 2. a hit model's Repel weapon pushes the attacker
+  for (const t of hit) {
+    const tm = s.models[t]
+    if (!liveOnTable(tm)) continue
+    const shield = weaponsOf(b, tm).some((w) => weaponHas(w.w, REPEL_ID) && !weaponCrippled(tm, w.loc))
+    const att = s.models[at.id]
+    if (!shield || !liveOnTable(att)) continue
+    const r = push(s, att.id, tm.pos, 1, lookups(s, b))
+    s = r.state; events.push(...r.events)
+  }
+  return { state: s, events }
+}
+
 export const menothPlugins: AttackPlugin[] = [{
   id: 'men.faction',
   damageFlat(state, b, atk, job) {
@@ -403,16 +448,20 @@ export const menothPlugins: AttackPlugin[] = [{
     }
     return { state, events: [] }
   },
-  adjustPoints(state, b, atk, job, points) {
+  adjustPoints(state, b, atk, job, points0) {
+    // Chain (Decapitation): the damage beyond the target's ARM is doubled (the points are what is left after ARM)
+    const decap = usesChain(b, atk) && points0 > 0
+    const points = decap ? points0 * 2 : points0
+    const keep: { state: GameState; events: GameEvent[]; points: number } | null = decap ? { state, events: [], points } : null
     // Holy Martyrs: when an enemy attack would disable the model, a friendly Flameguard Defender within 5" is destroyed instead and it heals 1
     const t = state.models[job.targetId]
     const at = state.models[atk.attackerId]
-    if (!t || !at || at.owner === t.owner || points <= 0 || !liveOnTable(t) || !ownFlag(state, b, t.id, 'holyMartyrs') || t.damage.track !== 'single') return null
-    if (t.damage.filled + points < Math.max(t.damage.boxes, 1)) return null
+    if (!t || !at || at.owner === t.owner || points <= 0 || !liveOnTable(t) || !ownFlag(state, b, t.id, 'holyMartyrs') || t.damage.track !== 'single') return keep
+    if (t.damage.filled + points < Math.max(t.damage.boxes, 1)) return keep
     const d = Object.values(state.models)
       .filter((m) => m.id !== t.id && m.owner === t.owner && liveOnTable(m) && profileIdIs(m, DEFENDER) && within(t, m, 5))
       .sort((x, y) => modelDistance(x, t) - modelDistance(y, t) || x.id.localeCompare(y.id))[0]
-    if (!d) return null
+    if (!d) return keep
     const look = lookups(state, b)
     const events: GameEvent[] = []
     const ap = applyDamage(state, d.id, Math.max(d.damage.track === 'single' ? d.damage.boxes : 1, 1), { source: 'other', layouts: look.layouts?.(d.id) })
@@ -425,14 +474,20 @@ export const menothPlugins: AttackPlugin[] = [{
     const h = healDamage(s, t.id, 1, look.layouts?.(t.id))
     return { state: h.state, events: [...events, ...h.events], points: 0 }
   },
-  onResolved(state, b, atk) {
+  onBoxed(_state, b, atk) {
+    // Chain (Decapitation): a model this attack disables cannot make a Tough roll
+    return usesChain(b, atk) ? { removeFromPlay: false, denyTough: true } : null
+  },
+  onResolved(state0, b, atk) {
+    const rep = repelResolved(state0, b, atk)
+    const state = rep.state
     // Cleansing Volley, second half: the fire goes out and the shooter has one more initial shot with the weapon it used
     const flag = atk.x.flags.cleansing as ModelId | undefined
     const at = state.models[atk.attackerId]
     const act = actOf(state)
-    if (!flag || !at || !act || !atk.weaponId || act.limitsUsed.includes(VOLLEY_KEY)) return { state, events: [] }
+    if (!flag || !at || !act || !atk.weaponId || act.limitsUsed.includes(VOLLEY_KEY)) return { state, events: rep.events }
     let s = state
-    const events: GameEvent[] = []
+    const events: GameEvent[] = [...rep.events]
     const r = removeCondition(s, flag, 'fire', 'effect')
     s = r.state; events.push(...r.events)
     const a2 = actOf(s)!

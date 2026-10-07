@@ -1,0 +1,22 @@
+{
+  "id": "cyg.storm-vanes",
+  "name": "Storm Vanes",
+  "faction": "cyg",
+  "type": "unit",
+  "keywords": [
+    "storm-forge-cadre"
+  ],
+  "cost": 5,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "cyg.storm-vane",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 5
+    }
+  },
+  "verify": "Unit of 3 for 5 points, FA 2 (WA, CD, Longshanks lists)."
+}

@@ -17,7 +17,7 @@ import { ASPECT_LETTER } from './types'
 import { cygnarHooks, cygnarPlugins } from './factions/cygnar'
 import { khadorHooks, khadorPlugins } from './factions/khador'
 import { trollbloodsHooks, trollbloodsPlugins } from './factions/trollbloods'
-import { circleHooks, circlePlugins, deathPoweredArm, scythingTouchArmPenalty, treewalkerDefBonus } from './factions/circle'
+import { circleHooks, circlePlugins, deathPoweredArm, scythingTouchArmPenalty, treewalkerDefBonus, warpingWindsBlastResist } from './factions/circle'
 import { cryxHooks, cryxPlugins } from './factions/cryx'
 import { lawgiverStrips, marshalPassIds, menothHooks, menothPlugins } from './factions/menoth'
 
@@ -94,9 +94,33 @@ export function rangeBonusOf(state: GameState, id: ModelId): number {
   for (const e of effectsOn(state, id)) for (const m of e.mods) if (m.stat === 'RNG' && m.mode === 'add') n += m.value
   return n
 }
-/** The attack range of a ranged weapon for this attacker, live RNG effects included (spells never get it). */
-export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec): number =>
-  weaponRange(w, w.recordType === 'spell' || w.kind === 'spell' ? 0 : rangeBonusOf(state, attackerId))
+/**
+ * Warping Winds, ranged half (Wind Weaver, Sky Shaker): a ranged attack at a model of the same faction as a carrier, on the carrier's side and within 3"
+ * of it (the carrier itself included), has 3 less RNG. The carrier is the caster of a live effect named Warping Winds. Faction is read from the profile id
+ * prefix because the range check has no bundle (the faction helpers in cygnar.ts and circle.ts want one); every profile id starts with its faction.
+ */
+const factionPrefix = (m: Pick<ModelState, 'profileId'>): string => m.profileId.split('.')[0]!
+export function warpingWindsRangePenalty(state: GameState, targetId: ModelId): number {
+  const t = state.models[targetId]
+  if (!t || !isOnTable(t)) return 0
+  const f = factionPrefix(t)
+  return state.effects.some((e) => {
+    if (e.name !== 'Warping Winds' || !e.casterId) return false
+    const c = state.models[e.casterId]
+    return !!c && isOnTable(c) && c.life === 'active' && c.owner === t.owner && factionPrefix(c) === f && modelDistance(c, t) <= 3 + 1e-6
+  }) ? 3 : 0
+}
+/**
+ * The attack range of a ranged weapon for this attacker, live RNG effects included (spells never get it). While an attack by this model is being
+ * resolved (`state.attack`) the Warping Winds penalty of its target comes off too, so the real roll and the preview both see it.
+ */
+export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec): number => {
+  const spell = w.recordType === 'spell' || w.kind === 'spell'
+  const base = weaponRange(w, spell ? 0 : rangeBonusOf(state, attackerId))
+  const a = state.attack
+  if (spell || !a || a.attackerId !== attackerId || w.type === 'melee' || w.rng === undefined) return base
+  return Math.max(0, base - warpingWindsRangePenalty(state, a.targetId))
+}
 export const weaponCrippled = (m: ModelState, loc: string): boolean => loc !== '-' && m.crippled.includes(loc)
 export const layoutsOf = (b: DataBundle, m: ModelState): GridLayout[] | undefined => {
   const d = prof(b, m).damage
@@ -173,9 +197,49 @@ export function appliedPassives(state: GameState, b: DataBundle, id: ModelId, ct
       out.push({ ability: ab, src: me })
     }
   }
+  out.push(...enemyAuraPassives(state, b, me, ctx))
   return out
 }
 
+// ---------- auras that work on ENEMY models (Skirmish WP-CORE) ----------
+// `appliedPassives` only walks the model's own side, so a rule that penalises the enemy near its carrier (Annoyance, Ashen Veil) is synthesised
+// here, keyed by the carrier's coreFlag. It answers only when the attack-roll caller names the model as the attacker (`ctx.attackerId`), so
+// nothing else (DEF, ARM, LOS) ever sees it. Each rule counts once, however many carriers stand near (no stacking).
+export const ANNOYANCE_ID = 'core.a.annoyance'
+export const ASHEN_VEIL_ID = 'core.a.ashen-veil'
+interface EnemyAura {
+  id: string; name: string; flag: string; range: number; value: number
+  carrierOk?: (state: GameState, b: DataBundle, src: ModelState) => boolean
+  victimOk?: (state: GameState, b: DataBundle, v: ModelState) => boolean
+}
+const ENEMY_AURAS: EnemyAura[] = [
+  { id: ANNOYANCE_ID, name: 'Annoyance', flag: 'annoyance', range: 1, value: -1 },
+  {
+    id: ASHEN_VEIL_ID, name: 'Ashen Veil', flag: 'ashenVeil', range: 2, value: -2,
+    // the veil is the Light Immolator arm's rule: a crippled arm switches it off; fire-resistant models are not troubled by it
+    carrierOk: (_state, b, src) => !weaponsOf(b, src).some((w) => w.weaponId === 'men.w.light-immolator-flail' && weaponCrippled(src, w.loc)),
+    victimOk: (state, b, v) => !resistsDamageType(state, b, v.id, ['fire']),
+  },
+]
+function enemyAuraPassives(state: GameState, b: DataBundle, me: ModelState, ctx: Partial<CondEnv>): AppliedPassive[] {
+  if (ctx.attackerId !== me.id || !isOnTable(me) || !isLivingModel(state, b, me.id)) return []
+  const out: AppliedPassive[] = []
+  const done = new Set<string>()
+  for (const src of Object.values(state.models)) {
+    if (src.owner === me.owner || src.life !== 'active' || !isOnTable(src) || src.inert) continue
+    for (const a of ENEMY_AURAS) {
+      if (done.has(a.id) || !within(src, me, a.range) || !ownFlag(state, b, src.id, a.flag)) continue
+      if (a.carrierOk && !a.carrierOk(state, b, src)) continue
+      if (a.victimOk && !a.victimOk(state, b, me)) continue
+      done.add(a.id)
+      out.push({ src, ability: { id: a.id, name: a.name, kind: 'passive', trigger: 'passive', scope: { who: 'self' }, effect: [{ op: 'modRoll', roll: 'attack', value: a.value }] } })
+    }
+  }
+  return out
+}
+
+/** coreFlag marker -> the core ability that carries the rule (Skirmish WP-CORE): channelling reads `core.a.arc-node`, Cavalry boosts through `core.a.cavalry`. */
+const FLAG_CORE_ABILITY: Record<string, Id> = { arcNode: 'core.a.arc-node', cavalry: 'core.a.cavalry' }
 /** Ability ids the model has: its own plus any granted by auras. */
 export function abilitiesOf(state: GameState, b: DataBundle, id: ModelId): Id[] {
   const me = state.models[id]
@@ -183,6 +247,11 @@ export function abilitiesOf(state: GameState, b: DataBundle, id: ModelId): Id[] 
   const out = new Set<Id>(abilityList(b, me))
   // abilities an effect granted for a while (Soul Phase, Blood Shadow, Fight to the Last): the effect carries `grants`
   for (const e of effectsOn(state, id)) for (const g of ((e as EffectInstance & { grants?: Id[] }).grants ?? [])) out.add(g)
+  // a faction record that only carries the marker flag (cir.a.cavalry, men.a.arc-node) gets the shared core ability the rule runs through
+  for (const a of [...out]) for (const n of (rec(b, a).effect ?? []) as Rec[]) {
+    const g = n.code === 'coreFlag' ? FLAG_CORE_ABILITY[n.params?.flag as string] : undefined
+    if (g) out.add(g)
+  }
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as EffectNode[]) {
       if ('op' in n && n.op === 'grantAbility' && n.ability) out.add(n.ability)
@@ -292,6 +361,8 @@ export function armOf(state: GameState, b: DataBundle, id: ModelId, o: { armorPi
   return full - baseArm + Math.ceil(baseArm / 2)
 }
 
+/** Names of the fixed-target blast-resistance effects the two Warping Winds users still create; the live aura replaces them. */
+const WARPING_WINDS_SNAPSHOTS = new Set(['Warping Winds (blast)', 'Warping Winds: Blast Resistance'])
 export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, types: DamageType[]): boolean {
   const me = state.models[id]
   if (!me) return false
@@ -301,8 +372,13 @@ export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, 
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
   }
-  // resistance an effect carries (Fortification: Resistance: Blast) in its `resist` list
-  for (const e of effectsOn(state, id)) if (((e as EffectInstance & { resist?: DamageType[] }).resist ?? []).some((t) => types.includes(t))) return true
+  // Warping Winds (Wind Weaver, Sky Shaker): Faction models of the carrier's side within 3" resist blast, live as the models move
+  if (types.includes('blast') && warpingWindsBlastResist(state, b, id)) return true
+  // resistance an effect carries (Fortification: Resistance: Blast) in its `resist` list; the fixed-target Warping Winds snapshots give way to the live check above
+  for (const e of effectsOn(state, id)) {
+    if (WARPING_WINDS_SNAPSHOTS.has(e.name)) continue
+    if (((e as EffectInstance & { resist?: DamageType[] }).resist ?? []).some((t) => types.includes(t))) return true
+  }
   for (const a of abilityList(b, me)) for (const n of (rec(b, a).effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
   return false
 }
@@ -360,7 +436,13 @@ export function evalCond(state: GameState, b: DataBundle, node: ConditionNode | 
   if (n.all) return (n.all as ConditionNode[]).every((c) => evalCond(state, b, c, env))
   if (n.any) return (n.any as ConditionNode[]).some((c) => evalCond(state, b, c, env))
   if (n.not) return !evalCond(state, b, n.not, env)
-  if (n.code) { const h = CODE_CONDITIONS[n.code]; return h ? h(state, b, env, n.params ?? {}) : false }
+  if (n.code) {
+    const h = CODE_CONDITIONS[n.code]
+    if (h) return h(state, b, env, n.params ?? {})
+    // a faction's own condition code (registered in its cryxHooks.conditions and so on)
+    const fh = codeHooks().conditions[n.code]
+    return fh ? fh({ state, point: 'passive', selfId: env.selfId, activePlayer: state.activePlayer, attackerId: env.attackerId, targetId: env.targetId, params: n.params ?? {}, bundle: b } as HookContext, n.params ?? {}) : false
+  }
   const sid = subjectId(env, n.subject)
   const sm = sid ? state.models[sid] : undefined
   switch (n.test) {
@@ -440,10 +522,22 @@ export interface HookEnv extends HookContext { bundle: DataBundle }
 export const envOf = (c: HookContext): HookEnv => c as HookEnv
 export const noop = (c: HookContext): HookResult => ({ state: c.state, events: [] })
 
+/**
+ * Cavalry (core.a.cavalry, reached from the coreFlag `cavalry` through abilitiesOf): the attack roll of the model's charge attack is boosted
+ * with no focus spent (RB p112). The damage roll of a charge attack is boosted by the charge rule itself. Runs at attack.declared, after
+ * the data's `when: charged` test.
+ */
+const coreCavalry = (c: HookContext): HookResult => {
+  const a = atkOf(c.state)
+  if (!a?.chargeAttack || a.x.boosted) return noop(c)
+  return { state: setAtk(c.state, { ...a, x: { ...a.x, boosted: true, flags: { ...a.x.flags, freeBoost: true } } }), events: [] }
+}
+
 export const coreHooks: CodeHookRegistry = {
   conditions: {},
   effects: {
     coreFlag: noop,
+    coreCavalry,
   },
 }
 
@@ -467,9 +561,20 @@ export interface AttackPlugin {
   /** the target was boxed: may demand RFP and a blast */
   onBoxed?(state: GameState, b: DataBundle, atk: AtkCtx, targetId: ModelId, job: DmgJob): { removeFromPlay: boolean; denyTough: boolean; burst?: { pow: number; radius: number; types: DamageType[] } } | null
 }
+/**
+ * Core plugins (Skirmish WP-CORE). Magical weapons: an effect that carries `magicalWeapons` (Guidance) makes the weapon attacks of the model it
+ * is on deal magical damage, as Wraithbane does; spells are magical already.
+ */
+export const corePlugins: AttackPlugin[] = [{
+  id: 'core.magical-weapons',
+  damageTypes(state, _b, atk) {
+    if (!atk.weaponId || atk.spellId) return []
+    return effectsOn(state, atk.attackerId).some((e) => (e as EffectInstance & { magicalWeapons?: boolean }).magicalWeapons) ? ['magical'] : []
+  },
+}]
 // Lazy: faction files import helpers from this file, so the tables are built on first use (avoids an import cycle at load).
 let pluginCache: AttackPlugin[] | null = null
-export const plugins = (): AttackPlugin[] => (pluginCache ??= [...cygnarPlugins, ...khadorPlugins, ...trollbloodsPlugins, ...circlePlugins, ...cryxPlugins, ...menothPlugins])
+export const plugins = (): AttackPlugin[] => (pluginCache ??= [...corePlugins, ...cygnarPlugins, ...khadorPlugins, ...trollbloodsPlugins, ...circlePlugins, ...cryxPlugins, ...menothPlugins])
 let hookCache: CodeHookRegistry | null = null
 export const codeHooks = (): CodeHookRegistry => (hookCache ??= {
   conditions: {

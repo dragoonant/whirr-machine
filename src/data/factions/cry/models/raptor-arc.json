@@ -1,0 +1,54 @@
+{
+  "faction": "cry",
+  "id": "cry.raptor-arc",
+  "name": "Raptor",
+  "type": "warEngine",
+  "engineClass": "light",
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "construct"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 7,
+    "MAT": 5,
+    "RAT": 5,
+    "DEF": 14,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "-CC",
+      "-HC",
+      "--HC",
+      "--HM",
+      "-HM",
+      "-MM"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.doomspitter",
+      "location": "H"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.pathfinder",
+    "cry.a.dodge",
+    "cry.a.eyeless-sight",
+    "cry.a.arc-node"
+  ],
+  "arcNode": true,
+  "cost": 6,
+  "fa": 6,
+  "figure": {
+    "slug": "wm-raptor",
+    "archetype": "lightEngine"
+  },
+  "verify": "Chassis stats, 20-box grid (letters from S1), Dodge, Pathfinder: S1 and S2. Build: Doomspitter head 4 + Arc Node back 2 = 6 (chassis 0, FA 6: S1, S2, S4). The Doomspitter card line and its Eyeless Sight grant are S1 + S2. No A box: the Arc Node cannot be crippled in MK4 (S2 note)."
+}

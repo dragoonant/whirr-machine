@@ -271,3 +271,85 @@ Per STATUS.md the engine runs the Cygnar and Khador starters only; none of these
 - RULING: card values checked | every card value carries a source tag (cryx-sources.md); single-source values: Hades grid layout and Dual Attack (S1), Chatterbane base, Fury health and names (S2) | 2026-10-07 web audit; the official app itself was not read
 - RULING: Nekane spell rack | not modelled: she casts only her five card spells | MK4 lets a warcaster rack extra army spells (RB p101), but no reliable source gives her rack slot count (S6 says 3 on a copied entry) and the starter is played without racks, as the Quick Start does
 - RULING: Marionette | the Furies' player makes one affected enemy model reroll one of its own attack or damage rolls; still not offered (no reroll engine) | S1 and S2 word it that way; the 2026-10-06 text had it helping a friendly attacker
+
+## Skirmish (50 points): WP-D-cry (2026-10-07)
+
+List `cry.l.skirmish` ("Necrofactorium Skirmish", level `skirmish`, leader Nekane) is the Recon starter plus the three add-ons Nekane players
+field most (90-skirmish.md B.5). Costs recomputed from the data: 0 + 16 + 4 + 10 + **10 + 6 + 4** = **50**.
+
+| Entry | Pts | Notes |
+|---|---|---|
+| Wraithbinder Nekane | 0 | unchanged |
+| Hades | 16 | unchanged |
+| Master Necrotech Chatterbane | 4 | unchanged |
+| The Furies (3) | 10 | unchanged |
+| **Night Terrors** (3) `cry.night-terrors` | 10 | new, FA 2 |
+| **Raptor** (Doomspitter head, Arc Node back) `cry.raptor-arc` | 6 | new, FA 6; fixed-loadout profile (head 4 + back 2; chassis 0) |
+| **Necrosurgeon Initiates** (3) `cry.initiates` | 4 | new, FA 4 |
+
+Non-lesser Cohort: Hades and the Raptor. Weapon qty and loadout are on the profiles; the list entry has no `loadout` (90 A.2).
+
+### Card values and confidence
+
+Tags: S1 community dump of the app's data (isorna/wardice-warmachine-data, July 2026), S2 Warmachine Academy wiki, S4 Asmoridin's
+list data, S8 Wargamer's Cryx preview (2024, pre-release), S9 Steamforged and retailer pages (names, box contents only). The official
+app itself was not read; no free card PDF exists for these three models.
+
+| Model | SPD | MAT | RAT | DEF | ARM | Health | Base | FA | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| Night Terror (x3) | 7 | 6 | - | 14 | 16 | 5 each | 50 | 2 | stats, weapons, abilities S1+S2; 50 mm S2+S8; 5 boxes S2 only; FA S1+S4 (S2 says 3) |
+| Necrosurgeon Initiate (x3) | 6 | 4 | - | 14 | 12 | 1 each | 30 | 4 | stats, weapon, abilities S1+S2; base and 1 box S2 only |
+| Raptor | 7 | 5 | 5 | 14 | 14 | 20-box grid | 40 | 6 | stats S1+S2; grid letters S1 only; light-warjack base S2 template; hardpoint costs S1+S2+S4 |
+
+- Night Terror weapon: **Scything Blade** x2, MAT 6, RNG 1, POW 12, magical (S1+S2). The 2024 preview (S8) quoted MAT 7; both current
+  sources say 6, so 6 stands. Abilities (S1+S2): Incorporeal, Unstoppable, Undead, Cavalry, Apparition, Finisher, Reposition [3"].
+- Initiate weapon: **Implement of Death**, MAT 4, RNG 1, POW 11. Abilities (S1+S2): Undead, Anatomical Precision, Grim Returns,
+  Magic Ability, Empower, Necrosurgery [d3+1].
+- Raptor chassis abilities (S1+S2): Light Warjack (Construct, Headbutt, Slam), Pathfinder, Dodge. **Doomspitter** (head, 4 points):
+  RAT 5, RNG 8, ROF 1, AOE 2, POW 14/8, location H, and it grants Eyeless Sight (S1+S2). **Arc Node** (back, 2 points). Other
+  options on the chassis (Deathripper 3, Beaked Maw 3, Venom Blaster 4; Heavy Armor 2, Light Spiker 4, Necrovent 3) are not in the list.
+- Raptor grid, columns top box first (S1): `-CC`, `-HC`, `--HC`, `--HM`, `-HM`, `-MM`: 4 Cortex, 4 Head, 4 Movement, 8 blank boxes.
+  There is no Arc Node box: S2 notes that MK4 offers no way to cripple the node.
+- A Raptor with the Doomspitter has no melee weapon (the Deathripper and Beaked Maw heads bring one).
+
+### Rules we wrote (own words)
+
+| Rule | What it does here | Where |
+|---|---|---|
+| Cavalry | the attack roll of this model's charge attack is boosted for free (charge damage is boosted by the core charge rule already) | `cry.a.cavalry` + code `cryCavalry` at `attack.declared`, `when: charged`; FAC-CRY-045 |
+| Finisher | one extra damage die against a model with any damage marked | `cry.a.finisher` (coreFlag `finisher`) + attack plugin `damageDice`; FAC-CRY-046 |
+| Anatomical Precision | a melee damage roll that fails to beat a living model's ARM still deals 1; a model its melee attack disables gets no Tough roll | `cry.a.anatomical-precision`: `attack.hit` forbid tough, plugin `adjustPoints`; FAC-CRY-047 |
+| Empower (star Action, 6", one per unit activation) | a friendly Cryx warjack loses Disruption and gains 1 focus (cap 3) | `cry.a.empower` + code `cryEmpower`; FAC-CRY-048, 049 |
+| Necrosurgery [d3+1] (star Action, 1") | removes d3+1 damage from a friendly undead Cryx model | `cry.a.necrosurgery` reuses code `repair` with `kind: undead`; FAC-CRY-050 |
+| Grim Returns (star Action, 5") | a destroyed Grunt of the chosen Grunt's unit returns within 2" with one box unmarked and gives up Normal Movement and Combat Action that turn | `cry.a.grim-returns` + code `cryGrimReturns`; FAC-CRY-051, 052 |
+| Eyeless Sight | sees through clouds, ignores concealment and Stealth | `cry.a.eyeless-sight` (three `ignore` ops) |
+| Arc Node | carries the flag `arcNode` (see below) | `cry.a.arc-node`, profile `arcNode: true` |
+| Apparition, Reposition, Unstoppable, Incorporeal, Dodge | existing records reused (`cry.a.apparition`, `core.a.reposition`, `core.a.unstoppable`, `cry.a.incorporeal`, `cry.a.dodge`) | |
+
+Grim Returns on a Night Terror brings it back Incorporeal (the ability is on its profile). Wraithbinder gives the Night Terrors +3 ARM
+within 10" of Nekane while they are Incorporeal, through the existing aura.
+
+### Open points handed to other packages
+
+- **Arc Node channelling is not live.** `spells.ts` looks for the ability id `core.a.arc-node`, which `core/abilities.json` does not define, so
+  the profile carries `cry.a.arc-node` (a `coreFlag arcNode`). WP-CORE: add `core.a.arc-node`, put it in `cry.raptor-arc` abilities, drop `cry.a.arc-node`.
+- **Targeted star Actions use a marker.** `needsTarget` in `phases/activation.ts` is true only for makeAttack, advance and `repair`; Empower
+  and Grim Returns carry a no-op `{op: 'advance', dist: 0}` node so core offers a chosen friendly target, then run their code hook. Replace
+  with a real "targeted" notion when core is next touched. Grim Returns is offered even when the unit has no destroyed Grunt (harmless).
+- **Headbutt needs a melee weapon.** `combatChoices` offers Headbutt only when the model has a melee weapon, so the Doomspitter Raptor has none.
+- **sim invariant.** `tools/sim.ts` flags `destroyed -> active`; Grim Returns emits `LifeStateChanged` with `cause: 'cry.a.grim-returns'` and must be allowed.
+- Faction `conditions` in a registry are not read by `evalCond` (only core code conditions are), so Finisher is a plugin and not a `when: {code}`.
+- Figures are not made: slugs `wm-night-terror`, `wm-initiate`, `wm-raptor` (procedural stand-ins draw until WP-FIG).
+
+### Sources used (Skirmish pass)
+
+- https://github.com/isorna/wardice-warmachine-data (`mk4/profiles/cryx.necrofactorium.profiles.json`, last change 2026-07-10, "app data dump"): stats, FA, weapons, abilities, Raptor grid and hardpoint costs (S1).
+- https://warmachineacademy.miraheze.org/wiki/Night_Terrors (rev 2026-04-13), /wiki/Raptor (2026-01-22), /wiki/Necrosurgeon_Initiates (2026-04-13) and the rule templates Cavalry, Finisher, Eyeless Sight, Reposition, Apparition, Grim Returns, Empower, Necrosurgery, Anatomical Precision, Dodge, Arc Node, Large, Medium, Small Base, Light Warjack, via `/w/api.php?action=query&prop=revisions` (S2).
+- https://github.com/Asmoridin/minis_games (`Warmachine/Data/Warmachine MKIV Data.txt`, 2026-04-07): points and FA (Night Terrors 10 / FA 2, Initiates 4 / FA 4, Raptor FA 6) (S4).
+- https://www.wargamer.com/warmachine/cryx-iron-liche-and-night-terrors: Night Terrors 50 mm bases, 10 points, ability names; its MAT 7 is a pre-release value (S8).
+- Longshanks list scan in `90-skirmish-sources.md` section 2 (Raptor, Night Terrors and Initiates in 20, 18 and 16 of 21 Nekane lists; the 50-point list `[LS-36739]`).
+- Tried, no card values: steamforged.com blog and product pages (HTTP 429), brueckenkopf-online.com rules preview (no stat lines), web searches for review text.
+
+### Needs rules check (Skirmish)
+
+See the `RULING:` lines for WP-D-cry in `docs/needs-rules-check.md` (M12 Skirmish section).

@@ -3,12 +3,36 @@ import { loadBundle } from '../../../data/index'
 import type { Id } from '../../../engine/index'
 import type { NewGameOptions } from '../../contract'
 import { BOARDS } from '../../board/boards'
+import { DEFAULT_GAME_SIZE, parseGameSize, type GameSize } from '../../store/settingsStore'
+
+export { DEFAULT_GAME_SIZE, parseGameSize, type GameSize }
+
+/** Game sizes for the start screen's Game size select (90-skirmish A.1; points and table from RB p118 and p116). */
+export const GAME_SIZES: readonly { id: GameSize; label: string; points: number; table: number; note: string }[] = [
+  { id: 'recon', label: 'Recon', points: 30, table: 36, note: 'About 30 points on a 36 inch table: a short game with a small army.' },
+  { id: 'skirmish', label: 'Skirmish', points: 50, table: 48, note: 'About 50 points on a 48 inch table: a bigger army and seven rounds.' },
+]
+/** The scenario each size starts on (the first one listed otherwise). */
+export const DEFAULT_SCENARIO: Record<GameSize, Id> = { recon: 'scn-qs-demo', skirmish: 'scn-copperline-crossing' }
+
+let warnedSize = ''
+/**
+ * `?size=recon|skirmish` from a URL query. Null when the URL does not name a size; an unknown value also gives null
+ * (so the caller falls back to recon) with one console warning per bad value.
+ */
+export function sizeFromUrl(search = typeof location !== 'undefined' ? location.search : ''): GameSize | null {
+  const raw = new URLSearchParams(search).get('size')
+  if (raw === null) return null
+  const size = parseGameSize(raw)
+  if (!size && warnedSize !== raw) { warnedSize = raw; console.warn(`Whirr Machine: unknown ?size=${raw}; using recon (try recon or skirmish).`) }
+  return size
+}
 
 export interface ArmyCard { profileId: Id; name: string; role: string; count: number }
-export interface SideChoice { listId: Id; factionId: Id; factionName: string; listName: string; points: number; models: ArmyCard[] }
+export interface SideChoice { listId: Id; factionId: Id; factionName: string; listName: string; points: number; level: GameSize; models: ArmyCard[] }
 export interface ScenarioChoice { id: Id; name: string; text: string }
 
-type Rec = { id: string; recordType?: string; name?: string; faction?: string; resource?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
+type Rec = { id: string; level?: string; recordType?: string; name?: string; faction?: string; resource?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
 
 const ROLE_WORDS: Record<string, string> = {
   leader: 'Warcaster', warEngine: 'War-engine', beast: 'Warbeast', solo: 'Solo', unit: 'Unit', trooper: 'Trooper', battleEngine: 'Battle engine',
@@ -17,11 +41,12 @@ const ROLE_WORDS: Record<string, string> = {
 const records = (): Rec[] => Object.values(loadBundle().byId as Record<string, Rec>)
 const byId = (id: string): Rec | undefined => (loadBundle().byId as Record<string, Rec>)[id]
 
-/** Every list at recon level, as a choosable side (the starter lists). */
-export function sideChoices(): SideChoice[] {
+/** Every list of a game size (default recon: the starter lists), as a choosable side. A list with no level is recon. */
+export function sideChoices(size: GameSize = DEFAULT_GAME_SIZE): SideChoice[] {
   const out: SideChoice[] = []
   for (const r of records()) {
     if (r.recordType !== 'list' || !r.leader || !r.faction) continue
+    if ((r.level ?? 'recon') !== size) continue
     const models: ArmyCard[] = [r.leader, ...(r.entries ?? []).map((e) => e.profile)].map((pid, i) => {
       const p = byId(pid)
       const size = i === 0 ? 1 : (r.entries?.[i - 1]?.size ?? 1)
@@ -31,16 +56,22 @@ export function sideChoices(): SideChoice[] {
     // a leader that is also listed as an entry would be doubled: drop repeats
     const seen = new Set<string>()
     const unique = models.filter((m) => (seen.has(m.profileId) ? false : (seen.add(m.profileId), true)))
-    out.push({ listId: r.id, factionId: r.faction, factionName: byId(r.faction)?.name ?? r.faction, listName: r.name ?? r.id, points: r.points ?? 0, models: unique })
+    out.push({ listId: r.id, factionId: r.faction, factionName: byId(r.faction)?.name ?? r.faction, listName: r.name ?? r.id, points: r.points ?? 0, level: size, models: unique })
   }
   return out.sort((a, b) => a.factionName.localeCompare(b.factionName))
 }
 
-/** Scenarios that suit a recon-level game. */
-export function scenarioChoices(): ScenarioChoice[] {
+/** Scenarios played at a game size (default recon). A scenario with no `levels` counts as recon only. */
+export function scenarioChoices(size: GameSize = DEFAULT_GAME_SIZE): ScenarioChoice[] {
   return records()
-    .filter((r) => r.recordType === 'scenario' && (!r.levels || r.levels.includes('recon')))
+    .filter((r) => r.recordType === 'scenario' && (r.levels ? r.levels.includes(size) : size === 'recon'))
     .map((r) => ({ id: r.id, name: r.name ?? r.id, text: r.text ?? '' }))
+}
+
+/** The scenario a game size starts on: recon keeps the first one listed, skirmish prefers Copperline Crossing. */
+export function defaultScenarioId(size: GameSize, choices: ScenarioChoice[] = scenarioChoices(size)): Id {
+  const pick = size === 'recon' ? choices[0] : (choices.find((c) => c.id === DEFAULT_SCENARIO[size]) ?? choices[0])
+  return pick?.id ?? ''
 }
 
 /** Opponent strengths (40-ai §8). The first entry is the start screen's default. */

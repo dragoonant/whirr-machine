@@ -1,17 +1,39 @@
-// Scenario roles (40-ai §2 bucket 4, "scenario movers"): each turn the AI decides which models hold our near element
-// (it needs `models` bodies within `within`), which contest or take the far one, and which are free to fight. The role's
-// goal point pulls a model's move scoring toward it; the engine's control check still decides what scores.
+// Scenario roles (40-ai §2 bucket 4, "scenario movers"): each turn the AI decides which models hold our elements (a hold
+// needs a model the element accepts: a warjack or warbeast for a 50 mm objective, a whole unit for a 40 mm one), which
+// contest the ones we cannot staff, and which are free to fight. The role's goal point pulls a model's move scoring toward
+// it; the engine's control check still decides what scores. Works for any number of elements (two on the 36" boards, four
+// on Copperline Crossing); the element's own hold rule, read from the scenario record, says which kinds of group can stand on it.
 import type { GameState, ModelId, ModelState, PlayerId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
-import { baseRadius, distToElement, elementsOf, forwardOf, modelsOf, type Element } from './world'
+import { elementSpecs, groupCanHold } from './scenario'
+import { baseRadius, distToElement, elementsOf, enemiesOf, forwardOf, modelsOf, type Element } from './world'
 
 export interface Role { kind: 'hold' | 'contest' | 'free'; element?: Element; goal?: Vec2 }
 
 const cache = new WeakMap<GameState, Map<PlayerId, Map<ModelId, Role>>>()
 
-/** Durability for contesting: war-engines first, then multi-model units, then solos. */
+/** Durability for contesting and for holding: war-engines first, then multi-model units, then solos. */
 const durability = (s: GameState, m: ModelState): number =>
-  m.type === 'warEngine' ? 3 : m.unitId ? 1 + (s.units[m.unitId]?.troopers.length ?? 1) * 0.4 : m.type === 'solo' ? 1 : 0
+  m.type === 'warEngine' || m.type === 'battleEngine' ? 3 : m.type === 'beast' ? 2.6 : m.unitId ? 1 + (s.units[m.unitId]?.troopers.length ?? 1) * 0.4 : m.type === 'solo' ? 1 : 0
+
+interface Grp { key: string; ms: ModelState[]; lead: ModelState; pace: number; dur: number }
+
+/** Where in the element's hold circle (our side of it) each model of the group should stand. */
+function goalsFor(el: Element, fwd: Vec2, ms: ModelState[]): Map<ModelId, Vec2> {
+  const out = new Map<ModelId, Vec2>()
+  const n = ms.length
+  // the direction from the element back toward our edge
+  const back = Math.atan2(-fwd.z, -fwd.x)
+  const radius = Math.max(0.6, Math.min(el.within - 0.9, 1.1 + 0.25 * n))
+  const step = n <= 1 ? 0 : Math.min((60 * Math.PI) / 180, (300 * Math.PI) / 180 / n)
+  const ordered = ms.slice().sort((a, b) => a.id.localeCompare(b.id))
+  ordered.forEach((m, i) => {
+    const a = back + (i - (n - 1) / 2) * step
+    const r = n <= 1 ? 1.4 : radius
+    out.set(m.id, { x: el.pos.x + Math.cos(a) * r, z: el.pos.z + Math.sin(a) * r })
+  })
+  return out
+}
 
 export function rolesFor(s: GameState, me: PlayerId): Map<ModelId, Role> {
   let byP = cache.get(s)
@@ -19,48 +41,82 @@ export function rolesFor(s: GameState, me: PlayerId): Map<ModelId, Role> {
   const hit = byP.get(me)
   if (hit) return hit
   const out = new Map<ModelId, Role>()
-  const fwd = forwardOf(s, me)
-  const els = elementsOf(s).slice().sort((a, b) => (a.pos.x * fwd.x + a.pos.z * fwd.z) - (b.pos.x * fwd.x + b.pos.z * fwd.z))
-  const ours = modelsOf(s, me).filter((m) => m.type !== 'leader' && !m.inert)
-  // activation groups (a unit moves together)
-  const groups = new Map<string, ModelState[]>()
-  for (const m of ours) { const k = m.unitId ?? m.id; groups.set(k, [...(groups.get(k) ?? []), m]) }
-  const free = new Set(groups.keys())
-  const goalOf = (el: Element, from: Vec2): Vec2 => {
-    // stand on our side of the element, just inside the hold distance
-    const back = { x: -fwd.x, z: -fwd.z }
-    const off = 1.4
-    const p = { x: el.pos.x + back.x * off, z: el.pos.z + back.z * off }
-    // slide along the element toward where the model comes from
-    const lat = { x: fwd.z, z: -fwd.x }
-    const side = (from.x - el.pos.x) * lat.x + (from.z - el.pos.z) * lat.z
-    const k = Math.max(-1.5, Math.min(1.5, side))
-    return { x: p.x + lat.x * k, z: p.z + lat.z * k }
-  }
-  const assign = (el: Element, kind: Role['kind'], bodies: number, prefer: (g: ModelState[]) => number): void => {
-    let have = 0
-    while (have < bodies && free.size) {
-      let bestK: string | null = null, bv = Infinity
-      for (const k of free) {
-        const g = groups.get(k)!
-        const lead = g[0]!
-        const spd = query.threat(s, lead.id).advance || 5
-        const d = Math.max(0, distToElement(el, lead.pos, lead.base) - el.within)
-        const cost = d / spd - prefer(g)
-        if (cost < bv) { bv = cost; bestK = k }
-      }
-      if (!bestK) break
-      const g = groups.get(bestK)!
-      free.delete(bestK)
-      for (const m of g) out.set(m.id, { kind, element: el, goal: goalOf(el, m.pos) })
-      have += g.length
-    }
-  }
-  const near = els[0], far = els[1]
-  if (near) assign(near, 'hold', near.models, (g) => (g.length >= 2 ? 0.8 : 0) - (g[0]!.type === 'warEngine' ? 0.3 : 0))
-  if (far) assign(far, 'contest', 1, (g) => durability(s, g[0]!) * 0.35)
-  for (const k of free) for (const m of groups.get(k)!) out.set(m.id, { kind: 'free' })
   byP.set(me, out)
+  const fwd = forwardOf(s, me)
+  const els = elementsOf(s)
+  if (!els.length) return out
+  const tok = new Map([...elementSpecs(s)].map(([k, v]) => [k, v.eligible]))
+  const ours = modelsOf(s, me).filter((m) => m.type !== 'leader' && !m.inert && !m.offTable)
+  // activation groups (a unit moves together)
+  const byKey = new Map<string, ModelState[]>()
+  for (const m of ours) { const k = m.unitId ?? m.id; byKey.set(k, [...(byKey.get(k) ?? []), m]) }
+  const groups: Grp[] = []
+  for (const [key, ms] of byKey) {
+    const lead = ms[0]!
+    let adv = 5
+    try { adv = query.threat(s, lead.id).advance || 5 } catch { adv = lead.type === 'warEngine' ? 5 : 6 }
+    groups.push({ key, ms, lead, pace: adv + 2.5, dur: durability(s, lead) })
+  }
+  const foes = enemiesOf(s, me).filter((e) => !e.inert)
+  // arrival time of the nearest of ours and of theirs: elements we get to first are ours to hold
+  const turns = (el: Element, p: Vec2, mm: number, pace: number): number => Math.max(0, distToElement(el, p, mm) - (el.within - 0.5)) / pace
+  const adv = new Map<string, number>()
+  for (const el of els) {
+    let dm = Infinity, de = Infinity
+    for (const g of groups) dm = Math.min(dm, turns(el, g.lead.pos, g.lead.base, g.pace))
+    for (const e of foes) de = Math.min(de, turns(el, e.pos, e.base, 7))
+    adv.set(el.id, (Number.isFinite(de) ? de : 4) - (Number.isFinite(dm) ? dm : 4))
+  }
+  // projection on the forward axis breaks ties: the elements nearer our edge are ours first
+  const proj = (el: Element): number => el.pos.x * fwd.x + el.pos.z * fwd.z
+  const order = els.slice().sort((a, b) => (adv.get(b.id)! - adv.get(a.id)!) || (proj(a) - proj(b)))
+  const free = new Set(groups.map((g) => g.key))
+  const byG = new Map(groups.map((g) => [g.key, g]))
+  const bodiesNeeded = (el: Element): number => (tok.get(el.id) ?? ['any']).includes('any') ? Math.max(1, el.models) : 1
+
+  const claim = (el: Element, kind: Role['kind'], g: Grp): void => {
+    free.delete(g.key)
+    const goals = goalsFor(el, fwd, g.ms)
+    for (const m of g.ms) out.set(m.id, { kind, element: el, goal: goals.get(m.id) })
+  }
+  const cost = (el: Element, g: Grp, holding: boolean): number => {
+    const t = turns(el, g.lead.pos, g.lead.base, g.pace)
+    const ours = (adv.get(el.id) ?? 0) >= 0
+    // a durable body belongs on an element we will have to defend; a fast one on the far side
+    const prefer = holding ? (ours ? 0.25 * g.dur : 0.1 * g.dur + (g.pace >= 9 ? 0.4 : 0)) : 0.12 * g.dur + (g.pace >= 9 ? 0.3 : 0)
+    return t - prefer
+  }
+  const unstaffed: Element[] = []
+  for (const el of order) {
+    const tokens = tok.get(el.id) ?? ['any']
+    let need = bodiesNeeded(el)
+    let staffed = false
+    while (need > 0) {
+      let best: Grp | null = null, bv = Infinity
+      for (const k of free) {
+        const g = byG.get(k)!
+        if (!groupCanHold(tokens, g.ms)) continue
+        const c = cost(el, g, true)
+        if (c < bv) { bv = c; best = g }
+      }
+      if (!best) break
+      claim(el, (adv.get(el.id) ?? 0) >= 0 ? 'hold' : 'contest', best)
+      need -= tokens.includes('any') ? best.ms.length : 1
+      staffed = true
+    }
+    if (!staffed) unstaffed.push(el)
+  }
+  // elements nobody can hold for us: send the toughest or fastest spare group to deny them (any non-Leader contests)
+  for (const el of unstaffed) {
+    let best: Grp | null = null, bv = Infinity
+    for (const k of free) {
+      const g = byG.get(k)!
+      const c = cost(el, g, false)
+      if (c < bv) { bv = c; best = g }
+    }
+    if (best) claim(el, 'contest', best)
+  }
+  for (const k of free) for (const m of byG.get(k)!.ms) out.set(m.id, { kind: 'free' })
   return out
 }
 
@@ -76,4 +132,3 @@ export function edgeGap(s: GameState, p: Vec2, mm: number): number {
   const r = baseRadius(mm)
   return Math.min(hw - Math.abs(p.x), hd - Math.abs(p.z)) - r
 }
-

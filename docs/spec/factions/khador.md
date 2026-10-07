@@ -170,3 +170,91 @@ p37, p45):
 - Bases (QS p35 layout diagram, model discs measured against the 36" table; Lazarenko also from his stat
   bar): Vilkul and each Hound 30 mm, Lazarenko 40 mm, Razor 50 mm.
 - Each Hound is a named character with a different gun, so the data model needs per-trooper weapons.
+
+---
+
+# Skirmish (50 points): `kha.l.skirmish` (WP-D-kha)
+
+List (49 points, up to 4 under is legal, RB p118): the Recon starter plus the three add-ons Vilkul players actually field
+(`90-skirmish.md` B.2).
+
+| Entry | Pts | FA | Status |
+|---|---|---|---|
+| Kapitan Zahara Vilkul | 0 | C | `kha.vilkul` (starter) |
+| Razor | 17 | C | `kha.razor` (starter) |
+| Dire Wolf (Accuracy / Cannon / Heavy Chain Gun) | 11 | 4 | **new** `kha.dire-wolf-gun` |
+| Sergeant Goran Lazarenko (Advance Deployment) | 4 | C | `kha.lazarenko` (starter) |
+| The Hounds x3 (Advance Deployment) | 9 | C | `kha.hounds` (starter) |
+| Arkanists x3 | 4 | 4 | **new** `kha.arkanists` (trooper `kha.arkanist`) |
+| Winter Korps Snipers x3 (Advance Deployment) | 4 | 3 | **new** `kha.wk-snipers` (trooper `kha.wk-sniper`) |
+| **Total** | **49** | | |
+
+## Sources (research standard of 2026-10-07)
+
+| Tag | Source | What it gave |
+|---|---|---|
+| `CD` | `isorna/wardice-warmachine-data`, `mk4/profiles/khador.winter-korps.profiles.json` (keys `direWolf`, `arkanists`, `winterKorpsSnipers`), `mk4/abilities/abilities.json`, `mk4/advantages/advantages.json`, raw.githubusercontent.com `main` (app dump 2026-07-10), fetched 2026-10-07 | stat lines, health grid, hardpoint costs and weapons, FA, ability wording |
+| `WA` | Warmachine Academy wiki, https://warmachineacademy.miraheze.org/wiki/Dire_Wolf (rev 2026-04-13), `/Arkanists` (2026-01-18), `/Winter_Korps_Snipers` (2026-04-13); templates `Template:Volley_Fire` (2025-03-11), `Sniper` (2024-10-18), `Empower` (2024-08-18), `Razor_Wind_MA` (2024-10-02), `Magic_Ability`, `Small_Base` (30 mm), `Anchor`, `Beat_Back`, read through the MediaWiki API | stat tables (with PC, #, FA), loadouts, base templates, ability wording |
+| `LS` | Longshanks Vilkul lists (`90-skirmish-sources.md` section 2; event 38172 Utah County Fall Journeyman Stage 2 holds the Accuracy / Cannon / Heavy Chain Gun build at 11) | which add-ons, build and its price |
+| `SFG` | Steamforged product pages found by search (Winter Korps Snipers and Hunting Dog: "3 models", Advance Deployment, Sniper; Auxiliary Expansion holds the Arkanists); the pages themselves answered HTTP 429, so only the search snippets were read | unit size 3 and the Snipers' two rules, independent of CD and WA |
+| `PP22` | Privateer Press lore article, https://home.privateerpress.com/2022/08/01/khador-winter-korps-lore-kapitan-ekaterina-baranova-dire-wolf-and-great-bear/ | an older preview text of Anchor (also stopped blast dice); superseded by the 2024-2026 text in CD and WA, not used |
+| `TL` | https://zachwatsonauthor.com/2026/03/11/winter-korps-tier-list/ | roles only: Arkanists are the focus engine, Snipers a flank and 40 mm contest unit, Dire Wolf a cheap holder |
+| `RB` | MK4 rulebook (local, abridged) | Crippled Head loses head rules (p95); boosted rolls (p61); battle engines and structures are not warrior models |
+
+No free Steamforged card PDF for the Winter Korps was found (only the paid rules PDF and the Quick Start). Confidence key as
+above plus `V-2src`: CD and WA agree and the rule reads the same in both (both derive from the app, so this is agreement of two
+mirrors, not two independent printings); `U-1src`: one source.
+
+## Stat lines
+
+| id | SPD | AAT | MAT | RAT | DEF | ARM | Boxes | Base | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| kha.dire-wolf-gun | 5 | n/a | 6 | 4 (+1 Accuracy = 5) | 10 | 19 | grid 30 | 50 | stats, grid V-2src; base 50 by heavy class (U) |
+| kha.arkanist | 6 | 4 | 0 | 0 | 13 | 13 | 1 | 30 | V-2src; WA prose elsewhere says AAT 5 (RULING) |
+| kha.wk-sniper | 6 | n/a | 4 | 6 | 13 | 13 | 1 | 30 | V-2src; Steamforged search snippet confirms Advance Deployment, Sniper, 3 models |
+
+MAT and RAT 0 on the Arkanist: the card has no weapons, and `model.schema.json` requires both stats.
+
+Dire Wolf grid (CD, top box first; `-` hull): C1 `---L`, C2 `--LLM`, C3 `---HMM`, C4 `---HCC`, C5 `--RRC`, C6 `---R` (30
+boxes; systems L 3, M 3, H 2, C 3, R 3). Unlike Razor it has a **Head** system: a crippled Head loses the Accuracy bonus (RB p95).
+
+## Weapons
+
+| id | Weapon | Type | Stat | RNG | ROF | POW | Loc | Abilities | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| kha.dire-wolf-gun | Cannon | ranged | RAT 4(5) | 12 | 1 | 15 | R | Beat Back, Critical Knockdown | V-2src |
+| kha.dire-wolf-gun | Heavy Chain Gun | ranged | RAT 4(5) | 10 | d3+1 | 12 | L | Volley Fire | V-2src |
+| kha.wk-sniper | Hunting Rifle | ranged | RAT 6 | 14 | 1 | 10 | n/a | none (Sniper is the model's rule) | V-2src |
+| kha.wk-sniper | Hand Weapon | melee | MAT 4 | 1 | n/a | 9 | n/a | none | V-2src |
+| kha.arkanist | Razor Wind (star attack) | arcane, printed as a spray | AAT 4 | SP 10 (data 10) | 1 | 12 | n/a | magical; crit fills the last column damaged | V-2src |
+
+## Abilities (our words) and the code behind them
+
+| Ability | Source of it | Hook point | Implementation | Test |
+|---|---|---|---|---|
+| Accuracy (Dire Wolf head) | `kha.a.accuracy` | passive | data: `modStat RAT +1` while `not systemCrippled H` | FAC-KHA-020 |
+| Anchor | `kha.a.anchor` (existing) | passive | data; friendly warriors in base contact cannot be knocked down | FAC-KHA-003 |
+| Beat Back, Critical Knockdown | core | attack.resolved / attack.crit | core | FAC-CYG-009 ATK-013 |
+| Volley Fire | `kha.a.volley-fire` | attack.beforeRoll (weapon) | code `volleyFire`: the attack roll is boosted for free (as Guided Fire's free die), skipped against battle engines and structures | FAC-KHA-021 |
+| Sniper | `kha.a.sniper` | passive flag + `adjustPoints`, `onBoxed` plugin | 1 damage point replaces the roll when 1 beats it; no Tough roll for a model its ranged attack disables | FAC-KHA-022 FAC-KHA-023 |
+| Magic Ability | `kha.a.magic-ability` | passive flag `magicAbility` | core reads the flag: the star attack is arcane (AAT) | FAC-KHA-024 |
+| Empower (star Action, range 6) | `kha.a.empower` | combat.choose | code `khaEmpower`: a friendly warjack in range loses Disruption and gains 1 focus (lowest focus first) | FAC-KHA-025 |
+| Sigil of Power (star Action, range 6) | `kha.a.sigil-of-power` | combat.choose | code `khaSigilOfPower` applies a turn effect to the model (and unit) nearest an enemy; plugin `damageTypes` adds `magical` | FAC-KHA-026 |
+| Razor Wind (star attack) | `kha.a.razor-wind` | combat.choose | arcane attack, plugin `adjustPoints` fills the last column on a critical hit against a warjack or warbeast | FAC-KHA-027 |
+| Advance Deployment | core | setup | core (list entry `advanceDeploy`) | SKM-001 |
+
+## RULINGs for this package
+
+Copied to `docs/needs-rules-check.md` under M12 Skirmish.
+
+- Sniper timing: the card says "instead of making a damage roll". The engine cannot skip the roll, so the dice are rolled and the
+  points are replaced by 1 only when that beats the roll on the odds (the target has one box left, or the roll's expected damage
+  is under 1); the choice never looks at the dice. Tough denial applies to every ranged attack by the model.
+- Razor Wind spray: the card prints a spray (RNG SP 10). A Magic Ability special attack is resolved by core as a single-target
+  arcane attack, so it hits one model. The crit rule fills the unmarked boxes of the last column or branch the hit damaged.
+- Empower and Sigil of Power targets: core special actions cannot ask for a target when the effect is a code hook, so the hook
+  chooses (Empower: the jack with the least focus; Sigil: the model or unit nearest an enemy).
+- Arkanist AAT: CD and the WA table say 4, a WA strategy paragraph says 5; the tables win.
+- Dire Wolf Anchor: the 2022 Privateer preview also removed a blast die; the current CD and WA text is knockdown only, so that is
+  what `kha.a.anchor` does.
+- Volley Fire: "boosted" is the RB p61 extra die on the attack roll. It is free (no focus), so no boost offer follows.

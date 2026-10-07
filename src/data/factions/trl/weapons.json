@@ -8,8 +8,13 @@
     "aoe": 2,
     "pow": 14,
     "blastPow": 8,
-    "qualities": ["core.q.magical"],
-    "abilities": ["trl.a.critical-devastation", "trl.a.guided-fire-die"]
+    "qualities": [
+      "core.q.magical"
+    ],
+    "abilities": [
+      "trl.a.critical-devastation",
+      "trl.a.guided-fire-die"
+    ]
   },
   {
     "id": "trl.w.axe",
@@ -27,7 +32,11 @@
     "aoe": 3,
     "pow": 16,
     "blastPow": 8,
-    "abilities": ["trl.a.forced-reload", "core.a.reload-1", "trl.a.guided-fire-die"]
+    "abilities": [
+      "trl.a.forced-reload",
+      "core.a.reload-1",
+      "trl.a.guided-fire-die"
+    ]
   },
   {
     "id": "trl.w.claw",
@@ -35,7 +44,9 @@
     "type": "melee",
     "rng": 1,
     "pow": 15,
-    "qualities": ["core.q.throw"]
+    "qualities": [
+      "core.q.throw"
+    ]
   },
   {
     "id": "trl.w.heavy-pistol",
@@ -44,8 +55,13 @@
     "rng": 8,
     "rof": 1,
     "pow": 12,
-    "qualities": ["core.q.pistol"],
-    "abilities": ["trl.a.both-barrels", "trl.a.luck"]
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "trl.a.both-barrels",
+      "trl.a.luck"
+    ]
   },
   {
     "id": "trl.w.pistol",
@@ -54,7 +70,32 @@
     "rng": 8,
     "rof": 1,
     "pow": 10,
-    "qualities": ["core.q.pistol"],
-    "abilities": ["trl.a.both-barrels"]
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "trl.a.both-barrels"
+    ]
+  },
+  {
+    "id": "trl.w.bombard",
+    "name": "Bombard",
+    "type": "ranged",
+    "rng": 14,
+    "rof": 1,
+    "aoe": 3,
+    "pow": 14,
+    "blastPow": 8,
+    "abilities": [
+      "core.a.arcing-fire",
+      "trl.a.guided-fire-die"
+    ]
+  },
+  {
+    "id": "trl.w.hand-weapon",
+    "name": "Hand Weapon",
+    "type": "melee",
+    "rng": 1,
+    "pow": 10
   }
 ]

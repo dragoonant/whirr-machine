@@ -1,0 +1,67 @@
+{
+  "id": "scn-copperline-crossing",
+  "name": "Copperline Crossing",
+  "text": "Four objectives hold the river flanks. A big one needs a Leader, warjack or warbeast nearby; a small one needs a Leader or a whole unit. Each one you hold scores a point at the end of every turn from the second player's second turn. Lead by three after your opponent's turn, kill the enemy Leader, or have more points after round seven.",
+  "levels": [
+    "skirmish"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "elements": [
+    {
+      "id": "el-50-w",
+      "kind": "objective50",
+      "pos": { "x": -10, "z": -3 },
+      "hold": { "within": 3, "models": 1, "eligible": ["leader", "warEngine", "battleEngine"] },
+      "contest": { "within": 3, "excludes": ["leader", "inert", "disabled", "wild"] },
+      "vp": { "control": 1 }
+    },
+    {
+      "id": "el-50-e",
+      "kind": "objective50",
+      "pos": { "x": 10, "z": 3 },
+      "hold": { "within": 3, "models": 1, "eligible": ["leader", "warEngine", "battleEngine"] },
+      "contest": { "within": 3, "excludes": ["leader", "inert", "disabled", "wild"] },
+      "vp": { "control": 1 }
+    },
+    {
+      "id": "el-40-w",
+      "kind": "objective40",
+      "pos": { "x": -10, "z": 3 },
+      "hold": { "within": 3, "models": 1, "eligible": ["leader", "unitAll"] },
+      "contest": { "within": 3, "excludes": ["leader", "inert", "disabled", "wild"] },
+      "vp": { "control": 1 }
+    },
+    {
+      "id": "el-40-e",
+      "kind": "objective40",
+      "pos": { "x": 10, "z": -3 },
+      "hold": { "within": 3, "models": 1, "eligible": ["leader", "unitAll"] },
+      "contest": { "within": 3, "excludes": ["leader", "inert", "disabled", "wild"] },
+      "vp": { "control": 1 }
+    }
+  ],
+  "terrainLayout": "layout.village-2-48"
+}

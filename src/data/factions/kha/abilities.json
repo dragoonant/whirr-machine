@@ -416,5 +416,144 @@
       "who": "self"
     },
     "duration": "instant"
+  },
+  {
+    "id": "kha.a.accuracy",
+    "name": "Accuracy",
+    "text": "Head fitting: while the Head system works, this model has +1 to its RAT.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": {
+      "not": {
+        "test": "systemCrippled",
+        "subject": "self",
+        "value": "H"
+      }
+    },
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "RAT",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Card: +1 RAT from the Accuracy head (CD, WA). Crippled Head loses head rules (RB p95), so the bonus is conditional."
+  },
+  {
+    "id": "kha.a.volley-fire",
+    "name": "Volley Fire",
+    "text": "This weapon rolls its attacks against warrior models boosted, at no cost. Battle engines and structures are not warrior models.",
+    "kind": "weaponQuality",
+    "trigger": "attack.beforeRoll",
+    "effect": [
+      {
+        "code": "volleyFire"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "kha.a.sniper",
+    "name": "Sniper",
+    "text": "When this model resolves a ranged attack it may inflict exactly 1 damage point in place of a damage roll. A model it disables with a ranged attack gets no Tough roll.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "sniper"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "The engine has no pre-roll damage substitution: a plugin swaps the points after the roll when 1 beats the expected roll (see khador.md, RULING Sniper)."
+  },
+  {
+    "id": "kha.a.magic-ability",
+    "name": "Magic Ability",
+    "text": "Special attacks and special actions of this model count as casting a spell.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "magicAbility"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "kha.a.empower",
+    "name": "Empower",
+    "text": "Special action, range 6. A friendly Faction warjack in range shakes off Disruption and gains 1 focus.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "khaEmpower"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 6,
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "duration": "instant",
+    "verify": "Core special actions cannot ask for a target unless the effect is makeAttack, advance or repair, so the hook picks the jack itself (lowest focus first)."
+  },
+  {
+    "id": "kha.a.sigil-of-power",
+    "name": "Sigil of Power",
+    "text": "Special action, range 6. A friendly model or unit in range makes its weapon attacks with magical damage until the end of the turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "khaSigilOfPower"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 6
+    },
+    "duration": "turn",
+    "verify": "No target prompt for code special actions in core: the hook picks the friendly model or unit nearest to an enemy."
+  },
+  {
+    "id": "kha.a.razor-wind",
+    "name": "Razor Wind",
+    "text": "Arcane special attack (printed as a spray, range 10, POW 12). A critical hit on a warjack or warbeast also fills the unmarked boxes of the last column or branch it damaged.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "razorWind"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant",
+    "attack": "kha.w.razor-wind",
+    "verify": "A Magic Ability special attack is resolved as a single-target arcane attack by core (activation.ts magicStar), so the spray hits one model only. The crit fill lives in the Khador attack plugin."
   }
 ]

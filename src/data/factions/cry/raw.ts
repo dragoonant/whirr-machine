@@ -15,6 +15,12 @@ import d9 from './models/nekane.json'
 import d10 from './spells.json'
 import d11 from './weapons.json'
 import d12 from '../../lists/cry-starter-recon.json'
+import d13 from './models/night-terror.json'
+import d14 from './models/night-terrors.json'
+import d15 from './models/initiate.json'
+import d16 from './models/initiates.json'
+import d17 from './models/raptor-arc.json'
+import d18 from '../../lists/cry-skirmish.json'
 
 export const cryRaw: RawGroup = {
   'ability': [
@@ -34,6 +40,11 @@ export const cryRaw: RawGroup = {
     { path: 'factions/cry/models/furies.json', data: d7 },
     { path: 'factions/cry/models/hades.json', data: d8 },
     { path: 'factions/cry/models/nekane.json', data: d9 },
+    { path: 'factions/cry/models/night-terror.json', data: d13 },
+    { path: 'factions/cry/models/night-terrors.json', data: d14 },
+    { path: 'factions/cry/models/initiate.json', data: d15 },
+    { path: 'factions/cry/models/initiates.json', data: d16 },
+    { path: 'factions/cry/models/raptor-arc.json', data: d17 },
   ],
   'spell': [
     { path: 'factions/cry/spells.json', data: d10 },
@@ -43,5 +54,6 @@ export const cryRaw: RawGroup = {
   ],
   'list': [
     { path: 'lists/cry-starter-recon.json', data: d12 },
+    { path: 'lists/cry-skirmish.json', data: d18 },
   ],
 }

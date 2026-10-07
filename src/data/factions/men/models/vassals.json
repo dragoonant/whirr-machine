@@ -1,0 +1,22 @@
+{
+  "id": "men.vassals",
+  "name": "Vassals of Menoth",
+  "faction": "men",
+  "type": "unit",
+  "keywords": [
+    "menoth"
+  ],
+  "cost": 4,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "men.vassal",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 4
+    }
+  },
+  "verify": "Unit of 3 for 4 points, FA 2 (WA3); 4 points also from the Longshanks Feora lists (LS1)."
+}

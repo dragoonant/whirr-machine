@@ -1,0 +1,47 @@
+{
+  "id": "cir.wolf-rider",
+  "name": "Wolf Rider",
+  "faction": "cir",
+  "type": "trooper",
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "tharn"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 9,
+    "MAT": 6,
+    "RAT": 6,
+    "DEF": 15,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cir.w.thrown-javelin"
+    },
+    {
+      "weapon": "cir.w.bladed-shield"
+    }
+  ],
+  "abilities": [
+    "cir.a.cavalry",
+    "core.a.pathfinder",
+    "core.a.unstoppable",
+    "cir.a.assault",
+    "cir.a.annoyance",
+    "core.a.reposition",
+    "cir.a.unpredictable-movement",
+    "cir.a.unyielding",
+    "cir.a.wraithbane-weapons"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "beast"
+  },
+  "verify": "App data (S1, S2 agree) after the January 2026 changelog (S8: MAT 7 to 6, Dual Attack cut, Assault gained): SPD 9, MAT 6, RAT 6, DEF 15, ARM 14, 5 boxes, 50 mm base (S1 base advantage; S4 'Large'), both weapons POW 9 with Weapon Master, Reposition 3. S4 (April 2026) still shows MAT 7 and Dual Attack: older than S8. The app keywords lack Tharn; kept from the unit name (RULING)."
+}

@@ -1,0 +1,24 @@
+{
+  "faction": "cry",
+  "id": "cry.initiates",
+  "name": "Necrosurgeon Initiates",
+  "type": "unit",
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead"
+  ],
+  "cost": 4,
+  "fa": 4,
+  "composition": {
+    "grunts": {
+      "profile": "cry.initiate",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 4
+    }
+  },
+  "verify": "4 points for 3, FA 4 (S1, S2, S4). Unit size 3 from S2 and the Core Expansion box (3 models)."
+}

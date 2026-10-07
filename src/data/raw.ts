@@ -7,6 +7,7 @@ import d1 from './core/qualities.json'
 import d2 from './core/systems.json'
 import d29 from './scenarios/ashwall-divide.json'
 import d30 from './scenarios/qs-demo.json'
+import d54 from './scenarios/copperline-crossing.json'
 import d31 from './terrain/layouts/ashwall-divide.json'
 import d32 from './terrain/pieces.json'
 import d33 from './terrain/pieces-bog.json'
@@ -58,6 +59,7 @@ const SHARED: RawGroup = {
   'scenario': [
     { path: 'scenarios/ashwall-divide.json', data: d29 },
     { path: 'scenarios/qs-demo.json', data: d30 },
+    { path: 'scenarios/copperline-crossing.json', data: d54 },
   ],
   'terrain-layout': [
     { path: 'terrain/layouts/ashwall-divide.json', data: d31 },

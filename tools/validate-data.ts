@@ -4,8 +4,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
-import { checkRefs, rawRecords, type RecordType, type TypedRecord } from '../src/data/index'
+import { checkRefs, derivedLayouts, rawRecords, type RecordType, type TypedRecord } from '../src/data/index'
 import { codeHooks, knownCodeConditions } from '../src/engine/code-hooks'
+import { baseRadius } from '../src/engine/geometry'
+import { distToShape, terrainTraits, worldShape } from '../src/engine/terrain'
+import type { TerrainInstance } from '../src/engine/types'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const schemaDir = path.join(root, 'src/data/schema')
@@ -44,6 +47,49 @@ const words = (s: string): string[] => s.toLowerCase().replace(/[^a-z0-9' ]+/g, 
 
 type Any = Record<string, any>
 
+/** Objective base size by element kind (mm). Flags are 30 mm, scenario terrain and zones have no base. */
+const ELEMENT_MM: Record<string, number> = { objective50: 50, objective40: 40, flag: 30 }
+
+export interface ClearanceRow { scenario: string; layout: string; element: string; piece: string; pieceType: string; impassable: boolean; gap: number }
+/** Gap (base edge to footprint edge, 0 = overlapping) of every objective of every 48" scenario to every piece of every layout it can be played on. */
+export function objectiveClearances(byId: Record<string, TypedRecord>): ClearanceRow[] {
+  const rows: ClearanceRow[] = []
+  const layoutsOf = (sc: Any): string[] => {
+    // the scenario's own layout plus every board layout's 48" twin (E3 eligibleLayouts)
+    const ids = new Set<string>([sc.terrainLayout])
+    for (const r of Object.values(byId)) if (r.recordType === 'terrain-layout' && /-48$/.test(r.id)) ids.add(r.id)
+    return [...ids]
+  }
+  for (const r of Object.values(byId)) {
+    if (r.recordType !== 'scenario') continue
+    const sc = r as unknown as Any
+    if (sc.table?.w !== 48 || sc.table?.d !== 48) continue
+    for (const lid of layoutsOf(sc)) {
+      const lay = byId[lid] as unknown as Any | undefined
+      if (!lay) continue
+      const pieces: { id: string; t: TerrainInstance }[] = (lay.pieces as Any[]).map((pc) => {
+        const tp = (byId[pc.terrain] ?? {}) as unknown as Any
+        return { id: pc.id, t: { id: pc.id, pieceId: pc.terrain, rulesType: tp.rulesType, pos: pc.pos, rot: pc.rot ?? 0, footprint: tp.footprint, height: tp.height ?? 0, props: tp.props ?? {} } as TerrainInstance }
+      })
+      for (const el of sc.elements as Any[]) {
+        const mm = ELEMENT_MM[el.kind as string]
+        if (mm === undefined) continue
+        for (const pc of pieces) {
+          const gap = Math.max(0, distToShape(el.pos, worldShape(pc.t)) - baseRadius(mm))
+          rows.push({ scenario: sc.id, layout: lid, element: el.id, piece: pc.id, pieceType: pc.t.rulesType, impassable: terrainTraits(pc.t).move === 'impassable', gap })
+        }
+      }
+    }
+  }
+  return rows
+}
+/** TER-110: an objective on a 48" table keeps at least 1" from every impassable footprint and sits on no other footprint. */
+export function objectiveClearanceProblems(byId: Record<string, TypedRecord>): string[] {
+  return objectiveClearances(byId).flatMap((c) =>
+    c.impassable ? (c.gap < 1 - 1e-9 ? [`${c.scenario}: ${c.element} is ${c.gap.toFixed(2)}" from impassable ${c.piece} (${c.pieceType}) in ${c.layout}, needs 1"`] : [])
+      : c.gap <= 0 ? [`${c.scenario}: ${c.element} overlaps ${c.piece} (${c.pieceType}) in ${c.layout}`] : [])
+}
+
 export function validateAll(): ValidationReport {
   const errors: string[] = []
   const warnings: string[] = []
@@ -75,8 +121,24 @@ export function validateAll(): ValidationReport {
     byId[id] = { ...(rec as { id: string }), recordType: type as RecordType }
   }
 
-  // 2. references
+  // 2. references. E2: the 48" twin of every board layout joins the records first (the engine loader does the same), so a scenario can name one
+  const derived = derivedLayouts(byId)
+  const vLayout = get('terrain-layout.schema.json')
+  for (const rec of Object.values(derived)) {
+    const { recordType: _rt, ...plain } = rec as unknown as Any
+    if (vLayout && !vLayout(plain)) for (const e of vLayout.errors ?? []) errors.push(`derived layout ${rec.id} ${e.instancePath || '/'}: ${e.message}`)
+  }
+  Object.assign(byId, derived)
+  stats['derived-layout'] = Object.keys(derived).length
   errors.push(...checkRefs(byId))
+  // E5: a scenario's table is its layout's table, and (TER-110) its objectives stand clear of terrain
+  for (const r of Object.values(byId)) {
+    if (r.recordType !== 'scenario') continue
+    const sc = r as unknown as Any
+    const lay = byId[sc.terrainLayout] as unknown as Any | undefined
+    if (lay && (lay.table.w !== sc.table.w || lay.table.d !== sc.table.d)) errors.push(`${r.id}: table ${sc.table.w}x${sc.table.d} differs from layout ${sc.terrainLayout} (${lay.table.w}x${lay.table.d})`)
+  }
+  errors.push(...objectiveClearanceProblems(byId))
 
   // 3. code hooks
   const codes = new Set<string>()

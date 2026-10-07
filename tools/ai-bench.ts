@@ -1,5 +1,6 @@
 // AI bench (40-ai §9): tier vs tier on the starter lists, both sides and both factions alternated.
-// Run: npm run bench:ai -- --games N --seed S [--pairs normal:random,normal:easy] [--scenario id] [--json]
+// Run: npm run bench:ai -- --games N --seed S [--size recon|skirmish] [--pairs normal:random,normal:easy] [--scenario id] [--json]
+// --size skirmish (90-skirmish E6): the 50-point *-skirmish lists on Copperline Crossing; --xlist/--ylist take list ids or faction ids.
 // Prints win rates by cause, own-Leader losses, assassination lines found/committed, mean and p95 ms per decision,
 // and engine rejections/stalls/cap hits (all must be 0). Writes tools/out/bench-<date>.json.
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -7,25 +8,30 @@ import { loadBundle } from '../src/data/index'
 import { decideSync, newBrain, type Brain } from '../src/ai/decider'
 import { pickSensible } from '../src/ai/random'
 import { applyTuning } from '../src/ai/tiers'
+import { GAME_SIZES, SIZE_DEFAULTS, resolveList, sizeProblem, type GameSize } from './sim'
 import { createGame, legalActions, step, type Action, type GameSetup, type GameState, type PlayerId } from '../src/engine/index'
 
 type Tier = 'random' | 'easy' | 'normal'
-interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean; xList?: string; yList?: string }
+interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean; xList?: string; yList?: string; size: GameSize; scenarioGiven: boolean }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { games: 20, seed: '1', pairs: [['normal', 'random'], ['normal', 'easy']], scenario: 'scn-ashwall-divide', cap: 4000, json: false, quiet: false }
+  const a: Args = { games: 20, seed: '1', pairs: [['normal', 'random'], ['normal', 'easy']], scenario: SIZE_DEFAULTS.recon.scenario, cap: 4000, json: false, quiet: false, size: 'recon', scenarioGiven: false }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!, v = argv[i + 1]
     if (k === '--games' && v) { a.games = Number(v); i++ }
     else if (k === '--seed' && v) { a.seed = v; i++ }
     else if ((k === '--pairs' || k === '--pair') && v) { a.pairs = v.split(',').map((p) => p.split(':') as [Tier, Tier]); i++ }
-    else if (k === '--scenario' && v) { a.scenario = v; i++ }
+    else if (k === '--scenario' && v) { a.scenario = v; a.scenarioGiven = true; i++ }
+    else if (k === '--size' && v) { if (!(GAME_SIZES as readonly string[]).includes(v)) { console.error(`--size must be one of ${GAME_SIZES.join(', ')}`); process.exit(2) } a.size = v as GameSize; i++ }
     else if (k === '--cap' && v) { a.cap = Number(v); i++ }
     else if (k === '--xlist' && v) { a.xList = v; i++ }
     else if (k === '--ylist' && v) { a.yList = v; i++ }
     else if (k === '--json') a.json = true
     else if (k === '--quiet') a.quiet = true
   }
+  if (!a.scenarioGiven) a.scenario = SIZE_DEFAULTS[a.size].scenario
+  if (a.xList) a.xList = resolveList(a.xList, a.size)
+  if (a.yList) a.yList = resolveList(a.yList, a.size)
   return a
 }
 
@@ -38,9 +44,10 @@ export interface GameResult {
 }
 
 /** One game between tiers x and y; x plays side `xSide`. */
-export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, seed: string, scenario: string, cap = 4000, xList?: string, yList?: string): GameResult {
+export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, seed: string, scenario: string, cap = 4000, xList?: string, yList?: string, size: GameSize = 'recon'): GameResult {
   const bundle = loadBundle()
-  const base = swapLists ? { A: 'kha.l.qs-recon', B: 'cyg.l.qs-recon' } : { A: 'cyg.l.qs-recon', B: 'kha.l.qs-recon' }
+  const [kha, cyg] = SIZE_DEFAULTS[size].lists
+  const base = swapLists ? { A: kha, B: cyg } : { A: cyg, B: kha }
   // --xlist/--ylist: x's list and y's list by id (x plays xSide), overriding the default starter pair
   const lists = xList && yList ? (xSide === 'A' ? { A: xList, B: yList } : { A: yList, B: xList }) : base
   const setup: GameSetup = { scenario, lists }
@@ -102,6 +109,8 @@ const quant = (xs: number[], q: number): number => { if (!xs.length) return 0; c
 function main(): void {
   const args = parseArgs(process.argv.slice(2))
   applyTuning(process.env.AI_TUNE)
+  const problem = sizeProblem(loadBundle(), args.size, args.scenario, args.xList && args.yList ? [args.xList, args.yList] : SIZE_DEFAULTS[args.size].lists)
+  if (problem) { console.error(`bench:ai: ${problem}`); process.exit(2) }
   const out: Record<string, unknown> = {}
   const lines: string[] = []
   for (const [x, y] of args.pairs) {
@@ -109,7 +118,7 @@ function main(): void {
     for (let g = 0; g < args.games; g++) {
       const xSide: PlayerId = g % 2 === 0 ? 'A' : 'B'
       const swap = Math.floor(g / 2) % 2 === 1
-      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap, args.xList, args.yList)
+      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap, args.xList, args.yList, args.size)
       r.game = g
       rs.push(r)
       if (!args.quiet && !args.json) console.log(`${x} vs ${y} game ${g} (${x} as ${xSide}${swap ? ', lists swapped' : ''}): ${r.winner === 'x' ? x : r.winner === 'y' ? y : r.winner} by ${r.reason}, round ${r.rounds}, ${r.decisions} decisions${r.rejected ? `, ${r.rejected} REJECTED` : ''}${r.stall ? ', STALL' : ''}`)

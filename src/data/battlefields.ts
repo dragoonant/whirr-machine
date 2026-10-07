@@ -4,6 +4,7 @@ import { deriveSeed, nextU32 } from '../engine/rng'
 import { scenarioAnchorProblems } from '../engine/scenario'
 import type { DataBundle, Id } from '../engine/types'
 import { loadBundle } from './index'
+import { layout48Id } from './layout48'
 
 /** Board order is part of the contract: the seed indexes into it. */
 export const BOARDS: readonly Id[] = ['board.bog', 'board.ruins', 'board.village', 'board.wasteland', 'board.outpost']
@@ -19,14 +20,21 @@ export function resolveBoardPref(pref: string | null | undefined): Id | null {
   return BOARDS.includes(id) ? id : null
 }
 
-/** Layouts of `board` that fit the scenario: same table, and every scenario terrain anchor carried unchanged (G6). */
+/**
+ * Layouts of `board` that fit the scenario: same table, and every scenario terrain anchor carried unchanged (G6). For a 48 inch
+ * scenario the board's layouts come back as their derived `-48` ids (90-skirmish E3); the 36 inch ones are returned unchanged.
+ */
 export function eligibleLayouts(bundle: DataBundle, board: Id, scenarioId: Id): Id[] {
   const b = bundle.byId[board] as { layouts?: Id[] } | undefined
-  return (b?.layouts ?? []).filter((l) => scenarioAnchorProblems(bundle, scenarioId, l).length === 0)
+  const table = (bundle.byId[scenarioId] as { table?: { w: number; d: number } } | undefined)?.table
+  const big = table !== undefined && table.w === 48 && table.d === 48
+  return (b?.layouts ?? []).map((l) => (big ? layout48Id(l) : l)).filter((l) => bundle.byId[l] !== undefined && scenarioAnchorProblems(bundle, scenarioId, l).length === 0)
 }
 
 /** The board whose layout list contains `layoutId` (for loading a save), or null. */
 export function boardOfLayout(layoutId: Id, bundle: DataBundle = loadBundle()): Id | null {
+  const own = (bundle.byId[layoutId] as { board?: Id } | undefined)?.board // a derived -48 layout names its board too
+  if (own && BOARDS.includes(own)) return own
   return BOARDS.find((id) => ((bundle.byId[id] as { layouts?: Id[] } | undefined)?.layouts ?? []).includes(layoutId)) ?? null
 }
 
@@ -44,16 +52,4 @@ export function pickBattlefield(seed: string, scenarioId: Id, boardPref?: string
   return { board, layoutId: ok[nextU32(deriveSeed(seed, 'battlefield', 'layout'))[0] % ok.length]! }
 }
 
-interface LayoutPieceRec { id: string; terrain: Id; pos: { x: number; z: number }; rot?: number }
-/**
- * 48 inch scale-up (70 section D): every centre times 4/3, footprints and rotations unchanged, so symmetry holds and every
- * gap grows. Returns a layout record (not stored in the bundle); its id is the layout id plus -48.
- */
-export function scaleLayout48(layout: { id: Id; name: string; board?: Id; pieces: LayoutPieceRec[] }): {
-  id: Id; name: string; board?: Id; table: { w: 48; d: 48 }; pieces: LayoutPieceRec[]
-} {
-  return {
-    id: `${layout.id}-48`, name: layout.name, ...(layout.board ? { board: layout.board } : {}), table: { w: 48, d: 48 },
-    pieces: layout.pieces.map((p) => ({ ...p, pos: { x: (p.pos.x * 4) / 3, z: (p.pos.z * 4) / 3 } })),
-  }
-}
+export { scaleLayout48, layout48Id, isLayout48Id, layout48Source } from './layout48'

@@ -1,0 +1,43 @@
+{
+  "faction": "cry",
+  "id": "cry.night-terror",
+  "name": "Night Terror",
+  "type": "trooper",
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 7,
+    "MAT": 6,
+    "RAT": 0,
+    "DEF": 14,
+    "ARM": 16
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.scything-blade",
+      "count": 2
+    }
+  ],
+  "abilities": [
+    "cry.a.incorporeal",
+    "core.a.unstoppable",
+    "cry.a.cavalry",
+    "cry.a.apparition",
+    "cry.a.finisher",
+    "core.a.reposition"
+  ],
+  "cost": 0,
+  "figure": {
+    "slug": "wm-night-terror",
+    "archetype": "infantry"
+  },
+  "verify": "SPD 7, MAT 6, DEF 14, ARM 16, two Scything Blades POW 12 magical, the ability list: community card data dump and Warmachine Academy agree (cryx-sources.md S1, S2); 50 mm base S2 + Wargamer preview; 5 boxes S2 only; the Wargamer 2024 preview said MAT 7 (pre-release), not used."
+}

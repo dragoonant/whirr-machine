@@ -1,0 +1,27 @@
+{
+  "id": "cir.wolf-riders",
+  "name": "Tharn Wolf Riders",
+  "faction": "cir",
+  "type": "unit",
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "tharn"
+  ],
+  "cost": 8,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "cir.wolf-rider",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 8
+    }
+  },
+  "figure": {
+    "archetype": "beast"
+  },
+  "verify": "Unit of 3 Grunts for 8 points, FA 2 (S1 '3 Grunts', S2 and S4 agree). No Chieftain or attachment (the Wolf Rider Champion is a separate 4-point solo, left out)."
+}

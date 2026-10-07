@@ -1,0 +1,37 @@
+{
+  "id": "cyg.tempest-assailer",
+  "name": "Tempest Assailer",
+  "faction": "cyg",
+  "type": "trooper",
+  "keywords": [
+    "legionnaire",
+    "storm-legion"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 5,
+    "MAT": 7,
+    "RAT": 0,
+    "DEF": 12,
+    "ARM": 18
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "cyg.w.heavy-voltaic-hammer"
+    }
+  ],
+  "abilities": [
+    "cyg.a.resist-electricity",
+    "cyg.a.repulsor-field",
+    "cyg.a.shield-wall"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Stats and abilities WA 2026-01-18 and CD (app dump 2026-07-10) agree; Repulsor Field replaced the Repulsor Shield attack in the Jan 2026 changelog. Boxes (8) are WA only."
+}

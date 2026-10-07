@@ -1,0 +1,35 @@
+{
+  "id": "kha.l.skirmish",
+  "name": "Winter Korps Skirmish",
+  "faction": "kha",
+  "level": "skirmish",
+  "points": 49,
+  "leader": "kha.vilkul",
+  "entries": [
+    {
+      "profile": "kha.razor"
+    },
+    {
+      "profile": "kha.dire-wolf-gun"
+    },
+    {
+      "profile": "kha.lazarenko",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "kha.hounds",
+      "size": 3,
+      "advanceDeploy": true
+    },
+    {
+      "profile": "kha.arkanists",
+      "size": 3
+    },
+    {
+      "profile": "kha.wk-snipers",
+      "size": 3,
+      "advanceDeploy": true
+    }
+  ],
+  "source": "Quick Start Khador plus Dire Wolf, Arkanists and Snipers (Longshanks 2026 Vilkul lists)"
+}

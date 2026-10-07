@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
 import { settings, useSettings } from '../../contract'
+import { useSettingsStore } from '../../store/settingsStore'
 import { boardFromUrl, boardFor } from '../../board/boards'
 import { SoundSettings } from '../../audio/SoundSettings'
 import { TitleArt } from './TitleArt'
 import { openHelp } from '../help/HelpGuide'
 import { usePaint, usePaintStore, PAINT_PRESETS } from '../../figures/paintStore'
-import { BOT_TIERS, battlefieldChoices, buildNewGame, type BotTierChoice, scenarioChoices, sideChoices, SPEED_CHOICES } from './startOptions'
+import {
+  BOT_TIERS, battlefieldChoices, buildNewGame, DEFAULT_GAME_SIZE, defaultScenarioId, GAME_SIZES, type BotTierChoice, type GameSize, parseGameSize,
+  scenarioChoices, sideChoices, sizeFromUrl, SPEED_CHOICES,
+} from './startOptions'
 import './start.css'
 
 export interface StartScreenProps {
@@ -18,19 +22,34 @@ export interface StartScreenProps {
 }
 
 export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenProps) {
-  const sides = useMemo(sideChoices, [])
-  const scenarios = useMemo(scenarioChoices, [])
+  // Game size: a click wins, then `?size=` in the URL, then the remembered choice, then recon.
+  const storedSize = useSettingsStore((s) => s.size)
+  const urlSize = useMemo(() => sizeFromUrl(), [])
+  const [picked, setPicked] = useState<GameSize | null>(null)
+  const size: GameSize = picked ?? urlSize ?? parseGameSize(storedSize) ?? DEFAULT_GAME_SIZE
+  const sizeInfo = GAME_SIZES.find((g) => g.id === size) ?? GAME_SIZES[0]!
+  const sides = useMemo(() => sideChoices(size), [size])
+  const scenarios = useMemo(() => scenarioChoices(size), [size])
   const { speed, battlefield } = useSettings()
   const boards = useMemo(battlefieldChoices, [])
   const board = boardFor(battlefield)?.id ?? 'random'
-  const [listId, setListId] = useState(sides[0]?.listId ?? '')
-  const [scenario, setScenario] = useState(scenarios[0]?.id ?? '')
+  // the army is remembered by faction, so changing the size keeps your side (its list of that size)
+  const [factionPick, setFactionPick] = useState('')
+  const [scenarioPick, setScenarioPick] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   const [opponent, setOpponent] = useState<string>('random')
   const [tier, setTier] = useState<BotTierChoice>(BOT_TIERS[0].id)
-  const side = sides.find((s) => s.listId === listId)
+  const side = sides.find((s) => s.factionId === factionPick) ?? sides[0]
+  const listId = side?.listId ?? ''
+  const scenario = scenarios.find((s) => s.id === scenarioPick[size])?.id ?? defaultScenarioId(size, scenarios)
   const scn = scenarios.find((s) => s.id === scenario)
   const faction = side?.factionId ?? ''
+  const chooseSize = (v: string) => {
+    const next = parseGameSize(v)
+    if (!next) return
+    setPicked(next); setError(null)
+    settings.set({ size: next })
+  }
   const paint = usePaint(faction, 'A')
   const setPaint = (v: { primary?: string; secondary?: string }) => usePaintStore.getState().setFaction(faction, v)
   const presetId = PAINT_PRESETS.find((pr) => pr.primary === paint?.primary && pr.secondary === paint?.secondary)?.id ?? (paint ? 'custom' : 'stock')
@@ -39,7 +58,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
     // ?seed= gives a repeatable game (tests, bug reports)
     const seed = new URLSearchParams(location.search).get('seed') ?? undefined
     const urlBoard = boardFromUrl() // ?board= beats the selector
-    const opts = buildNewGame({ listId, opponentListId: opponent, scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
+    const opts = buildNewGame({ listId, opponentListId: sides.find((s) => s.factionId === opponent)?.listId ?? 'random', scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
     if (!opts) { setError('Pick a side first.'); return }
     setError(onStart(opts))
   }
@@ -53,12 +72,19 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
       </header>
 
       <div className="start-grid">
+        <section className="start-card start-size" data-testid="start-size-card">
+          <h2>Game size</h2>
+          <select aria-label="Game size" data-testid="start-size" value={size} onChange={(e) => chooseSize(e.target.value)}>
+            {GAME_SIZES.map((g) => <option key={g.id} value={g.id}>{`${g.label}: ${g.points} points, ${g.table} inch table`}</option>)}
+          </select>
+          <p className="start-note" data-testid="start-size-note">{sizeInfo.note}</p>
+        </section>
         <section className="start-card">
           <h2>Your side</h2>
           <div className="start-choices">
             {sides.map((s) => (
               <button key={s.listId} type="button" data-testid={`setup-faction-${s.factionId}`} className={s.listId === listId ? 'on' : ''}
-                aria-pressed={s.listId === listId} onClick={() => setListId(s.listId)}>{s.factionName}</button>
+                aria-pressed={s.listId === listId} onClick={() => setFactionPick(s.factionId)}>{s.factionName}</button>
             ))}
           </div>
           {side && (
@@ -96,12 +122,12 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
           <label>Opponent army
             <select data-testid="start-opponent-army" value={opponent} onChange={(e) => setOpponent(e.target.value)}>
               <option value="random">Random army</option>
-              {sides.map((s) => <option key={s.listId} value={s.listId}>{s.factionName}: {s.listName}</option>)}
+              {sides.map((s) => <option key={s.listId} value={s.factionId}>{s.factionName}: {s.listName}</option>)}
             </select>
           </label>
           <p className="start-note" data-testid="start-opponent-note">{BOT_TIERS.find((b) => b.id === tier)?.note}</p>
           <label>Scenario
-            <select data-testid="start-scenario" value={scenario} onChange={(e) => setScenario(e.target.value)}>
+            <select data-testid="start-scenario" value={scenario} onChange={(e) => setScenarioPick((m) => ({ ...m, [size]: e.target.value }))}>
               {scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>

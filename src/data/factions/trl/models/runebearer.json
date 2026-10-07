@@ -1,0 +1,40 @@
+{
+  "id": "trl.runebearer",
+  "name": "Trollkin Runebearer",
+  "faction": "trl",
+  "type": "solo",
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "storm-of-the-north"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 6,
+    "AAT": 6,
+    "MAT": 0,
+    "RAT": 0,
+    "DEF": 12,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [],
+  "abilities": [
+    "core.a.tough",
+    "trl.a.attached",
+    "trl.a.arcane-repeater",
+    "trl.a.magic-ability",
+    "trl.a.guidance",
+    "trl.a.harmonious-exaltation",
+    "trl.a.spell-slave"
+  ],
+  "cost": 3,
+  "fa": 1,
+  "figure": {
+    "archetype": "solo"
+  },
+  "verify": "Card values agree in S1, S10 and S2 (SPD 6, AAT 6, DEF 12, ARM 14, 5 boxes, 3 points, FA 1, Tough, 40 mm). No melee or ranged weapon, so MAT and RAT are 0. The app keywords do not include Trollkin (kept as on the card)."
+}

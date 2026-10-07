@@ -180,3 +180,95 @@ Lasts one round:
   needs per-trooper weapons and health.
 - The `qs-2025` bundle (GOLD-001, `13-golden-first-turn.md`) uses the verified values plus the community
   values the QS turns rely on (pistol and rifle RNG, Scattergun spray length, trooper box counts).
+
+---
+
+# Skirmish (50 points): Storm Legion list and the three new models
+
+Work package WP-D-cyg (`90-skirmish.md` B.1). The list is `cyg.l.skirmish` ("Storm Legion Skirmish", level `skirmish`, 50 points):
+the Recon starter plus Tempest Assailers, Storm Vanes and a Shield Guard Courser. Tests: `tests/data/cyg-skirmish.test.ts`.
+
+## Sources (fetched 2026-10-07; only our own prose and numbers are stored in the repo)
+
+| Tag | Source | Used for |
+|---|---|---|
+| `CD` | `isorna/wardice-warmachine-data`, `mk4/profiles/cygnar.storm-legion.profiles.json`, `mk4/abilities/abilities.json`, `mk4/advantages/advantages.json` on raw.githubusercontent.com (app dump of 2026-07-10) | stats, weapons, option costs, the Courser grid, ability wording (read, then rewritten) |
+| `WA` | Warmachine Academy wiki (warmachineacademy.miraheze.org), pages Tempest_Assailers (rev 2026-01-18), Storm_Vanes (2026-09-30), Courser (2026-06-06), Tempest_Thunderers (family cross-check), and the templates Light_Warjack, Medium_Base, Small_Base, Repulsor_Field, Shield_Guard, Insulated_Cortex, Resistance:_Electricity, read through the MediaWiki API | boxes, unit size, base sizes, the second reading of every stat |
+| `CL1` | Steamforged Warmachine January 2026 changelog (v3), found through https://www.brueckenkopf-online.com/2026/warmachine-januar-update-changelog/ ; PDF `cdn.shopify.com/s/files/1/0602/0156/6449/files/WM-Jan-Changelog-V3-B_W.pdf` (downloaded to `docs/sources/`, gitignored) | Courser MAT 6 to 5 and RAT 7 to 6; Heavy Stormthrower SP 12 to SP 8 and cost 4 to 3; Voltaic Punching Spike cost 2 to 3; Storm Vanes RAT 6 to 5 and the Galvanic Capacitor rewrite; Tempest Assailers gain Repulsor Field |
+| `CL2` | Steamforged Mid-Year Update changelog (June 2026, v1.1), found through https://www.brueckenkopf-online.com/2026/warmachine-mid-year-update/ ; PDF `cdn.shopify.com/s/files/1/0602/0156/6449/files/WM-Changelog-2026-June-B_W.pdf` (also in `docs/sources/`) | Courser DEF 13 to 14; Heavy Stormthrower cost 3 to 2 (so 2 now); the Assailers and Vanes are untouched |
+| `SFG` | steamforged.com product pages for the Courser and the Tempest Assailers and the 2022 Privateer Press previews (home.privateerpress.com/2022/06/28 and /06/30): search snippets only, the pages answered HTTP 429 | the early-MK4 wording of Shield Guard, Shield Wall and Smite, to show those rules exist as listed (older text says Immunity: Electricity; the 2026 sources say Resistance) |
+| `LS` | Longshanks list prices, `90-skirmish-sources.md` | the costs 9, 5 and 6 |
+
+Confidence key (the Recon section's key plus):
+- `V-3`: CD and WA agree and a 2026 changelog confirms the change that produced the value;
+- `V-2`: CD and WA agree;
+- `U-wa`: Warmachine Academy only (single weak source, not cross-checked);
+- `CONFLICT`: CD and WA disagree; the entry says which was used.
+
+## Roster additions
+
+| id | Source model | shipName | Type | Pts | Base | Size | FA | conf |
+|---|---|---|---|---|---|---|---|---|
+| cyg.tempest-assailers (trooper cyg.tempest-assailer) | Tempest Assailers | Assailers | Unit | 9 | 40 | 3 (fixed) | 2 | pts, FA, size V-2 + LS; base from the WA template |
+| cyg.storm-vanes (trooper cyg.storm-vane) | Storm Vanes | Vanes | Unit | 5 | 30 | 3 (fixed) | 2 | V-2 + LS; base from the WA template |
+| cyg.courser-sg | Courser (Shield Guard, Heavy Stormthrower, Voltaic Punching Spike) | Courser | Light warjack | 6 (1 + 2 + 3) | 40 | 1 | 4 | V-3 (cost, DEF, MAT, RAT); base from the WA template |
+
+The Storm Vanes belong to the Storm Forge Cadre and are legal in Storm Legion (CD lists them under that army; 29 of 53 Caine lists on
+Longshanks take them). Both units are fixed at 3 models: WA's `#` column and every list agree, and no source gives a range.
+
+## Stat lines
+
+| id | SPD | MAT | RAT | DEF | ARM | Boxes | conf |
+|---|---|---|---|---|---|---|---|
+| cyg.tempest-assailer | 5 | 7 | 0 (none) | 12 | 18 | 8 | stats V-2; boxes U-wa (the 40 mm Legionnaire family shows 8 on WA: the Thunderers too) |
+| cyg.storm-vane | 5 | 0 (none) | 5 | 12 | 14 | 5 | stats V-3 (RAT 5 from CL1); boxes U-wa |
+| cyg.courser-sg | 6 | 5 | 6 | 14 | 16 | grid 26 | V-3 (MAT, RAT from CL1, DEF from CL2); grid CD |
+
+A model with no ranged weapon carries RAT 0 and one with no melee weapon MAT 0 (the schema wants both), as the Flameguard Defenders do.
+
+## Weapons
+
+| owner | Weapon | Type | RNG | ROF | POW | Loc | Qualities / damage | Rules (summary) | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| Assailer | Heavy Voltaic Hammer | melee MAT 7 | 2 | | 15 | | | ★Attack Smite | V-2 |
+| Vane | Storm Surge | ranged RAT 5 | SP 6 | 1 | 10 | | Pistol; electrical | | V-3 (Electro Leap cut in CL1) |
+| Courser | Heavy Stormthrower | ranged RAT 6 | SP 8 | 1 | 12 | R | Pistol; electrical | | V-3 (range from CL1) |
+| Courser | Voltaic Blade | melee MAT 5 | 1 | | 10 | R | | the blade under the stormthrower | CONFLICT: CD 10, WA 12; CD used (later dump) |
+| Courser | Voltaic Punching Spike | melee MAT 5 | 1 | | 12 | L | Throw PA | Critical Armor-Piercing | V-3 (cost 3 from CL1) |
+
+## Courser damage grid (light, 26 boxes; CD)
+
+Columns top to bottom, `-` = hull box, letter = system: 1 `--L`, 2 `--LLM`, 3 `--HMM`, 4 `--HCC`, 5 `--RRC`, 6 `--R`. Systems: L 3, R 3, M 3, C 3, H 2.
+The Courser has Shield Guard from its head, and the H boxes are on the grid (a crippled Head should switch Shield Guard off: see open items).
+
+## Abilities (our words) and how they are built
+
+| Ability | Carried by | Build | Test |
+|---|---|---|---|
+| Resistance: Electricity | all three | `grantResistance electricity` (core damage rule: one die fewer); lightning arcs also skip such models | FAC-CYG-016 |
+| Shield Wall | Assailers | descriptor copy of the Khador rule (`b2b`: +2 ARM, cannot be knocked down) | FAC-CYG-016 (DMG-010 analogue) |
+| Repulsor Field | Assailers | `attack.resolved`, code `repulsorField`: an enemy that hit it in melee is pushed 1" straight away | FAC-CYG-014 |
+| Smite (★Attack) | Heavy Voltaic Hammer | two records: the ★ choice `cyg.a.smite` and the resolver `cyg.a.smite-slam` (code `smite`, runs only when the ★ was chosen): d6" slam, half if the target's base is larger, knockdown, collateral POW = the hammer's 15 | FAC-CYG-013 |
+| Galvanic Capacitor | Vanes | a marker plus three any-time special actions (self scope), each once per activation of the unit: Lightning Wreath, Polarity Field Generator, Wind Weaver | FAC-CYG-018 |
+| Lightning Wreath | Vanes | code `lightningWreath`: an effect with `grants: Electro Leap` on one friendly model within 3" that has a melee weapon, for the turn | FAC-CYG-018 |
+| Electro Leap | granted | attack plugin `cyg.electro-leap` (onHit): a basic melee hit arcs POW 10 electrical to the nearest non-resistant model within 3" of the one hit, never the attacker | FAC-CYG-018 |
+| Polarity Field Generator | Vanes | code `polarityField` marks the unit for a round; export `polarityFieldBlocks` | FAC-CYG-018 (helper only) |
+| Wind Weaver / Warping Winds | Vanes | code `windWeaver`: a marker effect on the Vane plus a blast-resist snapshot on Cygnar models within 3"; export `warpingWindsRngPenalty` | FAC-CYG-018 (helper only) |
+| Plasma Nimbus | Vanes | optional `attack.resolved`, code `plasmaNimbus`: the attacker takes an unboostable POW 10 electrical roll | FAC-CYG-015 |
+| Shield Guard | Courser | coreFlag `shieldGuard`, resolved by the shared Menoth attack plugin | FAC-CYG-017 |
+| Insulated Cortex | Courser | coreFlag `insulatedCortex` (recorded; nothing in Cygnar applies Disruption yet) | data only |
+| Critical Armor-Piercing | Punching Spike | `damage.beforeRoll` when `crit`, code `cygCriticalArmorPiercing` (the flag Armor-Piercing sets) | FAC-CYG-016 |
+
+Proposed checklist rows (the checklist file is not ours; add them to `12-rules-test-checklist.md`): FAC-CYG-013 Smite, FAC-CYG-014 Repulsor
+Field, FAC-CYG-015 Plasma Nimbus, FAC-CYG-016 Resistance: Electricity / Shield Wall / Critical Armor-Piercing, FAC-CYG-017 Shield Guard on
+the Courser, FAC-CYG-018 Galvanic Capacitor (Wreath, Polarity, Wind Weaver); FAC-CYG-013a is the card-value test. SKM-001 is the list test.
+
+## Open items
+
+- Unit boxes (8 and 5) come from Warmachine Academy only; no card dump has unit health. Check them against the app.
+- The Voltaic Blade POW (10 or 12) is unresolved; the app card decides.
+- Not wired into core (see the package issues): the Warping Winds RNG loss, the Polarity Field charge and slam bar, Insulated Cortex, the
+  Courser losing Shield Guard with a crippled Head, a chosen (not auto-picked) Lightning Wreath target, and the shared Shield Guard
+  plugin's limit to leaders, war-engines and solos as the protected model.
+- The Mid-Year Update changelog also touches Caine in its Storm Legion column (a cut Mage Sight and a new Arcane Sight spell). The Recon
+  section's spell list is unverified (`U-cd`); recheck it against the 2026 changelogs.

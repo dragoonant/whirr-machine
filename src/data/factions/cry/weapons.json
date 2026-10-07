@@ -130,5 +130,33 @@
     "qualities": [
       "core.q.magical"
     ]
+  },
+  {
+    "id": "cry.w.scything-blade",
+    "name": "Scything Blade",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ]
+  },
+  {
+    "id": "cry.w.doomspitter",
+    "name": "Doomspitter",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 14,
+    "blastPow": 8,
+    "location": "H"
+  },
+  {
+    "id": "cry.w.implement-of-death",
+    "name": "Implement of Death",
+    "type": "melee",
+    "rng": 1,
+    "pow": 11
   }
 ]

@@ -1,22 +1,55 @@
 // Headless bot-vs-bot games on the real starter lists and scenario, with engine invariants checked after every step (60 §2, §3).
-// Run: npm run sim -- --games 50 --seed 1 [--scenario scn-ashwall-divide|scn-qs-demo] [--cap 5000] [--json] [--lists trl.l.starter-recon,kha.l.qs-recon]
-// --lists A,B plays those two lists (A and B swap sides on odd games); without it the Khador and Cygnar Quick Start lists play.
+// Run: npm run sim -- --games 50 --seed 1 [--size recon|skirmish] [--scenario scn-ashwall-divide|scn-qs-demo] [--cap 5000] [--json] [--lists trl.l.starter-recon,kha.l.qs-recon]
+// --lists A,B plays those two lists (A and B swap sides on odd games); each may be a list id or a faction id (cyg kha trl cir cry men),
+// which means that faction's list of the chosen size. Without --lists the Khador and Cygnar lists of the size play.
+// --size skirmish (90-skirmish E6): 50-point *-skirmish lists on Copperline Crossing, 48" table; --scenario still overrides the scenario.
 import { loadBundle } from '../src/data/index'
+import type { DataBundle } from '../src/engine/types'
 import { pickSensible } from '../src/ai/random'
 import {
   createGame, legalActions, replay, save, load, step, validate,
   type Action, type GameSetup, type GameState, type LifeState, type Phase, type PlayerId,
 } from '../src/engine/index'
 
-interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean; lists?: [string, string] }
+export type GameSize = 'recon' | 'skirmish'
+export const GAME_SIZES: readonly GameSize[] = ['recon', 'skirmish']
+/** Default scenario and Khador-vs-Cygnar pair per game size. */
+export const SIZE_DEFAULTS: Record<GameSize, { scenario: string; lists: [string, string] }> = {
+  recon: { scenario: 'scn-ashwall-divide', lists: ['kha.l.qs-recon', 'cyg.l.qs-recon'] },
+  skirmish: { scenario: 'scn-copperline-crossing', lists: ['kha.l.skirmish', 'cyg.l.skirmish'] },
+}
+const RECON_LISTS: Record<string, string> = {
+  cyg: 'cyg.l.qs-recon', kha: 'kha.l.qs-recon', trl: 'trl.l.starter-recon', cir: 'cir.l.starter-recon', cry: 'cry.l.necro-recon', men: 'men.l.starter-recon',
+}
+/** A list id as given, or a bare faction id ('trl') resolved to that faction's list of the game size. */
+export function resolveList(token: string, size: GameSize): string {
+  if (token.includes('.')) return token
+  return size === 'skirmish' ? `${token}.l.skirmish` : (RECON_LISTS[token] ?? token)
+}
+/** Why a size/scenario/lists choice cannot be played (a missing list, a scenario not played at that size), or null. */
+export function sizeProblem(bundle: DataBundle, size: GameSize, scenario: string, lists: readonly string[]): string | null {
+  for (const id of lists) {
+    const l = bundle.byId[id] as { level?: string } | undefined
+    if (!l) return `list '${id}' does not exist${size === 'skirmish' ? ' (the 50-point lists come from the faction data packages)' : ''}`
+    if ((l.level ?? 'recon') !== size) return `list '${id}' is a ${l.level ?? 'recon'} list, not ${size}`
+  }
+  const sc = bundle.byId[scenario] as { levels?: string[] } | undefined
+  if (!sc) return `scenario '${scenario}' does not exist`
+  if (sc.levels && !sc.levels.includes(size)) return `scenario '${scenario}' is not played at ${size}`
+  return null
+}
+
+interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean; lists?: [string, string]; size: GameSize; scenarioGiven: boolean }
 function parseArgs(argv: string[]): Args {
-  const a: Args = { games: 20, seed: '1', scenario: 'scn-ashwall-divide', cap: 5000, json: false, stall: 200, wallMs: 60_000, quiet: false }
+  const a: Args = { games: 20, seed: '1', scenario: SIZE_DEFAULTS.recon.scenario, cap: 5000, json: false, stall: 200, wallMs: 60_000, quiet: false, size: 'recon', scenarioGiven: false }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!, v = argv[i + 1]
-    if (k === '--games' && v) { a.games = Number(v); i++ } else if (k === '--seed' && v) { a.seed = v; i++ } else if (k === '--scenario' && v) { a.scenario = v; i++ } else if (k === '--cap' && v) { a.cap = Number(v); i++ } else if (k === '--stall' && v) { a.stall = Number(v); i++ } else if (k === '--json') a.json = true
+    if (k === '--games' && v) { a.games = Number(v); i++ } else if (k === '--seed' && v) { a.seed = v; i++ } else if (k === '--scenario' && v) { a.scenario = v; a.scenarioGiven = true; i++ } else if (k === '--size' && v) { if (!(GAME_SIZES as readonly string[]).includes(v)) { console.error(`--size must be one of ${GAME_SIZES.join(', ')}`); process.exit(2) } a.size = v as GameSize; i++ } else if (k === '--cap' && v) { a.cap = Number(v); i++ } else if (k === '--stall' && v) { a.stall = Number(v); i++ } else if (k === '--json') a.json = true
     else if (k === '--lists' && v) { const [x, y] = v.split(','); if (x && y) a.lists = [x, y]; i++ }
     else if (k === '--quiet') a.quiet = true
   }
+  if (!a.scenarioGiven) a.scenario = SIZE_DEFAULTS[a.size].scenario
+  if (a.lists) a.lists = [resolveList(a.lists[0], a.size), resolveList(a.lists[1], a.size)]
   return a
 }
 
@@ -80,9 +113,9 @@ const short = (a: Action): string => {
   return `${a.decisionId} ${a.player} ${a.type} ${extra.join(' ')}`
 }
 
-export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs' | 'lists'>, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
+export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs' | 'lists'> & { size?: GameSize }, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
   const seed = `${args.seed}:g${game}`
-  const [la, lb] = args.lists ?? ['kha.l.qs-recon', 'cyg.l.qs-recon']
+  const [la, lb] = args.lists ?? SIZE_DEFAULTS[args.size ?? 'recon'].lists
   const setup: GameSetup = { scenario: args.scenario, lists: game % 2 === 0 ? { A: la, B: lb } : { A: lb, B: la } }
   const violations: Violation[] = []
   const t0 = Date.now()
@@ -139,6 +172,8 @@ export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'ca
 function main(): void {
   const args = parseArgs(process.argv.slice(2))
   const bundle = loadBundle()
+  const problem = sizeProblem(bundle, args.size, args.scenario, args.lists ?? SIZE_DEFAULTS[args.size].lists)
+  if (problem) { console.error(`sim: ${problem}`); process.exit(2) }
   const games: GameSummary[] = []
   const violations: Violation[] = []
   const t0 = Date.now()
@@ -161,7 +196,7 @@ function main(): void {
   const meanRounds = finished.length ? finished.reduce((a, g) => a + g.rounds, 0) / finished.length : 0
   const ms = games.map((g) => g.ms).sort((a, b) => a - b)
   const summary = {
-    games: games.length, finished: finished.length, scenario: args.scenario, seed: args.seed,
+    games: games.length, finished: finished.length, size: args.size, scenario: args.scenario, seed: args.seed,
     byCause, meanRounds: Number(meanRounds.toFixed(2)),
     meanDecisions: Number((games.reduce((a, g) => a + g.decisions, 0) / Math.max(1, games.length)).toFixed(1)),
     p95GameMs: ms[Math.floor(ms.length * 0.95)] ?? 0, totalMs: Date.now() - t0,

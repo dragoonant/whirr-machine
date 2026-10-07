@@ -101,5 +101,68 @@
     "abilities": [
       "men.a.critical-fire"
     ]
+  },
+  {
+    "id": "men.w.repulsor-shield",
+    "name": "Repulsor Shield",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "location": "L",
+    "qualities": [
+      "core.q.shield"
+    ],
+    "abilities": [
+      "men.a.repel"
+    ],
+    "text": "A shield that shoves back whatever it strikes or is struck by."
+  },
+  {
+    "id": "men.w.light-immolator-flail",
+    "name": "Flail",
+    "type": "melee",
+    "rng": 1,
+    "pow": 14,
+    "location": "R",
+    "abilities": [
+      "men.a.critical-fire",
+      "men.a.chain"
+    ],
+    "text": "The Light Immolator arm: a chained fire flail."
+  },
+  {
+    "id": "men.w.holy-flame-jet",
+    "name": "Holy Flame Jet",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 12,
+    "damageTypes": [
+      "fire",
+      "magical"
+    ],
+    "qualities": [
+      "core.q.pistol",
+      "core.q.magical"
+    ],
+    "abilities": [
+      "men.a.continuous-fire"
+    ],
+    "text": "A short spray of blessed fire from a hand projector."
+  },
+  {
+    "id": "men.w.flame-halberd",
+    "name": "Flame Halberd",
+    "type": "melee",
+    "rng": 2,
+    "pow": 13,
+    "qualities": [
+      "core.q.weapon-master",
+      "core.q.magical"
+    ],
+    "abilities": [
+      "men.a.critical-fire"
+    ],
+    "text": "A blessed halberd that sets a foe alight on a critical hit."
   }
 ]

@@ -194,3 +194,110 @@ Menoth lines in `docs/needs-rules-check.md` (M9 factions section) are updated 20
 shape, points split, bases, Crusader loadout, Venerable head, Defenders' boxes, feat, Prophet/Illumination are
 RESOLVED; new lines cover missing stats (MAT/RAT 0), Pyrrhus's printed ARM, the Flame Belcher blast POW and the rules
 the engine cannot run yet. Spiral aspects do not apply (no warbeasts).
+
+# Skirmish (50 points): `men.l.skirmish` (WP-D-men, 2026-10-07)
+
+Spec: `docs/spec/90-skirmish.md` B.6 and C. Plays on the Skirmish scenario (Copperline Crossing, 48" table).
+
+## Sources for this section
+
+- **Confidence key:** `WA1` the Warmachine Academy wiki page of the model (the app transcribed by the community, MediaWiki `action=raw`),
+  `WA-T` the same wiki's rule template for the named ability, `LS1` Longshanks public lists of Feora players (cost check), `CD2` community
+  app data for the old Revenger grid, `S2` the Wargamer preview and `S3` the retail listings (gists and box contents only). `U-cd` = old
+  community data, no current card shows it. A tag with a plus means two sources agree.
+- WA1 pages (all read 2026-10-07; revisions 2026-09-05 to 2026-09-09):
+  - https://warmachineacademy.miraheze.org/wiki/Revenger
+  - https://warmachineacademy.miraheze.org/wiki/Cleanser_Sanctifiers (the wiki marks it WIP)
+  - https://warmachineacademy.miraheze.org/wiki/Vassals_of_Menoth
+  - the starter pages again for the re-check: /wiki/Crusader, /wiki/Feora,_Marshal_of_the_Flameguard, /wiki/Valeria,_The_Whisper_of_Death,
+    /wiki/Pyrrhus,_Flameguard_Commander, /wiki/Flameguard_Defenders
+- WA-T rule templates: `https://warmachineacademy.miraheze.org/w/index.php?title=Template:<name>&action=raw` for Righteous_Intervention,
+  Penance_of_the_Corrupted, Enliven, Ancillary_Attack, Repair, Repel, Arc_Node, Chain, Decapitation, Chain_Weapon, Ashen_Veil, Light_Warjack,
+  Medium_Base, Shield_Wall, Shield, Weapon_Master, Magic_Ability, Critical_Fire, Pistol, Sanctified_Hull.
+- LS1: Feora lists at Longshanks event 37526 (https://warmachine.longshanks.org/event/37526/), players 6555, 8784, 23922, 33096, 62504 and
+  63506, read as https://warmachine.longshanks.org/admin/players/pop_info.php?player=ID&event=37526&tab=list. Every list is 100 points;
+  the prices are what matter and they agree with WA1 everywhere (below).
+- CD2: https://raw.githubusercontent.com/isorna/wardice-warmachine-data/main/mk4/profiles/menoth.temple-guardians.profiles.json (the old
+  Revenger: 26 boxes, the grid shape; community data, not committed).
+- S2: https://www.wargamer.com/warmachine/summer-preview-2026-menoth (gists: Sanctifiers' once-per-game payback advance and melee attack;
+  Vassals feed focus to warjacks and have buff actions; Revenger has four heads and four arms per side).
+- S3: https://www.miniaturemarket.com/Warmachine-Menoth-Covenant-of-the-Flame-Bastions-of-Faith-Preorder/SFIK-MEN552 (Bastions of Faith box:
+  Stallos, Crusader, Revenger, Cleanser Preceptor, Cleanser Sanctifiers, Cleanser Skyhammers, Vassals of Menoth; 15 plastic models).
+- Tried, no numbers: Reddit and the official blog (blocked, see `menoth-sources.md`), Brueckenkopf preview (box news only), On Tabletop
+  (box list only), the Steamforged site (no free card PDF; the rules live in the app and Wartable).
+
+## The list (50 points)
+
+| Entry | Pts | FA | Size | conf |
+|---|---|---|---|---|
+| Feora, Marshal of the Flameguard (Leader) | 0 | | | |
+| Crusader (Venerable, Blazing Star, Flame Belcher) | 13 | 4 | | WA1; LS1 prices the parts: Venerable 2, Blazing Star 5, Flame Belcher 6 (and Battle Shield 5, Flame Pike 6, Heavy Purifier 4) |
+| Revenger (Arc Node, Repulsor Shield, Light Immolator) | 7 | 4 | | WA1+LS1: head 1, shield 3, flail arm 3 (seen at 7 in three lists) |
+| Valeria, the Whisper of Death (Advance Deployment) | 5 | C | | WA1+LS1 |
+| Pyrrhus, Flameguard Commander | 4 | C | | WA1+LS1 |
+| Flameguard Defenders | 8 | 4 | 5 | WA1+LS1 |
+| Cleanser Sanctifiers | 9 | 2 | 3 | WA1+LS1 (9 in every list) |
+| Vassals of Menoth | 4 | 2 | 3 | WA1+LS1 (4 in every list) |
+| **Total** | **50** | | | |
+
+The starter 30 (Crusader, Valeria, Pyrrhus, Defenders) plus 20 points of the three most-fielded add-ons of the five Feora lists in the spec
+(Revenger, Sanctifiers, Vassals). The Cleanser Preceptor (5 of 5 lists) does not fit: it would make 55. Skirmish rule: the Leader's
+battlegroup needs one non-lesser Cohort model; the list has two (Crusader, Revenger). The Revenger build is the one most Feora lists run:
+Arc Node head (also the cheapest at 1), Repulsor Shield, Light Immolator. Loadout choice is not an option in the engine, so it is a
+fixed profile (RULING, `needs-rules-check.md` M12 Skirmish).
+
+## New models
+
+| id | Source | Type | Base | Boxes | Pts | FA | conf |
+|---|---|---|---|---|---|---|---|
+| `men.revenger-arc` | Revenger | light warjack | 40 | grid 26 | 7 | 4 | WA1 (stats, boxes, FA, head and arm costs); grid shape U-cd (CD2) |
+| `men.cleanser-sanctifiers` / `men.cleanser-sanctifier` | Cleanser Sanctifiers | unit of 3 | 40 | 8 each | 9 | 2 | WA1 (a WIP page, so single-source for the numbers; the gists of S2 agree) |
+| `men.vassals` / `men.vassal` | Vassals of Menoth | unit of 3 | 30 | 5 each | 4 | 2 | WA1 |
+
+| id | SPD | MAT | RAT | DEF | ARM | conf |
+|---|---|---|---|---|---|---|
+| `men.revenger-arc` | 5 | 6 | 5 | 12 | 17 | WA1 (chassis; every arm and head here keeps MAT 6) |
+| `men.cleanser-sanctifier` | 5 | 7 | 5 | 12 | 18 | WA1 (Shield Wall adds +2 next to a unit-mate, as for the Defenders) |
+| `men.vassal` | 5 | 0 | 0 | 13 | 13 | WA1 (the card prints neither MAT nor RAT; 0, the Valeria convention) |
+
+Revenger grid (top box first, `-` hull, letter = system; boxes 3, 5, 5, 5, 5, 3): `--L`, `--LLM`, `---MM`, `---CC`, `--RRC`, `--R`. Three of
+each of L, M, C, R. The community grid also has two Arc Node boxes (A) in the middle columns; they are plain hull here because the Arc Node
+is now a head option and cannot be crippled (the same call as the Cryx Raptor). U-cd.
+
+## Weapons (our summaries)
+
+| Model | Weapon | Stat | RNG | POW | Qualities | conf |
+|---|---|---|---|---|---|---|
+| Revenger, left arm L | Repulsor Shield | MAT 6 | 1 | 12 | Shield (+2 ARM), Repel | WA1 |
+| Revenger, right arm R | Flail (Light Immolator) | MAT 6 | 1 | 14 | Critical Fire, Chain | WA1 |
+| Sanctifier | Holy Flame Jet | RAT 5 | SP 8 | 12 | Pistol, Magical, Fire damage, Continuous Effect: Fire | WA1 |
+| Sanctifier | Flame Halberd | MAT 7 | 2 | 13 | Weapon Master, Magical, Critical Fire | WA1 |
+| Vassal | none | | | | | WA1 |
+
+## Abilities
+
+| Rule | Where | Our reading | Runs now? |
+|---|---|---|---|
+| Repel (WA-T) | Repulsor Shield | A hit by the shield pushes the model hit 1" straight away; a melee weapon attack that hits the Revenger pushes the attacker 1" straight away from it once the attack is done; lost with the crippled left arm | **Yes** (`men.a.repel`, `repelResolved` in `menoth.ts`) |
+| Chain (Decapitation, WA-T) | Flail | Damage left after ARM is doubled; a model it disables gets no Tough roll | **Yes** (`men.a.chain`, adjustPoints and onBoxed seams) |
+| Repair [d3+1] | Vassals | ★Action, range 1, heal d3+1 on a friendly construct | **Yes** (`men.a.repair`, the shared `repair` hook) |
+| Enliven | Vassals | ★Action, range 3, round-long: after an enemy attack damages that cohort model it may make a full advance | **Yes**, with a flat 5" advance (RULING) |
+| Ancillary Attack | Vassals | ★Action, range 3: a friendly warjack makes one basic attack now, once per turn each | **Yes** (`men.a.ancillary-attack`) |
+| Shield Wall, Resistance: Fire, Shield | Sanctifiers, Revenger | as on the Defenders and Feora | **Yes** |
+| Sanctified Hull | Revenger | as on the Crusader | **Yes** |
+| Arc Node | Revenger | the Leader may channel a spell through it | **No**: `spells.ts` looks for `core.a.arc-node`, which core does not define; the model carries `arcNode: true` and `men.a.arc-node` (flag `arcNode`) for WP-CORE |
+| Ashen Veil | Light Immolator arm | concealment for the carrier; living enemies without Resistance: Fire within 2" take -2 on attack rolls | **No**: no attack-roll seam for an aura on enemy models, no granted concealment (WP-CORE) |
+| Righteous Intervention | Sanctifiers | once per game, in activation: for a round, when an enemy attack destroys a friendly non-Sanctifier within 6", a Sanctifier advances 2" and attacks in melee | **No**: an inert passive (no empty action offered); needs a once-per-game unit action and a reaction to a friendly death (WP-CORE) |
+| Penance of the Corrupted | Vassals | in the Control Phase, in the Leader's CTRL, take damage to give a friendly warjack that much focus | **No**: an inert passive; needs a damage-for-focus step in `focus.ts` (WP-CORE) |
+
+## Tests
+
+`tests/data/men-skirmish.test.ts`: SKM-001 (the list), SKM-002 (men: the mirror starts on Copperline Crossing, refused on a Recon
+scenario), FAC-MEN-032 (card values of the three new models), FAC-MEN-033 (the starter re-check against WA1), FAC-MEN-034 (Repel),
+FAC-MEN-035 (Chain), FAC-MEN-036 (Vassals' actions through the real pipeline), FAC-MEN-037 (Sanctifiers' Shield Wall and fire resistance).
+
+## Starter re-check against WA1 (2026-10-07)
+
+Every starter stat line, box count, weapon, cost and FA in this file was compared with the live wiki page; nothing changed. The M10 values
+were not proxies any more (they came from the same pages). The Crusader grid layout is still U-cd, and the point costs are now checked
+against two independent sources (WA1 and LS1). Figure slugs for the new models are `wm-revenger`, `wm-sanctifier` and `wm-vassal` (WP-FIG).

@@ -149,5 +149,72 @@
     "type": "melee",
     "rng": 1,
     "pow": 9
+  },
+  {
+    "id": "cyg.w.heavy-voltaic-hammer",
+    "name": "Heavy Voltaic Hammer",
+    "type": "melee",
+    "rng": 2,
+    "pow": 15,
+    "abilities": [
+      "cyg.a.smite",
+      "cyg.a.smite-slam"
+    ],
+    "text": "Long-hafted storm hammer of the Tempest Assailers; reach 2 inches."
+  },
+  {
+    "id": "cyg.w.storm-surge",
+    "name": "Storm Surge",
+    "type": "ranged",
+    "rng": "SP6",
+    "rof": 1,
+    "pow": 10,
+    "damageTypes": [
+      "electricity"
+    ],
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "text": "A forward-held emitter that sprays an arc of electrical discharge."
+  },
+  {
+    "id": "cyg.w.heavy-stormthrower",
+    "name": "Heavy Stormthrower",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 12,
+    "location": "R",
+    "damageTypes": [
+      "electricity"
+    ],
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "text": "The Courser's right-arm lightning spray."
+  },
+  {
+    "id": "cyg.w.stormthrower-blade",
+    "name": "Voltaic Blade",
+    "type": "melee",
+    "rng": 1,
+    "pow": 10,
+    "location": "R",
+    "text": "The blade fixed under the Heavy Stormthrower."
+  },
+  {
+    "id": "cyg.w.voltaic-punching-spike",
+    "name": "Voltaic Punching Spike",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "location": "L",
+    "qualities": [
+      "core.q.throw"
+    ],
+    "abilities": [
+      "cyg.a.critical-armor-piercing"
+    ],
+    "text": "A charged spike on the Courser's left fist."
   }
 ]

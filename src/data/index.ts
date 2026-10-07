@@ -1,6 +1,7 @@
 // Data bundle loader (20-data-schema section 1). Pure, browser-safe: no fs, no ajv.
 // Schema validation lives in tools/validate-data.ts; this file only builds the bundle and checks ids and refs.
 import type { DataBundle, DataRecord } from '../engine/types'
+import { isLayout48Id, layout48Source, scaleLayout48 } from './layout48'
 import { RAW } from './raw'
 
 export type RecordType =
@@ -94,7 +95,8 @@ export function checkRefs(byId: Record<string, TypedRecord>): string[] {
         if (o.board !== undefined) {
           need(r.id, o.board, ['board'], 'board')
           const bd = byId[String(o.board)] as Record<string, unknown> | undefined
-          if (bd && !arr(bd.layouts).includes(r.id)) errs.push(`${r.id}: board '${String(o.board)}' does not list this layout`)
+          // a derived -48 layout (E2) is listed under its 36 inch source id
+          if (bd && !arr(bd.layouts).includes(isLayout48Id(r.id) ? layout48Source(r.id) : r.id)) errs.push(`${r.id}: board '${String(o.board)}' does not list this layout`)
         }
         break
       }
@@ -142,6 +144,23 @@ export function contentHash(byId: Record<string, DataRecord>): string {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0')
 }
 
+/**
+ * E2 (90-skirmish A.4): the 48 inch twin of every board layout, `<layout id>-48` = `scaleLayout48` of its source. Returned as a
+ * separate map (the raw files stay 36 inch) so the loader and tools/validate-data can add them before checking references.
+ */
+export function derivedLayouts(byId: Record<string, TypedRecord>): Record<string, TypedRecord> {
+  const out: Record<string, TypedRecord> = {}
+  for (const r of Object.values(byId)) {
+    if (r.recordType !== 'terrain-layout' || isLayout48Id(r.id)) continue
+    const o = r as unknown as Parameters<typeof scaleLayout48>[0]
+    if (!o.board) continue // scenario-owned layouts (the Ashwall Divide) have no 48 inch twin
+    const big = scaleLayout48(o)
+    if (byId[big.id]) continue // an authored 48 inch layout wins
+    out[big.id] = { ...big, recordType: 'terrain-layout' } as unknown as TypedRecord
+  }
+  return out
+}
+
 let cached: DataBundle | null = null
 
 /** Build the bundle the engine takes. Throws on a duplicate id or a dangling reference. Cached per process. */
@@ -153,6 +172,7 @@ export function loadBundle(): DataBundle {
     if (byId[id]) throw new Error(`data: duplicate id '${id}' (${path})`)
     byId[id] = { ...rec, id, recordType: type }
   }
+  Object.assign(byId, derivedLayouts(byId)) // before checkRefs, so buildTerrain and scenarioAnchorProblems find them
   const errs = checkRefs(byId)
   if (errs.length) throw new Error(`data: ${errs.length} dangling reference(s):\n${errs.join('\n')}`)
   cached = { version: contentHash(byId), byId }

@@ -1,0 +1,22 @@
+{
+  "id": "kha.wk-snipers",
+  "name": "Winter Korps Snipers",
+  "faction": "kha",
+  "type": "unit",
+  "keywords": [
+    "winter-korps"
+  ],
+  "cost": 4,
+  "fa": 3,
+  "composition": {
+    "grunts": {
+      "profile": "kha.wk-sniper",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 4
+    }
+  },
+  "verify": "3 models, 4 points, FA 3 (CD, WA agree). The Hunting Dog command attachment is out of scope (RULING command attachments)."
+}

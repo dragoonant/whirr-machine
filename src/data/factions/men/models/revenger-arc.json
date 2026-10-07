@@ -1,0 +1,57 @@
+{
+  "id": "men.revenger-arc",
+  "name": "Revenger",
+  "faction": "men",
+  "type": "warEngine",
+  "engineClass": "light",
+  "keywords": [
+    "menoth",
+    "construct"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 5,
+    "MAT": 6,
+    "RAT": 5,
+    "DEF": 12,
+    "ARM": 17
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "--L",
+      "--LLM",
+      "---MM",
+      "---CC",
+      "--RRC",
+      "--R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.repulsor-shield",
+      "location": "L"
+    },
+    {
+      "weapon": "men.w.light-immolator-flail",
+      "location": "R"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.dual-attack",
+    "men.a.sanctified-hull",
+    "men.a.arc-node",
+    "men.a.ashen-veil"
+  ],
+  "arcNode": true,
+  "cost": 7,
+  "fa": 4,
+  "figure": {
+    "slug": "wm-revenger",
+    "archetype": "lightEngine"
+  },
+  "verify": "Chassis SPD 5 MAT 6 RAT 5 DEF 12 ARM 17, 26 boxes, FA 4 (WA, Revenger page rev 2026-09-05, WA1); build Arc Node head 1 + Repulsor Shield 3 + Light Immolator 3 = 7 (WA1, and Longshanks Feora lists of 2026-09 price the same build at 7, LS1). The grid layout is the older Revenger chassis from community data (U-cd, CD2): its two A boxes are plain hull here because the Arc Node is a head option now. Base 40 mm (Light Warjack, WA1)."
+}

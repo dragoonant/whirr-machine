@@ -1,0 +1,54 @@
+{
+  "id": "kha.dire-wolf-gun",
+  "name": "Dire Wolf",
+  "faction": "kha",
+  "type": "warEngine",
+  "engineClass": "heavy",
+  "keywords": [
+    "construct"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 5,
+    "MAT": 6,
+    "RAT": 4,
+    "DEF": 10,
+    "ARM": 19
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "---L",
+      "--LLM",
+      "---HMM",
+      "---HCC",
+      "--RRC",
+      "---R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "kha.w.cannon",
+      "location": "R"
+    },
+    {
+      "weapon": "kha.w.heavy-chain-gun",
+      "location": "L"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "kha.a.anchor",
+    "kha.a.accuracy"
+  ],
+  "cost": 11,
+  "fa": 4,
+  "figure": {
+    "archetype": "heavyEngine"
+  },
+  "verify": "Fixed build: Accuracy head 1 + Cannon 5 + Heavy Chain Gun 5 = 11 (CD hardpoints; WA 2026-04-13 hardpoints; LS 38172 list). Chassis SPD 5 MAT 6 RAT 4 DEF 10 ARM 19, 30 boxes, FA 4 (CD, WA agree). Grid from CD (two Head boxes). Base 50 by heavy class (WA gives no mm)."
+}

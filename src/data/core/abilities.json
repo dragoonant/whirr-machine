@@ -525,5 +525,43 @@
       "who": "target"
     },
     "duration": "instant"
+  },
+  {
+    "id": "core.a.arc-node",
+    "name": "Arc Node",
+    "text": "This model can carry its Leader's spells: the Leader may channel a spell through it, so the spell is cast from this model.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "arcNode"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.cavalry",
+    "name": "Cavalry",
+    "text": "The attack roll of this model's charge attack is boosted, with no focus spent.",
+    "kind": "triggered",
+    "trigger": "attack.declared",
+    "when": {
+      "test": "charged"
+    },
+    "effect": [
+      {
+        "code": "coreCavalry"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
   }
 ]

@@ -1,0 +1,17 @@
+{
+  "id": "trl.l.skirmish",
+  "name": "Trollbloods Skirmish",
+  "faction": "trl",
+  "level": "skirmish",
+  "points": 50,
+  "leader": "trl.gunnbjorn",
+  "entries": [
+    { "profile": "trl.bomber" },
+    { "profile": "trl.dozer-smigg" },
+    { "profile": "trl.braylen", "advanceDeploy": true },
+    { "profile": "trl.highwaymen", "size": 5, "advanceDeploy": true },
+    { "profile": "trl.krielstone" },
+    { "profile": "trl.runebearer" }
+  ],
+  "source": "Gunnbjorn starter plus Dozer & Smigg, Krielstone, Runebearer (90-skirmish B.3)"
+}

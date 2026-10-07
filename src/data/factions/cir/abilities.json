@@ -299,5 +299,197 @@
     "scope": { "who": "target" },
     "duration": "round",
     "verify": "Core: healDamage and rollTough honour effects that forbid heal or tough."
+  },
+  {
+    "id": "cir.a.cavalry",
+    "name": "Cavalry",
+    "text": "This is a cavalry model. Its charge attack rolls are boosted without paying for it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "cavalry"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Marker only (flag cavalry). The boosted charge attack roll (rulebook p112) is core work for WP-CORE."
+  },
+  {
+    "id": "cir.a.assault",
+    "name": "Assault",
+    "text": "After a successful charge, before its Combat Action, this model may make one ranged attack at the model it charged, without the usual penalty for the target being in melee.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "assault"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Marker only (flag assault; rulebook p90-91). The engine does not yet offer the free ranged attack after a charge: core work for WP-CORE."
+  },
+  {
+    "id": "cir.a.annoyance",
+    "name": "Annoyance",
+    "text": "Living enemy models within 1 inch of this model take -1 on their attack rolls.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "annoyance"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Flag annoyance; annoyancePenalty() in factions/circle.ts is the seam. Core must add it to atkModsFor (an aura on enemy models, which appliedPassives does not reach)."
+  },
+  {
+    "id": "cir.a.unpredictable-movement",
+    "name": "Unpredictable Movement",
+    "text": "When this unit makes a Normal Movement, after the advancing model has moved, the rest of the unit may be placed up to 4 inches from it instead of the usual 2.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "unpredictableMovement"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Marker only (flag unpredictableMovement). Unit placement still uses the 2 inch rule: core work for WP-CORE."
+  },
+  {
+    "id": "cir.a.unyielding",
+    "name": "Unyielding",
+    "text": "This model gets +2 ARM against melee damage rolls.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "cirUnyielding"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Plugin cir.unyielding (adjustPoints): takes 2 off the points of a melee damage roll, which is the same as +2 ARM; Affliction's one-point floor still applies. Attack previews do not show it yet."
+  },
+  {
+    "id": "cir.a.combo-strike",
+    "name": "Combo Strike",
+    "text": "Special attack with this weapon in place of the initial attacks: one attack that adds 4 to its damage roll.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 4
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cir.a.magic-ability",
+    "name": "Magic Ability",
+    "text": "Special attacks and actions of this model count as casting a spell.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "magicAbility"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cir.a.chain-lightning",
+    "name": "Chain Lightning",
+    "text": "Arcane special attack, range 10. The model hit takes a POW 10 electrical damage roll, then the lightning arcs to d3 more models, each time to the nearest model it has not touched within 3 inches of the last, skipping the caster. Each arc takes a POW 10 electrical roll, but arcs are not attacks.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "cirChainLightning"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant",
+    "attack": "cir.w.chain-lightning",
+    "verify": "Plugin cir.chain-lightning (onResolved) rolls the arcs: RULING friendly models can be arced to, ties go to the lower model id, each arc rolls 2d6 + 10 against ARM (one die fewer if it resists electricity), magical electrical damage."
+  },
+  {
+    "id": "cir.a.hunters-grace",
+    "name": "Hunter's Grace",
+    "text": "Special action: friendly Tharn models within 5 inches of this model cannot be knocked down for a round.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "cirHuntersGrace"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 5,
+      "filter": {
+        "test": "keyword",
+        "value": "tharn"
+      }
+    },
+    "duration": "round",
+    "verify": "RULING: the models covered are the Tharn within 5 inches when the action is used; the effect does not follow the Shaman as it moves (the engine has no moving aura for actions)."
+  },
+  {
+    "id": "cir.a.sky-shaker",
+    "name": "Sky Shaker",
+    "text": "Special action: for a round this model gains Warping Winds. Ranged attacks at friendly Faction models within 3 inches of it lose 3 RNG, and those models resist blast damage.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "cirSkyShaker"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3
+    },
+    "duration": "round",
+    "verify": "RULING: Resistance: Blast goes to the Faction models within 3 inches when the action is used (static). The -3 RNG is warpingWindsRngPenalty() in factions/circle.ts, which core must call from the range check; until then it is not applied."
   }
 ]

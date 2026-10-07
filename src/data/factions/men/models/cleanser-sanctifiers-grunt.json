@@ -1,0 +1,41 @@
+{
+  "id": "men.cleanser-sanctifier",
+  "name": "Cleanser Sanctifier",
+  "faction": "men",
+  "type": "trooper",
+  "keywords": [
+    "menoth",
+    "flameguard"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 5,
+    "MAT": 7,
+    "RAT": 5,
+    "DEF": 12,
+    "ARM": 18
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.holy-flame-jet"
+    },
+    {
+      "weapon": "men.w.flame-halberd"
+    }
+  ],
+  "abilities": [
+    "core.a.resist-fire",
+    "kha.a.shield-wall",
+    "men.a.righteous-intervention"
+  ],
+  "cost": 0,
+  "figure": {
+    "slug": "wm-sanctifier",
+    "archetype": "infantry"
+  },
+  "verify": "Card values from WA (Cleanser Sanctifiers page rev 2026-09-05, WA2, marked WIP by the wiki): SPD 5 MAT 7 RAT 5 DEF 12 ARM 18, 8 boxes, Medium Base (40 mm), Resistance: Fire, Shield Wall, Righteous Intervention, Holy Flame Jet and Flame Halberd. Shield Wall is the Khador record (same rule as the Defenders). Keywords are ours."
+}

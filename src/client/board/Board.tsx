@@ -15,7 +15,8 @@ import { useInteractionStore } from '../interaction/store'
 import { Clouds } from '../vfx/Clouds'
 import { Pops } from '../vfx/Pops'
 import { CameraRig } from './Camera'
-import { THEME, cameraPose, proxyAttrs, tableOf } from './layout'
+import { GEO, lineMaterial } from '../figures/kit'
+import { SIDE_COLOURS, THEME, cameraPose, killBoxViews, proxyAttrs, tableOf } from './layout'
 import { Surface } from './Surface'
 import { loadBoardsJson, useBoard } from './boardStore'
 import { TerrainTooltip } from './TerrainTooltip'
@@ -100,17 +101,52 @@ function Figures(): ReactElement {
 }
 const EMPTY: PlayerId[] = []
 
+/**
+ * Kill Box line (SK12): a thin strip at the inner border of the strip along each player's own edge (12 inches deep on
+ * Skirmish). Faint until the scenario's first Kill Box turn, brighter after, and the strip tints while that player's Leader
+ * stands inside it. Recon scenarios have no Kill Box and draw nothing.
+ */
+export function KillBoxLines(): ReactElement | null {
+  const state = usePresentedState()
+  const views = useMemo(() => killBoxViews(state), [state?.players.A.edge, state?.players.B.edge, state?.scenario.id, state?.scenario.killBox.A, state?.scenario.killBox.B, state?.round, state?.activePlayer, state?.firstPlayer]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!views.length) return null
+  return (
+    <group>
+      {views.map((v) => {
+        const [a, b] = v.line
+        const cx = (a.x + b.x) / 2, cz = (a.z + b.z) / 2
+        const alongX = Math.abs(b.x - a.x) > Math.abs(b.z - a.z)
+        const len = Math.hypot(b.x - a.x, b.z - a.z)
+        const colour = SIDE_COLOURS[v.player].zone
+        return (
+          <group key={v.player}>
+            <mesh geometry={GEO.plane} material={lineMaterial(`kb:${colour}`, colour, v.active ? 0.7 : 0.25)} rotation={[-Math.PI / 2, 0, 0]}
+              position={[cx, 0.05, cz]} scale={alongX ? [len, 0.14, 1] : [0.14, len, 1]} />
+            {v.occupied && (
+              <mesh geometry={GEO.plane} material={lineMaterial('kb:occupied', '#e2735b', 0.16)} rotation={[-Math.PI / 2, 0, 0]}
+                position={[(v.rect.x0 + v.rect.x1) / 2, 0.025, (v.rect.z0 + v.rect.z1) / 2]} scale={[v.rect.x1 - v.rect.x0, v.rect.z1 - v.rect.z0, 1]} />
+            )}
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
 /** Lighting from the board: key colour and intensity, a sky/ground ambient pair and a fog that matches the background. */
-function Lights({ shadows }: { shadows: boolean }): ReactElement {
+function Lights({ shadows, span }: { shadows: boolean; span: number }): ReactElement {
   const { light } = useBoard()
+  // the shadow box covers the whole table (it was fixed at 26 for a 36 inch table; a 48 inch one needs 34)
+  const half = Math.max(26, span * 0.7)
+  const fogScale = Math.max(1, span / 36) // the camera sits further back over a bigger table: push the fog back with it
   const sky = useMemo(() => '#' + new THREE.Color(light.ambient).lerp(new THREE.Color('#ffffff'), 0.55).getHexString(), [light.ambient])
   return (
     <>
       <color attach="background" args={[light.fog]} />
-      <fog attach="fog" args={[light.fog, light.fogNear, light.fogFar]} />
+      <fog attach="fog" args={[light.fog, light.fogNear * fogScale, light.fogFar * fogScale]} />
       <hemisphereLight args={[sky, light.ambient, 1.5]} />
       <directionalLight position={[16, 34, 12]} intensity={light.keyIntensity} color={light.key} castShadow={shadows} shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-26} shadow-camera-right={26} shadow-camera-top={26} shadow-camera-bottom={-26} shadow-camera-far={90} />
+        shadow-camera-left={-half} shadow-camera-right={half} shadow-camera-top={half} shadow-camera-bottom={-half} shadow-camera-far={90 + (half - 26) * 2} />
       <directionalLight position={[-18, 14, -16]} intensity={0.35} color="#b87333" />
     </>
   )
@@ -127,10 +163,11 @@ function Scene(): ReactElement {
       <Invalidator />
       {shadows && <ShadowGate />}
       <AmbientTick />
-      <Lights shadows={shadows} />
+      <Lights shadows={shadows} span={Math.max(w, d)} />
       <CameraRig />
       <Surface w={w} d={d} onShadows={shadows} />
       <Zones />
+      <KillBoxLines />
       <Terrain />
       <ScenarioElements />
       <Figures />

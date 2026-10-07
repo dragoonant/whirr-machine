@@ -276,3 +276,103 @@ touches (Veil of Mists in place of Bleed, the animus COST floor of 0 under the f
 - RULING: Rapid Healing trigger | It heals d3 only when the enemy attack actually dealt damage to this model (logged in the attack's flags.damagedIds); a hit that deals 0, or damage already marked from earlier, does not heal | the card says an attack that damages the model
 - RULING: Affliction cast | An offensive spell with no POW: the cast is an attack roll that rolls no damage; a hit puts the upkeep effect (-2 DEF, the 1-damage floor) on the model hit, filed as an enemy upkeep of the caster | the spec marks it OFF yes; the card lists no POW
 - RULING: Raven damage | A weapon with no POW never rolls damage, so riders that read a damage roll (Meat for the Beast, the Affliction floor) do not fire | the card lists no POW
+
+---
+
+# Skirmish (50 points): the Devourer's Host list `cir.l.skirmish` (47 points)
+
+Work package WP-D-cir of `90-skirmish.md` (sections B.4 and C). One list: the Recon starter plus the add-ons that Devourer's Host
+players field. Tanith's own lists are not public (`90-skirmish-sources.md` section 2), so the evidence is the 7 Devourer's Host lists
+of the same period (Longshanks, tag LS). All prose is ours; names and numbers are the real ones.
+
+## Sources for this section
+
+Tags S1 to S7 are the ones in `circle-sources.md`. The research standard of 2026-10-07 applies: the official app being hard to read is
+not a reason to leave a value unverified, so each value below was checked in at least two places.
+
+| Tag | Source | What it gave |
+|---|---|---|
+| S1, S2 | App data as split by tate4490/Warmachine (`data_general.json`, commit 2026-07-01) and isorna/wardice-warmachine-data (`mk4/profiles/circle-orboros.devourer-s-host.profiles.json`, "app data dump" 2026-07-10), read from local copies in the session scratchpad (nothing is stored in the repo) | Every stat, box count, point cost, FA, weapon, ability text and the Doppler Bark card of the three models; S1 also has the base-size advantages (50 mm, 40 mm) and the aspect totals of the Argus spiral; S2 has the spiral branch sizes |
+| S8 | Steamforged **January 2026 changelog** v1.1 (local `docs/sources/WM-Jan-Changelog-V3.pdf`; the Brueckenkopf preview https://www.brueckenkopf-online.com/2026/warmachine-januar-update-changelog/ does not list Circle) and the June 2026 changelog (`WM-Changelog-2026-June.pdf`: no Circle line) | The official reason S4 is out of date: Tharn Wolf Riders and the Champion MAT 7 to 6, cut Dual Attack, gain Assault; Tharn Ravager Shaman MAT 7 to 6; Wild Argus not mentioned (unchanged) |
+| S9 | Privateer Press, "WARMACHINE App Update January 10, 2024" https://home.privateerpress.com/2024/01/10/warmachine-app-update-january-10-2024/ | Tharn Ravager Shaman: Sky Shaker replaced Shepherd's Call, damage boxes raised to 8, cost 4. Wolf Riders and Wild Argus: no change |
+| S4 | Warmachine Academy wiki pages Tharn_Wolf_Riders (rev 2026-04-13), Tharn_Ravager_Shaman (2026-04-13), Wild_Argus (2025-06-27) and the templates Doppler_Bark_Animus, Combo_Strike, Annoyance, Sky_Shaker, Chain_Lightning_MA (MediaWiki API on https://warmachineacademy.miraheze.org/) | Base templates (Large, Medium, Medium), unit size 3, FA, points; agrees with S1 and S2 on everything except the items S8 explains |
+| S6 | MK4 rulebook (local): Cavalry and Cavalry Charge p112 (boosted charge attack rolls), Assault p90 to 91, Unstoppable and Weapon Master p68 to 70, base sizes p71 | The rules behind the abilities |
+| LS | Longshanks, 7 Devourer's Host lists, 2026-05 to 2026-10 (`90-skirmish-sources.md` section 2) | Which add-ons are fielded: Tharn Wolf Riders 5/7, Tharn Ravager Shaman 5/7, Wild Argus 4/7 (and in the one 50-point list) |
+
+Tried, nothing usable: the Warmachine University wiki (the domain now redirects to an unrelated site; not followed), the MK4 fandom wiki
+(HTTP 402), Bell of Lost Souls GameWire (HTTP 403), Steamforged blog posts (HTTP 429), web searches for MK4 Wolf Rider or Argus card
+text (only MK3-era articles). The official app itself is not readable from here; S1 and S2 are extracts of it.
+
+## The list (47 points)
+
+| Entry | Pts | Source of the points |
+|---|---|---|
+| Tanith the Feral Song (Leader) | 0 | S1, S2 |
+| Pureblood Warpwolf | 15 | S1, S2, S4 |
+| Wild Argus (**new**, light warbeast) | 6 | S1, S2, S4 |
+| Lord of the Feast (Advance Deployment) | 5 | S1, S2, S4 |
+| Tharn Ravagers x3 | 9 | S1, S2, S4 |
+| Tharn Wolf Riders x3 (**new**) | 8 | S1, S2, S4 |
+| Tharn Ravager Shaman (**new**) | 4 | S1, S2, S4, S9 |
+| **Total** | **47** | the Tharn Wolf Rider Champion (4) would make 51; two Gallows Groves (1 each) are left out until their rules are checked |
+
+## New models
+
+| id | Model | Pts | FA | Base | Boxes | SPD | AAT | MAT | RAT | DEF | ARM | FURY | THR | conf |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `cir.wolf-riders` (unit of 3 `cir.wolf-rider`) | Tharn Wolf Riders | 8 | 2 | 50 (Large) | 5 each | 9 | - | 6 | 6 | 15 | 14 | - | - | S1, S2; S8 explains why S4 (MAT 7) is older |
+| `cir.ravager-shaman` | Tharn Ravager Shaman | 4 | 2 | 40 (Medium) | 8 | 6 | 6 | 6 | - (stored 0) | 13 | 15 | - | - | S1, S2; S8 (MAT 7 to 6); S9 |
+| `cir.wild-argus` | Wild Argus | 6 | 4 | 40 (Medium) | spiral 21 (Mind 7, Body 7, Spirit 7) | 6 | - | 5 | - | 14 | 15 | 3 | 9 | S1, S2, S4 (all agree); not in S8 |
+
+Keywords: the app keywords are Circle and Devourer's Host (plus the type). We add `tharn` to the Wolf Riders and the Shaman, as the earlier
+data did for the Ravagers, because Hunter's Grace names "Tharn" models (RULING). The Argus is not Tharn.
+
+## Weapons
+
+| id | Weapon | Qty | Type | Stat | RNG | ROF | POW | Qualities and rules | conf |
+|---|---|---|---|---|---|---|---|---|---|
+| `cir.w.thrown-javelin` | Thrown Javelin | 1 | ranged | RAT 6 | 7 | 1 | 9 | Weapon Master (one more damage die) | S1, S2, S4 |
+| `cir.w.bladed-shield` | Bladed Shield | 1 | melee | MAT 6 | 1 | - | 9 | Weapon Master | S1, S2 (S4: MAT 7, see S8) |
+| `cir.w.totem-staff` | Totem Staff | 1 | melee | MAT 6 | 1 | - | 12 | Magical damage | S1, S2 (S4: MAT 7) |
+| `cir.w.chain-lightning` | Chain Lightning (the Shaman's star attack; the card lists it as an ability, we model it as an unmounted weapon like the Furies' Stygian Abyss) | 1 | arcane | AAT 6 | 10 | 1 | 10 | Electricity, magical; arcs, see below | S1, S2, S4 |
+| `cir.w.bite` | Bite | 2 | melee | MAT 5 | 1 | - | 12 | Combo Strike | S1, S2, S4 |
+
+Weapon locations are not on the cards, so none are stored (as for the Pureblood).
+
+## Abilities (our summaries) and how the engine does them
+
+| Ability | Holder | What it does | Engine state |
+|---|---|---|---|
+| Cavalry | Wolf Rider | cavalry model: boosted charge attack rolls (S6 p112) | flag `cavalry` only; **core must boost the roll** (issue) |
+| Assault | Wolf Rider | one ranged attack after a successful charge, before the Combat Action, no target-in-melee penalty (S6 p90) | flag `assault` only; **core must offer the attack** (issue) |
+| Annoyance | Wolf Rider | living enemies within 1" take -1 to attack rolls (never stacks, RULING) | flag `annoyance` and the helper `annoyancePenalty()`; **core must add it to the attack-roll mods** (issue) |
+| Unpredictable Movement | Wolf Rider | when the unit's Normal Movement places models, the rest may go within 4" of the advancing one, not 2" | flag only; **core placement still uses 2"** (issue) |
+| Unyielding | Wolf Rider | +2 ARM against melee damage rolls | **done**: plugin `cir.unyielding` takes 2 points off a melee or power-attack roll (the ARM shown is unchanged; Affliction's floor still applies) |
+| Reposition [3"], Unstoppable, Pathfinder, Weapon Master | Wolf Rider | core abilities | **done** (existing core records) |
+| Magic Ability | Shaman | its special attacks and actions count as casting | **done** (flag `magicAbility`: the star attack is arcane and rolls AAT) |
+| Chain Lightning (star attack) | Shaman | RNG 10 arcane attack; the model hit takes POW 10 electrical damage, then the lightning arcs to d3 more models, each the nearest untouched model within 3" of the last (the Shaman is skipped); each arc takes a POW 10 electrical roll that is not an attack | **done**: plugin `cir.chain-lightning` (after the attack resolves). RULING: friends can be arced to; ties go to the lower model id; arcs roll 2d6 + 10 against ARM, one die fewer against electricity resistance, magical damage |
+| Hunter's Grace (star action) | Shaman | friendly Tharn models within 5" cannot be knocked down for a round | **done, static**: the Tharn within 5" when the action is used (RULING); uses the Combat Action |
+| Sky Shaker (star action) | Shaman | Warping Winds for a round: ranged attacks at friendly Faction models within 3" lose 3 RNG, and those models resist blast | **half done**: a Warping Winds effect on the Shaman and Resistance: Blast fixed on the Faction models within 3" when used (RULING). The -3 RNG is the helper `warpingWindsRngPenalty()`; **core must call it from the range check** (issue). `warpingWindsBlastResist()` is the live version core can use instead of the static resistance |
+| Body Snatcher: Heart Eater, Blood Rage, Meat for the Beast, Rapid Healing, Treewalker, Tough, Pathfinder | Shaman | as the Ravagers (see above) | **done** (existing hooks) |
+| Combo Strike (star attack) | Argus | one Bite in place of the initial attacks, +4 to its damage roll | **done** (data only, the Both Barrels pattern) |
+| Headbutt, Slam, Pathfinder | Argus | core abilities | **done** |
+| Doppler Bark (animus, COST 2, SELF, RND) | Argus | living or undead enemy models within 2" of the caster: base DEF 5 and no run, charge, slam or trample for a round | DEF 5 **done**; the effect carries `forbid` run, charge, slam and trample, which only a frenzied beast's charge reads today (**core must read it in moverInfo**, issue). The Argus casts it forced; Tanith can cast it for her battlegroup |
+
+The Wolf Rider and the Shaman carry **Wraithbane Weapons** like the other Circle models (a rider on the Wraithbane animus, not on the card).
+
+## Conflicts and RULINGs
+
+- **Wolf Riders MAT 6 vs 7, Assault vs Dual Attack.** S1 and S2 (app, July 2026) say MAT 6, Assault, no Dual Attack; S4 (April 2026) says MAT 7 and Dual
+  Attack. S8 (January 2026 changelog) lists exactly that change, so S4 is stale. We follow the app.
+- **Ravager Shaman MAT 6 vs 7.** Same cause (S8); S9 explains the 8 boxes and cost 4.
+- **Doppler Bark reach.** The wiki's Tricks text says 5"; its own template, S1 and S2 all say 2". We use 2".
+- The wiki's Chain Lightning template says "3d consecutive"; S1 and S2 say d3.
+- The Argus spiral aspect order is our reading (Mind, Body, Spirit), as for the Pureblood; the totals 7/7/7 do not depend on it.
+- Not fielded: Tharn Ravager Chieftain (attachment, `needs-rules-check.md` M12), Tharn Wolf Rider Champion, Gallows Grove.
+
+## Tests
+
+`tests/data/cir-skirmish.test.ts`: SKM-001 (the list), DATA-CIR-S01 to S04 (cards, weapons, prose and hooks), SKM-CIR-001 (the real list builds into a
+Skirmish game), FAC-CIR-S01 to S08 (card values in the engine, Unyielding in the pipeline and as a plugin, Chain Lightning arcs, Doppler Bark,
+Hunter's Grace, Sky Shaker, Combo Strike, Annoyance) and SMOKE-CIR-S01 (a Skirmish mirror game to round 2). `npm run sim -- --size skirmish
+--games 6 --seed 3 --lists cir.l.skirmish,cir.l.skirmish`: 6/6 games end, 0 violations.

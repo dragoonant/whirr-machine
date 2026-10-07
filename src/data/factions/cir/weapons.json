@@ -62,5 +62,60 @@
     "rng": 2,
     "pow": 15,
     "abilities": ["cir.a.brutal-charge"]
+  },
+  {
+    "id": "cir.w.thrown-javelin",
+    "name": "Thrown Javelin",
+    "type": "ranged",
+    "rng": 7,
+    "rof": 1,
+    "pow": 9,
+    "qualities": [
+      "core.q.weapon-master"
+    ]
+  },
+  {
+    "id": "cir.w.bladed-shield",
+    "name": "Bladed Shield",
+    "type": "melee",
+    "rng": 1,
+    "pow": 9,
+    "qualities": [
+      "core.q.weapon-master"
+    ]
+  },
+  {
+    "id": "cir.w.totem-staff",
+    "name": "Totem Staff",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ]
+  },
+  {
+    "id": "cir.w.chain-lightning",
+    "name": "Chain Lightning",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "pow": 10,
+    "damageTypes": [
+      "electricity"
+    ],
+    "qualities": [
+      "core.q.magical"
+    ]
+  },
+  {
+    "id": "cir.w.bite",
+    "name": "Bite",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "abilities": [
+      "cir.a.combo-strike"
+    ]
   }
 ]

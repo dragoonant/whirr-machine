@@ -12,6 +12,15 @@ export type SpeedPreset = keyof typeof SPEED_PRESETS
 
 export type GraphicsTier = 'low' | 'high'
 
+/** Game size (90-skirmish): Recon is 30 points on a 36" table, Skirmish 50 points on 48". */
+export const GAME_SIZE_IDS = ['recon', 'skirmish'] as const
+export type GameSize = (typeof GAME_SIZE_IDS)[number]
+export const DEFAULT_GAME_SIZE: GameSize = 'recon'
+/** A size id from user input (URL, storage), or null when it is not one of ours. */
+export function parseGameSize(v: unknown): GameSize | null {
+  return typeof v === 'string' && (GAME_SIZE_IDS as readonly string[]).includes(v) ? (v as GameSize) : null
+}
+
 export interface Settings {
   speed: AnimSpeed
   graphics: GraphicsTier
@@ -22,10 +31,12 @@ export interface Settings {
   showZones: boolean
   /** Start-screen Battlefield choice: 'random' or a board id (remembered between visits). */
   battlefield: string
+  /** Start-screen Game size (90-skirmish C1), remembered between visits. Optional so callers that build a Settings stay valid; absent = recon. */
+  size?: GameSize
 }
 
 export const SETTINGS_KEY = 'wm.settings'
-export const DEFAULT_SETTINGS: Settings = { speed: 1, graphics: 'high', narration: true, confirmEndTurn: true, showZones: false, battlefield: 'random' }
+export const DEFAULT_SETTINGS: Settings = { speed: 1, graphics: 'high', narration: true, confirmEndTurn: true, showZones: false, battlefield: 'random', size: DEFAULT_GAME_SIZE }
 
 function sanitize(raw: Partial<Settings> | null): Settings {
   const s = { ...DEFAULT_SETTINGS }
@@ -36,6 +47,7 @@ function sanitize(raw: Partial<Settings> | null): Settings {
   if (typeof raw.confirmEndTurn === 'boolean') s.confirmEndTurn = raw.confirmEndTurn
   if (typeof raw.showZones === 'boolean') s.showZones = raw.showZones
   if (typeof raw.battlefield === 'string' && raw.battlefield.length < 40) s.battlefield = raw.battlefield
+  s.size = parseGameSize(raw.size) ?? DEFAULT_GAME_SIZE
   return s
 }
 
@@ -55,7 +67,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 }))
 
 function pick(s: Settings): Settings {
-  return { speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn, showZones: s.showZones, battlefield: s.battlefield }
+  return { speed: s.speed, graphics: s.graphics, narration: s.narration, confirmEndTurn: s.confirmEndTurn, showZones: s.showZones, battlefield: s.battlefield, size: s.size ?? DEFAULT_GAME_SIZE }
 }
 
 export function getSettings(): Settings { return pick(useSettingsStore.getState()) }

@@ -5,15 +5,21 @@ import type { RawGroup } from '../../raw'
 import d0 from './abilities.json'
 import d1 from './faction.json'
 import d2 from './feats.json'
+import d12 from './models/cleanser-sanctifiers-grunt.json'
+import d13 from './models/cleanser-sanctifiers.json'
 import d3 from './models/crusader.json'
 import d4 from './models/defenders-grunt.json'
 import d5 from './models/defenders.json'
 import d6 from './models/feora.json'
 import d7 from './models/pyrrhus.json'
 import d8 from './models/valeria.json'
+import d14 from './models/revenger-arc.json'
+import d15 from './models/vassals-grunt.json'
+import d16 from './models/vassals.json'
 import d9 from './spells.json'
 import d10 from './weapons.json'
 import d11 from '../../lists/men-starter-recon.json'
+import d17 from '../../lists/men-skirmish.json'
 
 export const menRaw: RawGroup = {
   'ability': [
@@ -32,6 +38,11 @@ export const menRaw: RawGroup = {
     { path: 'factions/men/models/feora.json', data: d6 },
     { path: 'factions/men/models/pyrrhus.json', data: d7 },
     { path: 'factions/men/models/valeria.json', data: d8 },
+    { path: 'factions/men/models/cleanser-sanctifiers-grunt.json', data: d12 },
+    { path: 'factions/men/models/cleanser-sanctifiers.json', data: d13 },
+    { path: 'factions/men/models/revenger-arc.json', data: d14 },
+    { path: 'factions/men/models/vassals-grunt.json', data: d15 },
+    { path: 'factions/men/models/vassals.json', data: d16 },
   ],
   'spell': [
     { path: 'factions/men/spells.json', data: d9 },
@@ -41,5 +52,6 @@ export const menRaw: RawGroup = {
   ],
   'list': [
     { path: 'lists/men-starter-recon.json', data: d11 },
+    { path: 'lists/men-skirmish.json', data: d17 },
   ],
 }

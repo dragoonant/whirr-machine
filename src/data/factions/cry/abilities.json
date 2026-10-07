@@ -725,5 +725,214 @@
       "who": "target"
     },
     "duration": "instant"
+  },
+  {
+    "id": "cry.a.cavalry",
+    "name": "Cavalry",
+    "text": "The attack roll of this model's charge attack is boosted, with no focus spent.",
+    "kind": "triggered",
+    "trigger": "attack.declared",
+    "when": {
+      "test": "charged"
+    },
+    "effect": [
+      {
+        "code": "cryCavalry"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.finisher",
+    "name": "Finisher",
+    "text": "Roll one extra die on this model's damage rolls against a model that already has damage marked.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "finisher"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.anatomical-precision",
+    "name": "Anatomical Precision",
+    "text": "When this model's melee damage roll does not beat the ARM of a living model, that model still takes 1 damage. A model this model's melee attack disables gets no Tough roll.",
+    "kind": "triggered",
+    "trigger": "attack.hit",
+    "when": {
+      "test": "attackKind",
+      "value": "melee"
+    },
+    "effect": [
+      {
+        "op": "forbid",
+        "what": "tough"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.grim-returns",
+    "name": "Grim Returns",
+    "text": "Special action, range 5: choose a friendly Grunt in range (not a character). One destroyed Grunt of its unit comes back with one box unmarked, placed within 2 inches of the chosen trooper. It gives up its Normal Movement and Combat Action this turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 0,
+        "direction": "any"
+      },
+      {
+        "code": "cryGrimReturns"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 5,
+      "filter": {
+        "all": [
+          {
+            "test": "modelType",
+            "value": "trooper"
+          },
+          {
+            "not": {
+              "test": "isCharacter"
+            }
+          }
+        ]
+      }
+    },
+    "duration": "instant",
+    "verify": "The no-op advance node only tells core to offer a chosen friendly target (needsTarget in phases/activation.ts); the code hook does the work."
+  },
+  {
+    "id": "cry.a.empower",
+    "name": "Empower",
+    "text": "Special action, range 6: a friendly Cryx warjack in range loses Disruption and gains 1 focus. Only one model in the unit may use it per activation.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 0,
+        "direction": "any"
+      },
+      {
+        "code": "cryEmpower"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 6,
+      "filter": {
+        "all": [
+          {
+            "test": "modelType",
+            "value": "warEngine"
+          },
+          {
+            "test": "keyword",
+            "value": "cryx"
+          }
+        ]
+      }
+    },
+    "duration": "instant",
+    "limit": "oncePerActivation",
+    "verify": "As Grim Returns: the no-op advance node marks a targeted action."
+  },
+  {
+    "id": "cry.a.necrosurgery",
+    "name": "Necrosurgery [d3+1]",
+    "text": "Special action, range 1: remove d3+1 damage points from a friendly undead Cryx model.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "repair",
+        "params": {
+          "dice": "d3",
+          "flat": 1,
+          "kind": "undead"
+        }
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 1,
+      "filter": {
+        "all": [
+          {
+            "test": "undead"
+          },
+          {
+            "test": "keyword",
+            "value": "cryx"
+          }
+        ]
+      }
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.eyeless-sight",
+    "name": "Eyeless Sight",
+    "text": "This model sees through clouds and ignores concealment and Stealth when picking targets.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "clouds"
+      },
+      {
+        "op": "ignore",
+        "ignore": "concealment"
+      },
+      {
+        "op": "ignore",
+        "ignore": "stealth"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.arc-node",
+    "name": "Arc Node",
+    "text": "This warjack can carry its warcaster's spells: the caster may channel a spell through it.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "arcNode"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Spell channelling (spells.ts channelers) looks for the ability core.a.arc-node, which core/abilities.json does not define yet, so this model carries the flag arcNode instead. When core adds core.a.arc-node, put it in cry.raptor-arc abilities and drop this record."
   }
 ]

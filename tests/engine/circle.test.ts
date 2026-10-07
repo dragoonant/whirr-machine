@@ -61,7 +61,7 @@ describe('Circle data and hooks wiring', () => {
     const walk = (n: unknown) => { if (Array.isArray(n)) n.forEach(walk); else if (n && typeof n === 'object') { const o = n as Record<string, unknown>; if (typeof o.code === 'string') codes.add(o.code); Object.values(o).forEach(walk) } }
     for (const r of Object.values(B.byId) as Record<string, unknown>[]) if (typeof r.id === 'string' && r.id.startsWith('cir.') && ['ability', 'spell', 'feat'].includes(r.recordType as string)) { walk(r.effect); walk(r.when) }
     expect(codes.size).toBeGreaterThanOrEqual(15)
-    for (const c of codes) { expect(c.startsWith('cir')).toBe(true); expect(circleHooks.effects[c], c).toBeTypeOf('function') }
+    for (const c of codes) { if (c === 'coreFlag') continue; expect(c.startsWith('cir')).toBe(true); expect(circleHooks.effects[c], c).toBeTypeOf('function') } // coreFlag: the core marker (Magic Ability, Cavalry), registered in core
   })
 })
 

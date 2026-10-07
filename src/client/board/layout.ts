@@ -3,8 +3,8 @@
 import { loadBundle } from '../../data/index'
 import type { ElementControl, GameState, ModelState, PlayerId, TerrainInstance, TerrainRulesType, Vec2 } from '../../engine/index'
 import { baseRadius } from '../../engine/geometry'
-import { scenarioDef, type ElementDef } from '../../engine/scenario'
-import { deploymentZone, type Rect } from '../../engine/setup'
+import { killBoxActive, scenarioDef, type ElementDef } from '../../engine/scenario'
+import { deploymentZone, zoneRect, type Rect } from '../../engine/setup'
 import { worldShape, type WorldShape } from '../../engine/terrain'
 
 export type { ElementDef, Rect, WorldShape }
@@ -74,6 +74,35 @@ export function zoneViews(s: GameState | null): ZoneView[] {
       out.push({ player: p, rect: deploymentZone(s, bundle, p, false), advance: deploymentZone(s, bundle, p, true) })
     }
   } catch { /* zones are decoration: never break the board */ }
+  return out
+}
+
+/**
+ * Kill Box (SK12): the strip along a player's own edge where that player's Leader must not end its turn. `line` is the
+ * strip's inner border (the 12 inch mark on Skirmish), `active` once the scenario's first Kill Box turn has come, and
+ * `occupied` while that player's Leader is inside it (the engine's own verdict, `scenario.killBox`). Empty when the
+ * scenario has no Kill Box (Recon scenarios) or the edges are not chosen yet.
+ */
+export interface KillBoxView { player: PlayerId; rect: Rect; line: [Vec2, Vec2]; active: boolean; occupied: boolean; vp: number }
+export function killBoxViews(s: GameState | null): KillBoxView[] {
+  if (!s) return []
+  const out: KillBoxView[] = []
+  try {
+    const def = scenarioDef(loadBundle(), s.scenario.id)
+    const kb = def.killBox
+    if (!kb) return []
+    const active = killBoxActive(s, def)
+    for (const p of ['A', 'B'] as PlayerId[]) {
+      const edge = s.players[p].edge
+      if (!edge) continue
+      const rect = zoneRect(def, edge, kb.depth)
+      const line: [Vec2, Vec2] = edge === 'north' ? [{ x: rect.x0, z: rect.z1 }, { x: rect.x1, z: rect.z1 }]
+        : edge === 'south' ? [{ x: rect.x0, z: rect.z0 }, { x: rect.x1, z: rect.z0 }]
+        : edge === 'west' ? [{ x: rect.x1, z: rect.z0 }, { x: rect.x1, z: rect.z1 }]
+        : [{ x: rect.x0, z: rect.z0 }, { x: rect.x0, z: rect.z1 }]
+      out.push({ player: p, rect, line, active, occupied: !!s.scenario.killBox?.[p], vp: kb.vp })
+    }
+  } catch { /* the Kill Box line is decoration: never break the board */ }
   return out
 }
 

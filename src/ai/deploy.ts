@@ -5,7 +5,8 @@
 // legal deployment the sampler can reach exists; shallow zones fall back to chain placement along the zone's width.
 import type { Action, GameState, ModelId, Placement, PlayerId, Vec2 } from '../engine/index'
 import { validate } from '../engine/index'
-import { baseRadius, dist, elementsOf, forwardOf, live, other } from './world'
+import { elementSpecs, groupCanHold } from './scenario'
+import { baseRadius, dist, elementsOf, forwardOf } from './world'
 
 interface Zone { x0: number; x1: number; z0: number; z1: number }
 
@@ -33,7 +34,18 @@ function legalAt(s: GameState, ids: ModelId[], placed: Placement[], id: ModelId,
 const edgeD = (s: GameState, a: ModelId, pa: Vec2, b: ModelId, pb: Vec2): number =>
   dist(pa, pb) - baseRadius(s.models[a]!.base) - baseRadius(s.models[b]!.base)
 
-/** The spot each model would like, by role. */
+/** Hold weight of a group when choosing who stands on an objective: a heavier jack, a bigger unit. */
+function holdWeight(s: GameState, ids: ModelId[]): number {
+  const m = s.models[ids[0]!]!
+  return m.type === 'warEngine' || m.type === 'battleEngine' ? 10 + (m.base ?? 0) / 100 : m.type === 'beast' ? 9 : m.unitId ? ids.length : 0.5
+}
+
+/**
+ * The spot each model would like. Groups (a unit, or one model) are matched to the scenario's elements by what each element
+ * accepts (a warjack or warbeast for a 50 mm objective, a whole unit for a 40 mm one), the elements nearest our edge first,
+ * and deploy in line with their element so a four-objective table is split into lanes instead of one pile. Spares go to
+ * the nearer elements with the fewest holders; solos go to the far side to contest; the Leader sits behind the line.
+ */
 function wishes(s: GameState, ids: ModelId[], zone: Zone, player: PlayerId): Record<ModelId, Vec2> {
   const fwd = forwardOf(s, player)
   const alongX = fwd.x === 0
@@ -42,30 +54,67 @@ function wishes(s: GameState, ids: ModelId[], zone: Zone, player: PlayerId): Rec
   const front = (inset: number): Vec2 => alongX
     ? { x: centre.x, z: fwd.z > 0 ? zone.z1 - inset : zone.z0 + inset }
     : { x: fwd.x > 0 ? zone.x1 - inset : zone.x0 + inset, z: centre.z }
-  const lateral = (p: Vec2, off: number): Vec2 => alongX ? { x: p.x + off, z: p.z } : { x: p.x, z: p.z + off }
-  // our near element (the one closer to our edge) and the far one, as lateral offsets
-  const els = elementsOf(s).slice().sort((a, b) => (a.pos.x * fwd.x + a.pos.z * fwd.z) - (b.pos.x * fwd.x + b.pos.z * fwd.z))
+  const lateral = (p: Vec2, lat: number): Vec2 => alongX ? { x: lat, z: p.z } : { x: p.x, z: lat }
   const latOf = (v: Vec2): number => (alongX ? v.x : v.z)
-  const nearLat = els[0] ? latOf(els[0].pos) : 0
-  const farLat = els[1] ? latOf(els[1].pos) : -nearLat
-  const out: Record<ModelId, Vec2> = {}
-  const enemies = Object.values(s.models).filter((m) => m.owner === other(player) && live(m))
-  let unitN = 0
+  const lo = alongX ? zone.x0 : zone.z0, hi = alongX ? zone.x1 : zone.z1
+  const clampLat = (v: number): number => Math.max(lo + 1, Math.min(hi - 1, v))
+  // elements nearest our edge first (ties keep scenario order)
+  const proj = (e: { pos: Vec2 }): number => e.pos.x * fwd.x + e.pos.z * fwd.z
+  const els = elementsOf(s).slice().sort((a, b) => proj(a) - proj(b))
+  const specs = elementSpecs(s)
+  const nearCut = els.length ? proj(els[0]!) + 1.5 : 0
+  const nearEls = els.filter((e) => proj(e) <= nearCut)
+  const farEls = els.filter((e) => proj(e) > nearCut)
+  const nearLat = nearEls.length ? nearEls.reduce((a, e) => a + latOf(e.pos), 0) / nearEls.length : 0
+  // groups
+  const groups: ModelId[][] = []
+  const byUnit = new Map<string, ModelId[]>()
   for (const id of ids) {
     const m = s.models[id]!
-    if (m.type === 'leader') {
-      // behind the line, a little toward the near element, deep in the zone
-      out[id] = lateral(front(Math.max(baseRadius(m.base) + 0.3, depth - 2.5)), nearLat * 0.4 - (alongX ? centre.x : centre.z))
-    } else if (m.type === 'warEngine') {
-      out[id] = lateral(front(1.5), nearLat * 0.6 - (alongX ? centre.x : centre.z))
-    } else if (m.unitId) {
-      out[id] = lateral(front(1.2), nearLat - (alongX ? centre.x : centre.z) + unitN * 0.01)
-      unitN++
-    } else {
-      out[id] = lateral(front(1.2), farLat - (alongX ? centre.x : centre.z))
+    if (m.unitId) { let g = byUnit.get(m.unitId); if (!g) { g = []; byUnit.set(m.unitId, g); groups.push(g) } g.push(id) } else groups.push([id])
+  }
+  const out: Record<ModelId, Vec2> = {}
+  const place = (g: ModelId[], lat: number, inset: number): void => { for (const id of g) out[id] = lateral(front(inset), clampLat(lat)) }
+  const free = groups.filter((g) => s.models[g[0]!]!.type !== 'leader')
+  const holders = new Map<string, number>()
+  const claim = (el: { id: string; pos: Vec2 }, inset = 1.2): boolean => {
+    const tok = specs.get(el.id)?.eligible ?? ['any']
+    let best: ModelId[] | null = null, bv = -Infinity
+    for (const g of free) {
+      const ms = g.map((id) => s.models[id]!)
+      if (!groupCanHold(tok, ms)) continue
+      const w = holdWeight(s, g)
+      if (w > bv) { bv = w; best = g }
     }
-    // shade away from enemy guns already on the table (second player): no change needed for the starter sizes
-    void enemies
+    if (!best) return false
+    free.splice(free.indexOf(best), 1)
+    const lead = s.models[best[0]!]!
+    place(best, latOf(el.pos), lead.type === 'warEngine' || lead.type === 'beast' ? 1.5 : inset)
+    holders.set(el.id, (holders.get(el.id) ?? 0) + 1)
+    return true
+  }
+  for (const el of nearEls) claim(el)
+  for (const el of farEls) claim(el)
+  // spares: war-engines and units behind the nearer elements that have the fewest holders, solos to the far side
+  const lanes = (nearEls.length ? nearEls : els).slice()
+  for (const g of free) {
+    const lead = s.models[g[0]!]!
+    if (lead.type === 'solo' || (!lead.unitId && lead.type !== 'warEngine' && lead.type !== 'beast')) {
+      const target = farEls.length ? farEls[0]! : lanes[lanes.length - 1]
+      place(g, target ? latOf(target.pos) : nearLat, 1.2)
+    } else {
+      lanes.sort((a, b) => (holders.get(a.id) ?? 0) - (holders.get(b.id) ?? 0))
+      const el = lanes[0]
+      place(g, el ? latOf(el.pos) : nearLat, lead.unitId ? 1.2 : 1.5)
+      if (el) holders.set(el.id, (holders.get(el.id) ?? 0) + 1)
+    }
+  }
+  // the Leader: toward the middle of our near elements, just behind the line (a short walk out of the Kill Box on a 48" table)
+  for (const g of groups) {
+    const m = s.models[g[0]!]!
+    if (m.type !== 'leader') continue
+    const inset = Math.min(Math.max(depth - 1.2, 1), Math.max(baseRadius(m.base) + 0.3, depth * 0.45 + 1))
+    out[m.id] = lateral(front(inset), clampLat(nearLat * 0.4))
   }
   return out
 }

@@ -22,6 +22,11 @@ import type {
 
 const EPS = 1e-6
 export const FIXED_SETUP_SCENARIOS = ['scn-qs-demo'] // QS fixed setup: A (Khador) first on the north edge, no roll-off or edge choice
+/** RB p118: army points by game size (E1 of 90-skirmish). A list may cost the cap or up to LIST_FLOOR_GAP below it, never more. */
+export const LEVEL_CAP: Record<string, number> = { recon: 30, skirmish: 50, pitched: 75, grandMelee: 100 }
+export const LIST_FLOOR_GAP = 4
+/** The game size of a list record; a list that names none is a recon list (the first starter lists did not). */
+export const listLevel = (list: { level?: string }): string => list.level ?? 'recon'
 
 // ---------- geometry of zones ----------
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
@@ -113,8 +118,13 @@ export function buildArmy(player: PlayerId, listId: string, bundle: DataBundle):
       if ((p.type === 'warEngine' && !p.lesser) || (p.type === 'beast' && p.beastClass !== 'lesser')) cohort = true
     }
   })
-  const cap = list.points ?? 30
+  // E1: a list that names its level is capped by the level, never by its own declared total, and must fill it to within 4 points.
+  // A list with no level is a legacy or ad hoc one (test fixtures): its declared total (default 30) is the cap and there is no floor.
+  const level = list.level as string | undefined
+  const cap = level === undefined ? (list.points ?? 30) : LEVEL_CAP[level]
+  if (cap === undefined) throw new Error(`list '${listId}': unknown level '${String(level)}'`)
   if (points > cap) throw new Error(`list '${listId}' costs ${points}, over ${cap}`)
+  if (level !== undefined && points < cap - LIST_FLOOR_GAP) throw new Error(`list '${listId}' costs ${points}, under ${cap - LIST_FLOOR_GAP} (a ${level} list is ${cap - LIST_FLOOR_GAP} to ${cap} points)`)
   if (!cohort) throw new Error(`list '${listId}' needs at least one non-lesser war-engine`)
   return { models, units, leaderId }
 }
@@ -137,6 +147,11 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
     const sc = bundle.byId[setup.scenario] as Record<string, any> | undefined // eslint-disable-line @typescript-eslint/no-explicit-any
     if (!sc) return reject('E_BAD_SETUP', `unknown scenario '${setup.scenario}'`)
     const def = scenarioDef(bundle, setup.scenario)
+    // E1: both lists are the same game size, and the scenario is played at that size
+    const levels = (['A', 'B'] as PlayerId[]).map((p) => listLevel((bundle.byId[setup.lists[p]] ?? {}) as { level?: string }))
+    if (levels[0] !== levels[1]) return reject('E_BAD_SETUP', `the lists are different game sizes (${levels[0]} and ${levels[1]})`)
+    const scLevels = sc.levels as string[] | undefined
+    if (scLevels && !scLevels.includes(levels[0]!)) return reject('E_BAD_SETUP', `scenario '${setup.scenario}' is not played at ${levels[0]} (only ${scLevels.join(', ')})`)
     const armies = { A: buildArmy('A', setup.lists.A, bundle), B: buildArmy('B', setup.lists.B, bundle) }
     const layoutId = setup.layout ?? (sc.terrainLayout as string)
     const anchorProblems = scenarioAnchorProblems(bundle, setup.scenario, layoutId)

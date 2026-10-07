@@ -3,13 +3,13 @@
 // Snacking is an attack plugin (it needs the boxed-model seam); Resourceful, Sentry and the RNG buffs are read through the
 // exported helpers at the bottom (see the CORE notes in the issues list of the faction package).
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
-import { alive, atkOf, hasFlag, lookups, noop, prof, setAtk, type AtkCtx, type AttackPlugin } from '../code-hooks'
-import { applyEffect, type EffectExtras } from '../effects'
+import { actOf, alive, atkOf, hasFlag, lookups, noop, prof, setAtk, touching, type AtkCtx, type AttackPlugin } from '../code-hooks'
+import { applyEffect, effectsOn, removeEffect, type EffectExtras } from '../effects'
 import { hasDouble, rerollDice, rollD3, rollNd6, sum } from '../dice'
 import { dist, baseRadius } from '../geometry'
-import { healDamage } from '../damage'
-import { inCtrl } from '../measure'
-import { knockDownUnless, slideAway } from '../movement'
+import { applyDamage, healDamage, resolveDeath } from '../damage'
+import { inCtrl, modelDistance, within } from '../measure'
+import { knockDownUnless, push, slideAway } from '../movement'
 import { distToShape, worldShape, type WorldShape } from '../terrain'
 import { blastSet } from '../phases/activation'
 import type { DataBundle, EffectInstance, GameState, ModelId, ModelState, StatMod, TerrainInstance, Vec2 } from '../types'
@@ -30,26 +30,38 @@ const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe' || k 
 const luck = (c: HookContext): HookResult => {
   const a = atkOf(c.state)
   if (!a || !c.targetId) return noop(c)
-  const res = a.x.results[c.targetId]
   const used = (a.x.flags.luckUsed as string[] | undefined) ?? []
-  if (!res || res.hit || res.auto || res.dice.length === 0 || used.includes(c.targetId)) return noop(c)
+  if (used.includes(c.targetId)) return noop(c)
+  const r = rerollMiss(c.state, a, c.targetId, 'trl.a.luck')
+  if (!r) return noop(c)
+  const next: AtkCtx = {
+    ...r.next,
+    x: { ...r.next.x, hitModels: r.hit ? [...r.next.x.hitModels, c.targetId] : r.next.x.hitModels, flags: { ...r.next.x.flags, luckUsed: [...used, c.targetId] } },
+  }
+  return { state: setAtk(r.state, next), events: r.events }
+}
+
+/**
+ * Reroll one missed attack roll (R1.12): all the dice again, re-checked against the target number the roll was made with, the stored result
+ * and the attack's own hit/crit fields updated. Shared by Luck (a weapon ability) and Lucky Shot (an animus). Null when the roll did not miss.
+ */
+function rerollMiss(state: GameState, a: AtkCtx, tid: ModelId, sourceId: string): { state: GameState; events: GameEvent[]; next: AtkCtx; hit: boolean } | null {
+  const res = a.x.results[tid]
+  if (!res || res.hit || res.auto || res.dice.length === 0) return null
   const flat = res.total - sum(res.dice)
-  const rr = rerollDice(c.state, `r:${c.state.rollSeq}`, res.dice, 'trl.a.luck', flat)
+  const rr = rerollDice(state, `r:${state.rollSeq}`, res.dice, sourceId, flat)
   const n = rr.dice.length
+  const tn = (a.x.flags.rollTn as Record<ModelId, number> | undefined)?.[tid] ?? a.hitTarget
   const all1 = rr.dice.every((d) => d === 1)
   const all6 = n > 1 && rr.dice.every((d) => d === 6)
-  const hit = !all1 && (all6 || rr.total >= a.hitTarget)
+  const hit = !all1 && (all6 || rr.total >= tn)
   const crit = hit && hasDouble(rr.dice)
-  const results = { ...a.x.results, [c.targetId]: { ...res, hit, crit, total: rr.total, dice: rr.dice } }
-  const primary = c.targetId === a.targetId
-  const next: AtkCtx = {
-    ...a,
-    ...(primary ? { hit, crit, dieValues: rr.dice } : {}),
-    x: { ...a.x, results, hitModels: hit ? [...a.x.hitModels, c.targetId] : a.x.hitModels, flags: { ...a.x.flags, luckUsed: [...used, c.targetId] } },
-  }
+  const results = { ...a.x.results, [tid]: { ...res, hit, crit, total: rr.total, dice: rr.dice } }
+  const primary = tid === a.targetId
+  const next: AtkCtx = { ...a, ...(primary ? { hit, crit, dieValues: rr.dice } : {}), x: { ...a.x, results } }
   // a second AttackResolved supersedes the first one in the log (same attack and roll, new outcome)
   const again: GameEvent = { type: 'AttackResolved', attackId: a.attackId, rollId: rr.event.rollId, hit, crit, auto: null }
-  return { state: setAtk(rr.state, next), events: [rr.event, again] }
+  return { state: rr.state, events: [rr.event, again], next, hit }
 }
 
 // ---------- Critical Devastation (Gunnbjorn's Bazooka) ----------
@@ -240,10 +252,67 @@ export function hasGrantedCover(state: GameState, b: DataBundle, id: ModelId): b
   })
 }
 
+// ---------- Skirmish additions (docs/spec/factions/trollbloods.md, Skirmish section) ----------
+const eps = 1e-6
+const BULLDOZE = 'trl.a.bulldoze'
+/**
+ * Bulldoze (movement.end): after a Normal Movement that was not a charge, every enemy model the mover touches is shoved up to 2" directly away
+ * (R5.15 push: no damage, stops on contact), once per model per turn. A turn-long marker effect on the shoved model keeps the count.
+ * RULING: Bulldoze runs when the move ends, not at any point along the path; a charge keeps its target in reach.
+ */
+const bulldoze = (c: HookContext): HookResult => {
+  const me = c.state.models[c.selfId]
+  if (!alive(me) || actOf(c.state)?.charge?.success) return noop(c)
+  const look = lookups(c.state, bundleOf(c))
+  let state = c.state
+  const events: GameEvent[] = []
+  const victims = Object.values(state.models)
+    .filter((t) => t.owner !== me.owner && alive(t) && t.life === 'active' && touching(me, t) && !state.effects.some((e) => e.sourceId === BULLDOZE && e.targetIds.includes(t.id)))
+    .sort((p, q) => p.id.localeCompare(q.id))
+  for (const t of victims) {
+    const m = applyEffect(state, { sourceId: BULLDOZE, name: 'Bulldozed', owner: me.owner, casterId: me.id, targetIds: [t.id], mods: [], duration: 'turn' })
+    state = m.state; events.push(...m.events)
+    const r = push(state, t.id, me.pos, 2, look)
+    state = r.state; events.push(...r.events)
+  }
+  return { state, events }
+}
+
+/** Lucky Shot: the spell machinery creates the turn effect on the target (sourceId trl.s.lucky-shot); the reroll itself is the plugin below. */
+const luckyShot = (c: HookContext): HookResult => noop(c)
+
+/**
+ * Guidance (the Runebearer's star action): one friendly model within 6" gains Eyeless Sight for a turn. The engine's special-action picker names
+ * one target for only a few hooks, so the hook picks: the Leader if it is in range, else the nearest warbeast or war-engine, else the nearest other model.
+ * RULING: its second half (the target's weapons deal magical damage) is recorded on the effect (`magicalWeapons`); the attack pipeline does not read it yet.
+ */
+const guidance = (c: HookContext): HookResult => {
+  const me = c.state.models[c.selfId]
+  if (!alive(me)) return noop(c)
+  const rank = (m: ModelState): number => (m.type === 'leader' ? 0 : m.type === 'beast' || m.type === 'warEngine' ? 1 : 2)
+  const t = Object.values(c.state.models)
+    .filter((m) => m.id !== me.id && m.owner === me.owner && alive(m) && m.life === 'active' && !m.inert && within(me, m, 6))
+    .sort((p, q) => rank(p) - rank(q) || modelDistance(me, p) - modelDistance(me, q) || p.id.localeCompare(q.id))[0]
+  if (!t) return noop(c)
+  const r = applyEffect(c.state, { sourceId: 'trl.a.guidance', name: 'Guidance', owner: me.owner, casterId: me.id, targetIds: [t.id], mods: [], grants: ['trl.a.eyeless-sight'], duration: 'turn', magicalWeapons: true } as Parameters<typeof applyEffect>[1])
+  return { state: r.state, events: r.events }
+}
+
+const HARMONY = 'trl.a.harmonious-exaltation'
+/** Harmonious Exaltation (star action): marks the Leader within 5" so its next spell this turn costs 1 less (read through harmoniousDiscount). */
+const harmoniousExaltation = (c: HookContext): HookResult => {
+  const me = c.state.models[c.selfId]
+  if (!alive(me)) return noop(c)
+  const leader = c.state.models[c.state.players[me.owner].leaderId]
+  if (!alive(leader) || !within(me, leader, 5)) return noop(c)
+  const r = applyEffect(c.state, { sourceId: HARMONY, name: 'Harmonious Exaltation', owner: me.owner, casterId: me.id, targetIds: [leader.id], mods: [], duration: 'turn' })
+  return { state: r.state, events: r.events }
+}
+
 export const trollbloodsHooks: CodeHookRegistry = {
   // wholeUnit: a scope marker read by spells.ts (Snipe covers the target's whole unit); true wherever it is evaluated as a plain condition
   conditions: { wholeUnit: () => true },
-  effects: { luck, criticalDevastation, guidedFire, guidedFireDie, rockWall, sentry, grantCover, regenerate },
+  effects: { luck, criticalDevastation, guidedFire, guidedFireDie, rockWall, sentry, grantCover, regenerate, bulldoze, luckyShot, guidance, harmoniousExaltation },
 }
 
 // ---------- Snacking (plugin) ----------
@@ -255,6 +324,24 @@ const snackingApplies = (state: GameState, b: DataBundle, atk: AtkCtx, targetId:
   const t = state.models[targetId]
   return (atk.kind === 'melee' || atk.kind === 'power') && hasFlag(state, b, atk.attackerId, 'snacking') && !!t && t.owner !== state.models[atk.attackerId]?.owner && isLiving(b, t)
 }
+
+// ---------- Bond [Gunnbjorn], Lucky Shot, Take Up (plugin) ----------
+const isGunnbjorn = (m: ModelState | undefined): m is ModelState => !!m && m.profileId === 'trl.gunnbjorn'
+/** Dozer & Smigg are bonded while they stand in their own Gunnbjorn's battlegroup (never under enemy control) inside his CTRL. */
+export function bondedToGunnbjorn(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!m || !alive(m) || m.wild || !hasFlag(state, b, id, 'bondGunnbjorn') || !m.controllerId) return false
+  const g = state.models[m.controllerId]
+  return isGunnbjorn(g) && alive(g) && g.owner === m.owner && inCtrl(g, m, statOf(state, b, g.id, 'CTRL'))
+}
+
+const LUCKY = 'trl.s.lucky-shot'
+const luckyShotEffect = (state: GameState, id: ModelId): string | undefined => effectsOn(state, id).find((e) => e.sourceId === LUCKY)?.id
+
+const takeUpGrunt = (state: GameState, t: ModelState): ModelState | undefined =>
+  Object.values(state.models)
+    .filter((m) => m.id !== t.id && m.unitId && m.unitId === t.unitId && m.owner === t.owner && alive(m) && m.life === 'active' && m.profileId === 'trl.stone-scribe' && within(t, m, 1))
+    .sort((x, y) => modelDistance(x, t) - modelDistance(y, t) || x.id.localeCompare(y.id))[0]
 
 export const trollbloodsPlugins: AttackPlugin[] = [{
   id: 'trl.snacking',
@@ -275,6 +362,51 @@ export const trollbloodsPlugins: AttackPlugin[] = [{
       s = h.state; events.push(d.event, ...h.events)
     }
     return { state: s, events }
+  },
+}, {
+  id: 'trl.skirmish-riders',
+  /**
+   * Before the hit and miss triggers: (1) Lucky Shot rerolls the first missed ranged attack roll of the model it is on (the effect is then used up);
+   * (2) Bond [Gunnbjorn] makes a bonded model's direct ranged damage roll boosted for free (the pipeline's autoBoost, as for a charge attack),
+   * so no paid boost is offered on top of it.
+   */
+  beforeHits(state, b, atk) {
+    if (atk.spellId || !isRangedKind(atk.kind)) return null
+    let s = state
+    const events: GameEvent[] = []
+    let a = atk
+    const lucky = luckyShotEffect(s, a.attackerId)
+    if (lucky) {
+      const tid = a.x.rollTargets.find((t) => { const r = a.x.results[t]; return !!r && !r.hit && !r.auto && r.dice.length > 0 })
+      if (tid) {
+        const r = rerollMiss(s, a, tid, LUCKY)
+        if (r) {
+          const rm = removeEffect(r.state, lucky, 'other')
+          s = setAtk(rm.state, r.next); events.push(...r.events, ...rm.events); a = r.next
+        }
+      }
+    }
+    if (!a.x.powerful && bondedToGunnbjorn(s, b, a.attackerId) && a.x.rollTargets.some((t) => a.x.results[t]?.hit)) {
+      s = setAtk(s, { ...a, x: { ...a.x, powerful: true } })
+    }
+    return s === state ? null : { state: s, events }
+  },
+  adjustPoints(state, b, _atk, job, points) {
+    // Take Up: a hit that would destroy the Stone Bearer destroys a Stone Scribe of the unit within 1" instead; the Bearer takes nothing
+    const t = state.models[job.targetId]
+    if (!t || points <= 0 || !alive(t) || t.life !== 'active' || !hasFlag(state, b, t.id, 'takeUp') || t.damage.track !== 'single') return null
+    if (t.damage.filled + points < Math.max(t.damage.boxes, 1)) return null
+    const g = takeUpGrunt(state, t)
+    if (!g) return null
+    const look = lookups(state, b)
+    const ap = applyDamage(state, g.id, Math.max(g.damage.track === 'single' ? g.damage.boxes : 1, 1), { source: 'other', layouts: look.layouts?.(g.id) })
+    let s = ap.state
+    const events: GameEvent[] = [...ap.events]
+    if (s.models[g.id]!.life === 'disabled') {
+      const dd = resolveDeath(s, g.id, { layouts: look.layouts?.(g.id), cause: 'take-up' })
+      s = dd.state; events.push(...dd.events)
+    }
+    return { state: s, events, points: 0 }
   },
 }]
 
@@ -313,4 +445,34 @@ export function pruneRockWalls(state: GameState): GameState {
     return upheld && !crushed
   })
   return keep.length === state.terrain.length ? state : { ...state, terrain: keep }
+}
+
+// ---------- seams read by other modules (Skirmish) ----------
+/**
+ * Serenity (control.ts, start of the Control Phase, before leeching): each living Stone Bearer of `player` removes 1 fury from the most
+ * furious friendly warbeast within 1". Pure; returns the events. Call it from runControl right after the casters refill.
+ */
+export function serenityStep(state: GameState, b: DataBundle, player: ModelState['owner']): { state: GameState; events: GameEvent[] } {
+  let s = state
+  const events: GameEvent[] = []
+  const bearers = Object.values(state.models).filter((m) => m.owner === player && alive(m) && m.life === 'active' && hasFlag(state, b, m.id, 'serenity')).sort((x, y) => x.id.localeCompare(y.id))
+  for (const bearer of bearers) {
+    const beast = Object.values(s.models)
+      .filter((m) => m.owner === player && m.type === 'beast' && alive(m) && (m.fury ?? 0) > 0 && modelDistance(bearer, m) <= 1 + eps)
+      .sort((x, y) => (y.fury ?? 0) - (x.fury ?? 0) || x.id.localeCompare(y.id))[0]
+    if (!beast) continue
+    const after = (beast.fury ?? 0) - 1
+    s = { ...s, models: { ...s.models, [beast.id]: { ...beast, fury: after } } }
+    events.push({ type: 'FuryChanged', modelId: beast.id, delta: -1, after, reason: 'shed', fromId: bearer.id })
+  }
+  return { state: s, events }
+}
+
+/** Harmonious Exaltation: 1 off the COST of a spell `casterId` casts this turn while the marker is on it (0 when none). Call `useHarmoniousExaltation` once the cast is paid. */
+export function harmoniousDiscount(state: GameState, casterId: ModelId): number {
+  return effectsOn(state, casterId).some((e) => e.sourceId === HARMONY) ? 1 : 0
+}
+export function useHarmoniousExaltation(state: GameState, casterId: ModelId): { state: GameState; events: GameEvent[] } {
+  const e = effectsOn(state, casterId).find((x) => x.sourceId === HARMONY)
+  return e ? removeEffect(state, e.id, 'other') : { state, events: [] }
 }

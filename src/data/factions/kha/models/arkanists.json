@@ -1,0 +1,22 @@
+{
+  "id": "kha.arkanists",
+  "name": "Arkanists",
+  "faction": "kha",
+  "type": "unit",
+  "keywords": [
+    "winter-korps"
+  ],
+  "cost": 4,
+  "fa": 4,
+  "composition": {
+    "grunts": {
+      "profile": "kha.arkanist",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 4
+    }
+  },
+  "verify": "3 models, 4 points, FA 4 (CD points and FA; WA PC 4, # 3, FA 4)."
+}

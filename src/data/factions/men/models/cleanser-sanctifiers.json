@@ -1,0 +1,23 @@
+{
+  "id": "men.cleanser-sanctifiers",
+  "name": "Cleanser Sanctifiers",
+  "faction": "men",
+  "type": "unit",
+  "keywords": [
+    "menoth",
+    "flameguard"
+  ],
+  "cost": 9,
+  "fa": 2,
+  "composition": {
+    "grunts": {
+      "profile": "men.cleanser-sanctifier",
+      "min": 3,
+      "max": 3
+    },
+    "costBySize": {
+      "3": 9
+    }
+  },
+  "verify": "Unit of 3 for 9 points, FA 2 (WA2); 9 points also from the Longshanks Feora lists (LS1)."
+}

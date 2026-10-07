@@ -5,8 +5,15 @@
     "text": "Warbeasts in this model's battlegroup have Run & Gun.",
     "kind": "aura",
     "trigger": "passive",
-    "effect": [{ "op": "grantAbility", "ability": "trl.a.run-and-gun" }],
-    "scope": { "who": "warbeasts" },
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "trl.a.run-and-gun"
+      }
+    ],
+    "scope": {
+      "who": "warbeasts"
+    },
     "duration": "continuous"
   },
   {
@@ -15,8 +22,14 @@
     "text": "After destroying an enemy with a ranged attack, this model may advance its full speed at the end of its activation.",
     "kind": "triggered",
     "trigger": "activation.end",
-    "effect": [{ "code": "runAndGun" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "runAndGun"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant",
     "optional": true
   },
@@ -26,8 +39,17 @@
     "text": "Upkeep spells this model has running on its own battlegroup cost no fury to keep up.",
     "kind": "passive",
     "trigger": "passive",
-    "effect": [{ "code": "coreFlag", "params": { "flag": "resourceful" } }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "resourceful"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "continuous"
   },
   {
@@ -36,11 +58,20 @@
     "text": "Once per activation, unless it ran this turn, this model may be forced to heal d3 damage.",
     "kind": "specialAction",
     "trigger": "combat.choose",
-    "effect": [{ "code": "regenerate" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "regenerate"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant",
     "limit": "oncePerActivation",
-    "cost": { "focus": 0, "forced": 1 }
+    "cost": {
+      "focus": 0,
+      "forced": 1
+    }
   },
   {
     "id": "trl.a.snacking",
@@ -48,8 +79,17 @@
     "text": "When this model boxes a living model with a melee attack, it may remove that model from play and heal d3 damage.",
     "kind": "passive",
     "trigger": "passive",
-    "effect": [{ "code": "coreFlag", "params": { "flag": "snacking" } }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "snacking"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "continuous"
   },
   {
@@ -60,12 +100,27 @@
     "trigger": "attack.resolved",
     "when": {
       "all": [
-        { "not": { "test": "hit" } },
-        { "test": "isEnemy", "subject": "attacker" }
+        {
+          "not": {
+            "test": "hit"
+          }
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
       ]
     },
-    "effect": [{ "op": "advance", "dist": 2, "direction": "any" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant",
     "optional": true
   },
@@ -75,11 +130,19 @@
     "text": "Friendly Trollkin Highwaymen within 10 inches have Dodge.",
     "kind": "aura",
     "trigger": "passive",
-    "effect": [{ "op": "grantAbility", "ability": "trl.a.dodge" }],
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "trl.a.dodge"
+      }
+    ],
     "scope": {
       "who": "friendly",
       "range": 10,
-      "filter": { "test": "keyword", "value": "highwaymen" }
+      "filter": {
+        "test": "keyword",
+        "value": "highwaymen"
+      }
     },
     "duration": "continuous"
   },
@@ -89,9 +152,19 @@
     "text": "After a basic ranged attack destroys an enemy, this model may advance 2 inches.",
     "kind": "triggered",
     "trigger": "attack.resolved",
-    "when": { "code": "destroyedEnemyWithBasicRanged" },
-    "effect": [{ "op": "advance", "dist": 2, "direction": "any" }],
-    "scope": { "who": "self" },
+    "when": {
+      "code": "destroyedEnemyWithBasicRanged"
+    },
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant",
     "optional": true
   },
@@ -101,8 +174,14 @@
     "text": "On a critical hit, roll one d6 and throw every model hit that many inches directly away from the attacker, farthest first. Other models in the blast take a POW 8 damage roll.",
     "kind": "specialAttack",
     "trigger": "attack.crit",
-    "effect": [{ "code": "criticalDevastation" }],
-    "scope": { "who": "target" },
+    "effect": [
+      {
+        "code": "criticalDevastation"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
     "duration": "instant"
   },
   {
@@ -111,8 +190,17 @@
     "text": "Force this model once to make one more shot with this weapon during the combat action.",
     "kind": "passive",
     "trigger": "passive",
-    "effect": [{ "code": "coreFlag", "params": { "flag": "forcedReload" } }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "forcedReload"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "continuous"
   },
   {
@@ -121,8 +209,14 @@
     "text": "While Guided Fire covers this model, its ranged attack rolls with this weapon are boosted for free.",
     "kind": "triggered",
     "trigger": "attack.beforeRoll",
-    "effect": [{ "code": "guidedFireDie" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "guidedFireDie"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant"
   },
   {
@@ -132,10 +226,19 @@
     "kind": "specialAttack",
     "trigger": "combat.choose",
     "effect": [
-      { "op": "modRoll", "roll": "damage", "value": 4 },
-      { "op": "forbid", "what": "weaponAttacks" }
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 4
+      },
+      {
+        "op": "forbid",
+        "what": "weaponAttacks"
+      }
     ],
-    "scope": { "who": "self" },
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant"
   },
   {
@@ -144,8 +247,245 @@
     "text": "Once per attack roll, a missed roll with this weapon is rolled again.",
     "kind": "specialAttack",
     "trigger": "attack.miss",
-    "effect": [{ "code": "luck" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "luck"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "instant"
+  },
+  {
+    "id": "trl.a.bond-gunnbjorn",
+    "name": "Bond [Gunnbjorn]",
+    "text": "If it starts the game in Gunnbjorn's battlegroup it is bonded to him. While bonded, under your control and inside his CTRL, the damage rolls of its ranged attacks are boosted for free.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "bondGunnbjorn"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.bulldoze",
+    "name": "Bulldoze",
+    "text": "When it ends a Normal Movement (not a charge or trample) touching enemy models, it may shove each of them up to 2 inches directly away. No model is shoved by Bulldoze more than once a turn.",
+    "kind": "triggered",
+    "trigger": "movement.end",
+    "effect": [
+      {
+        "code": "bulldoze"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "trl.a.protective-aura",
+    "name": "Protective Aura",
+    "text": "Friendly Faction models within 8 inches of this model have +2 ARM.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 8,
+      "filter": {
+        "test": "keyword",
+        "value": "trollblood"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.serenity",
+    "name": "Serenity",
+    "text": "At the start of your Control Phase, before leeching, remove 1 fury from a friendly Faction warbeast within 1 inch of this model.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "serenity"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.take-up",
+    "name": "Take Up",
+    "text": "When an attack would destroy this model, a Stone Scribe of its unit within 1 inch is destroyed in its place and this model takes no damage.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "takeUp"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.attached",
+    "name": "Attached",
+    "text": "Attach this model to a friendly Faction Leader before the game. A Leader has only one attachment. It counts as part of that Leader's battlegroup.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "attached"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.arcane-repeater",
+    "name": "Arcane Repeater",
+    "text": "While its Leader is within 5 inches of this model, the Leader's CTRL is 2 inches greater.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "CTRL",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 5,
+      "filter": {
+        "test": "modelType",
+        "value": "leader"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.magic-ability",
+    "name": "Magic Ability",
+    "text": "Its Magic Ability special actions and attacks count as casting a spell.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "magicAbility"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.guidance",
+    "name": "Guidance",
+    "text": "Special action, RNG 6: one friendly model in range gains Eyeless Sight and its weapons deal magical damage for a turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "guidance"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 6
+    },
+    "duration": "turn"
+  },
+  {
+    "id": "trl.a.harmonious-exaltation",
+    "name": "Harmonious Exaltation",
+    "text": "Special action, RNG 5: once this turn, the next spell this model's Leader casts costs 1 less.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "harmoniousExaltation"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 5,
+      "filter": {
+        "test": "modelType",
+        "value": "leader"
+      }
+    },
+    "duration": "turn"
+  },
+  {
+    "id": "trl.a.spell-slave",
+    "name": "Spell Slave",
+    "text": "In its Leader's CTRL it may cast a spell from the Leader's card that costs 3 or less and is not an upkeep, SELF or CTRL spell. Offensive ones are arcane attacks.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "spellSlave"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.eyeless-sight",
+    "name": "Eyeless Sight",
+    "text": "This model ignores clouds when working out line of sight.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "ignore",
+        "ignore": "clouds"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
   }
 ]

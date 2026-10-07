@@ -1,0 +1,41 @@
+{
+  "faction": "cry",
+  "id": "cry.initiate",
+  "name": "Necrosurgeon Initiate",
+  "type": "trooper",
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 4,
+    "RAT": 0,
+    "DEF": 14,
+    "ARM": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 1
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.implement-of-death"
+    }
+  ],
+  "abilities": [
+    "cry.a.anatomical-precision",
+    "cry.a.grim-returns",
+    "cry.a.magic-ability",
+    "cry.a.empower",
+    "cry.a.necrosurgery"
+  ],
+  "cost": 0,
+  "figure": {
+    "slug": "wm-initiate",
+    "archetype": "infantry"
+  },
+  "verify": "SPD 6, MAT 4, DEF 14, ARM 12, Implement of Death POW 11, abilities: S1 and S2 agree; 30 mm small base and 1 box S2 only."
+}

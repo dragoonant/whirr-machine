@@ -2,16 +2,16 @@
 // Soul tokens live in ModelState.tokens; events TokenGained / TokenSpent. Data-only rules (Dodge, Wraithbinder, Volume Fire,
 // Critical Corrosion, Banish, Wraithbinder...) need no code here. Core drives the rest: start-of-activation offers, special actions, LOS, movement and damage rules (core-m9 tests).
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
-import { applyEffect, removeEffect } from '../effects'
+import { applyEffect, hasCondition, removeCondition, removeEffect } from '../effects'
 import { applyDamage, healDamage } from '../damage'
 import { rollD3 } from '../dice'
 import { gainFocus, spendFocus, isRejection } from '../focus'
-import { dist, isLegalPlacement, isOnTable } from '../geometry'
+import { baseRadius, dist, isLegalPlacement, isOnTable } from '../geometry'
 import { relocate } from '../movement'
 import { raise } from '../pending'
 import { modelDistance, within } from '../measure'
 import {
-  abilitiesOf, atkOf, envOf, hasFlag, INCORPOREAL_LOST, layoutsOf, noop, prof, rec, setAtk, type AtkCtx, type AttackPlugin,
+  abilitiesOf, atkOf, envOf, hasFlag, INCORPOREAL_LOST, isIncorporeal, layoutsOf, noop, prof, rec, setAtk, type AtkCtx, type AttackPlugin,
 } from '../code-hooks'
 import type { DataBundle, DecisionOption, GameState, Id, ModelId, ModelState, PendingDecision, Rejection, TokenKind, Vec2 } from '../types'
 import type { Action } from '../actions'
@@ -195,7 +195,9 @@ const repair = (c: HookContext): HookResult => {
   const src = c.state.models[c.selfId]
   const t = c.targetId ? c.state.models[c.targetId] : undefined
   const b = envOf(c).bundle
-  if (!src || !t || t.owner !== src.owner || !isOnTable(t) || !within(src, t, 1) || !hasFlag(c.state, b, t.id, 'construct')) return noop(c)
+  // Repair heals a construct; Necrosurgery (params.kind 'undead', Skirmish) heals an undead model
+  const okKind = c.params?.kind === 'undead' ? !!t && keywords(b, t).includes('undead') : !!t && hasFlag(c.state, b, t.id, 'construct')
+  if (!src || !t || t.owner !== src.owner || !isOnTable(t) || !within(src, t, 1) || !okKind) return noop(c)
   const flat = Number(c.params?.flat ?? 3)
   const d = rollD3(c.state)
   const h = healDamage(d.state, t.id, d.value + flat, layoutsOf(b, t))
@@ -239,10 +241,84 @@ const cryCripplingGrasp = (c: HookContext): HookResult => {
   return { state: s, events }
 }
 
+
+// ---------- Skirmish additions (Night Terrors, Raptor, Necrosurgeon Initiates; docs/spec/factions/cryx.md) ----------
+/** Cavalry: a charge attack's attack roll is boosted for free (RB p112). The data's `when: charged` has already filtered. */
+const cryCavalry = (c: HookContext): HookResult => {
+  const a = atkOf(c.state)
+  if (!a?.chargeAttack || a.x.boosted) return noop(c)
+  return patchX(c, { boosted: true })
+}
+
+const markedBoxes = (m: ModelState): number =>
+  m.damage.track === 'single' ? m.damage.filled : m.damage.grids.reduce((n, g) => n + g.cols.reduce((k, col) => k + col.filter(Boolean).length, 0), 0)
+
+/** Empower (star Action, 6" on a friendly Cryx warjack): it loses Disruption, then gains 1 focus (a warjack holds at most 3). */
+const cryEmpower = (c: HookContext): HookResult => {
+  const src = c.state.models[c.selfId]
+  const t = c.targetId ? c.state.models[c.targetId] : undefined
+  const b = envOf(c).bundle
+  if (!src || !t || t.owner !== src.owner || !isOnTable(t) || t.type !== 'warEngine' || !within(src, t, 6) || !keywords(b, t).includes('cryx')) return noop(c)
+  let s = c.state
+  const events: GameEvent[] = []
+  if (hasCondition(s, t, 'disrupted')) {
+    const r = removeCondition(s, t.id, 'disrupted', 'effect')
+    s = r.state; events.push(...r.events)
+    for (const e of s.effects.filter((x) => x.targetIds.includes(t.id) && x.conditions?.includes('disrupted'))) {
+      const r2 = removeEffect(s, e.id, 'replaced')
+      s = r2.state; events.push(...r2.events)
+    }
+  }
+  const g = gainFocus(s, t.id, 1, 'gain', src.id)
+  return { state: g.state, events: [...events, ...g.events] }
+}
+
+/**
+ * Grim Returns (star Action, 5" on a friendly trooper): one destroyed Grunt of that trooper's unit comes back with one box unmarked, within 2" of the chosen
+ * trooper, and forfeits its Normal Movement and Combat Action for the turn. RULING: the first destroyed Grunt by model id (a unit that lost several
+ * gets the lowest id back first); a Grunt removed from play (life 'boxed') cannot return.
+ */
+export const GRIM_RETURNS = 'cry.a.grim-returns'
+const cryGrimReturns = (c: HookContext): HookResult => {
+  const src = c.state.models[c.selfId]
+  const t = c.targetId ? c.state.models[c.targetId] : undefined
+  if (!src || !t || t.owner !== src.owner || !isOnTable(t) || t.type !== 'trooper' || !t.unitId || !within(src, t, 5)) return noop(c)
+  const unit = c.state.units[t.unitId]
+  if (!unit || prof(envOf(c).bundle, t).character || rec(envOf(c).bundle, unit.profileId).character) return noop(c) // Grunts only: a character unit (the Furies) cannot be brought back
+  const gruntProfile = (rec(envOf(c).bundle, unit.profileId).composition as { grunts?: { profile?: Id } } | undefined)?.grunts?.profile
+  const dead = Object.values(c.state.models)
+    .filter((m) => m.unitId === unit.id && m.life === 'destroyed' && !m.offTable && m.profileId === gruntProfile)
+    .sort((x, y) => x.id.localeCompare(y.id))[0]
+  if (!dead) return noop(c)
+  // a legal spot within 2" (edge to edge) of the chosen trooper, nearest ring first
+  const reach = baseRadius(t.base) + baseRadius(dead.base)
+  let spot: Vec2 | null = null
+  for (let ring = 0.05; ring <= 2 + 1e-9 && !spot; ring += 0.25) {
+    const n = Math.max(16, Math.ceil((2 * Math.PI * (reach + ring)) / 0.25))
+    for (let i = 0; i < n && !spot; i++) {
+      const a = (i / n) * 2 * Math.PI
+      const p = { x: t.pos.x + Math.cos(a) * (reach + ring), z: t.pos.z + Math.sin(a) * (reach + ring) }
+      if (isLegalPlacement(c.state, dead.id, p, dead.base).ok) spot = p
+    }
+  }
+  if (!spot) return noop(c)
+  const boxes = dead.damage.track === 'single' ? dead.damage.boxes : 1
+  const back: ModelState = { ...dead, life: 'active', conditions: [], crippled: [], tokens: undefined, deathHandled: false, activated: unit.activated, damage: { track: 'single', boxes, filled: Math.max(boxes - 1, 0) } }
+  let s: GameState = { ...c.state, models: { ...c.state.models, [dead.id]: back }, units: { ...c.state.units, [unit.id]: { ...unit, troopers: [...unit.troopers, dead.id] } } }
+  const from = dead.pos
+  s = relocate(s, dead.id, spot)
+  const events: GameEvent[] = [
+    { type: 'LifeStateChanged', modelId: dead.id, from: 'destroyed', to: 'active', cause: GRIM_RETURNS } as GameEvent,
+    { type: 'ModelMoved', modelId: dead.id, kind: 'place', from, to: spot, path: [spot], distance: dist(from, spot), elevAfter: s.models[dead.id]!.elev } as GameEvent,
+  ]
+  const f = applyEffect(s, { sourceId: GRIM_RETURNS, name: 'Grim Returns', owner: src.owner, casterId: src.id, targetIds: [dead.id], mods: [], forbid: ['advance', 'combatAction'], duration: 'turn' })
+  return { state: f.state, events: [...events, ...f.events] }
+}
+
 export const cryxHooks: CodeHookRegistry = {
   conditions: {},
   effects: {
-    cryBlessed, cryShadowFire, wraithShot, wraithShotDamage, soulTaker, devourSoul, shadowGate, soulGenerator, grapplingHook,
+    cryCavalry, cryEmpower, cryGrimReturns, cryBlessed, cryShadowFire, wraithShot, wraithShotDamage, soulTaker, devourSoul, shadowGate, soulGenerator, grapplingHook,
     vitalMagic, repair, exhaustFumes, wrathOfLyliss, cryCripplingGrasp,
   },
 }
@@ -293,6 +369,21 @@ export const cryxPlugins: AttackPlugin[] = [{
   id: 'cry.souls-and-fear',
   damageFlat(state, b, atk) {
     return mortalFear(state, b, atk.attackerId)
+  },
+  /** Finisher: one extra die on a direct damage roll against a model that already has damage marked. */
+  damageDice(state, b, atk, job) {
+    if (job.kind !== 'direct' || !abilitiesOf(state, b, atk.attackerId).includes('cry.a.finisher')) return 0
+    const t = state.models[job.targetId]
+    return t && markedBoxes(t) > 0 ? 1 : 0
+  },
+  /** Anatomical Precision: a melee damage roll that does not beat the ARM of a living model still deals 1 (not through non-magical Incorporeal immunity). */
+  adjustPoints(state, b, atk, job, points) {
+    if (points > 0 || job.kind !== 'direct' || (atk.kind !== 'melee' && atk.kind !== 'power')) return null
+    if (!abilitiesOf(state, b, atk.attackerId).includes('cry.a.anatomical-precision')) return null
+    const t = state.models[job.targetId]
+    if (!t || t.life !== 'active' || !isLiving(state, b, t.id)) return null
+    if (isIncorporeal(state, b, t.id) && !job.types.includes('magical')) return null
+    return { state, events: [], points: 1 }
   },
   onResolved(state, b, atk) {
     let st = state

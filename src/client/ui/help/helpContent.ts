@@ -25,6 +25,9 @@ export const HELP_TABS: HelpTab[] = [
       { kind: 'h', text: 'How victory points work' },
       { kind: 'p', text: 'The scenario gives you things to hold, such as a low wall. You hold one at the end of your turn when you have enough of your own models near it and the enemy has none contesting it. Each thing you hold scores 1 VP. The top bar always shows both scores.' },
       { kind: 'tip', text: 'Killing models does not score points by itself. It matters because dead models cannot hold walls, and a dead caster ends the game.' },
+      { kind: 'h', text: 'Game sizes' },
+      { kind: 'p', text: 'The start screen offers two sizes. Recon is a small army of about 30 points on a 36 inch table, the quickest way to learn. Skirmish is about 50 points on a 48 inch table: roughly twice the models, more room to manoeuvre and a longer fight. Each side has one ready-made list per size, and you and the opponent always play the same size.' },
+      { kind: 'tip', text: 'On a Skirmish table, watch the faint line 12 inches in from your own edge. From the first player\'s second turn, ending a turn with your warcaster or warlock sitting wholly inside that strip hands your opponent 2 VP, so do not hide at the back.' },
     ],
   },
   {
