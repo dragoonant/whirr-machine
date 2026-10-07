@@ -1,7 +1,8 @@
 // Per-figure particle status effects (crippled systems, fire, corrosion). Emits into the shared pools from the
-// figure's world position; asks the demand frameloop for ~15 frames a second while there is something to show.
-import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, type RefObject } from 'react'
+// figure's world position; keeps the demand frameloop running at full rate while there is something to show.
+import { useFrame } from '@react-three/fiber'
+import { useMemo, type RefObject } from 'react'
+import { useAmbientFrames } from '../board/frameRate'
 import type { Group } from 'three'
 import { emitSocket, socketsFor } from './sockets'
 
@@ -16,14 +17,9 @@ export interface StatusFxProps {
 }
 
 export function StatusFx({ root, r, h, crippled, conditions, enabled }: StatusFxProps): null {
-  const invalidate = useThree((s) => s.invalidate)
   const sockets = useMemo(() => socketsFor(crippled, conditions, r, h), [crippled, conditions, r, h])
   const active = enabled && sockets.length > 0
-  useEffect(() => {
-    if (!active) return
-    const t = setInterval(invalidate, 66)
-    return () => clearInterval(t)
-  }, [active, invalidate])
+  useAmbientFrames(active, false)
   useFrame((_, delta) => {
     const g = root.current
     if (!active || !g) return

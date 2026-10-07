@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useThree } from '@react-three/fiber'
 import { Box3, Color, Matrix4, Vector3, type BufferGeometry, type Material, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { markShadowsDirty } from './frameRate'
 
 export interface TemplateMesh { geometry: BufferGeometry; material: Material | Material[]; matrix: Matrix4 }
 export interface TerrainTemplate {
@@ -68,7 +69,10 @@ export function useTerrainTemplate(slug: string | undefined): TerrainTemplate | 
     listeners.add(l)
     return () => { listeners.delete(l) }
   }, [slug, gl, invalidate])
-  return entry?.status === 'ready' ? entry.tpl ?? null : null
+  const tpl = entry?.status === 'ready' ? entry.tpl ?? null : null
+  // after the commit that mounts the piece, so its shadow is in the next shadow pass
+  useEffect(() => { if (tpl) { markShadowsDirty(); invalidate() } }, [tpl, invalidate])
+  return tpl
 }
 
 const tinted = new Map<string, Material | Material[]>()

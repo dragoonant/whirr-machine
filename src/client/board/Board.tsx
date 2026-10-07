@@ -1,6 +1,6 @@
 // The battlefield canvas: demand frameloop, dpr cap, shared geometry. Mount <Battlefield /> where the board goes.
 // Also renders the invisible DOM proxies (data-testid="model-<id>") from the presented store.
-import { useEffect, useMemo, useRef, type ReactElement } from 'react'
+import { useEffect, useMemo, type ReactElement } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import {
   useAnimating, useHoverId, useMeasure, useModelIds, usePresentedModels, usePresentedRev, usePresentedState, usePrompt, useSelectedId,
@@ -18,6 +18,8 @@ import { THEME, cameraPose, proxyAttrs, tableOf } from './layout'
 import { Surface } from './Surface'
 import { loadBoardsJson, useBoard } from './boardStore'
 import { TerrainTooltip } from './TerrainTooltip'
+import { FpsMeter, FpsProbe, fpsEnabled } from './FpsMeter'
+import { markShadowsDirty, takeShadowsDirty, useAmbientFrames } from './frameRate'
 import * as THREE from 'three'
 import { Terrain } from './Terrain'
 import { ScenarioElements, Zones } from './Zones'
@@ -46,9 +48,10 @@ function Invalidator(): null {
 }
 
 /**
- * Shadow map on demand: re-rendered when the presented state, board, graphics or the figure set changes, every frame
- * while something animates, and at most every 400 ms otherwise (with a trailing update, so late model loads get
- * their shadow). A camera pan alone no longer re-renders the shadow pass every frame (M8 frame budget).
+ * Shadow map on demand: re-rendered only when a shadow caster changed: the presented state, board, graphics or the
+ * figure set, every frame while a move/attack animates, and once after a figure turns, tips, fades or loads
+ * (markShadowsDirty). Camera pans and ambient animation (orbs, shells, particles) never re-render the shadow pass,
+ * which is what used to cause a hitch every 400 ms.
  */
 function ShadowGate(): null {
   const gl = useThree((s) => s.gl)
@@ -58,34 +61,22 @@ function ShadowGate(): null {
   const board = useBoard()
   const { graphics } = useSettings()
   const animating = useAnimating()
-  const last = useRef(0)
-  const trailing = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     gl.shadowMap.autoUpdate = false
     gl.shadowMap.needsUpdate = true
-    return () => { gl.shadowMap.autoUpdate = true; if (trailing.current) clearTimeout(trailing.current) }
+    return () => { gl.shadowMap.autoUpdate = true }
   }, [gl])
-  useEffect(() => { gl.shadowMap.needsUpdate = true; invalidate() }, [gl, invalidate, rev, ids, board, graphics])
-  useFrame(() => {
-    const now = performance.now()
-    if (animating || now - last.current > 400) { gl.shadowMap.needsUpdate = true; last.current = now; return }
-    // one trailing frame that updates the shadows (last = 0 makes that frame update without scheduling another)
-    if (!trailing.current) trailing.current = setTimeout(() => { trailing.current = null; last.current = 0; invalidate() }, 450)
-  })
+  useEffect(() => { markShadowsDirty(); invalidate() }, [invalidate, rev, ids, board, graphics])
+  useFrame(() => { if (takeShadowsDirty() || animating) gl.shadowMap.needsUpdate = true })
   return null
 }
 
-/** ~15 Hz heartbeat only while something ambient (orbs, domes, shells) is on screen. Off in Low graphics. */
+/** Keeps frames coming while something ambient (orbs, clouds, stationary shells) is on screen: full rate, 30 Hz on Low. */
 function AmbientTick(): null {
-  const invalidate = useThree((s) => s.invalidate)
   const state = usePresentedState()
   const { graphics } = useSettings()
   const ambient = !!state && (state.clouds.length > 0 || Object.values(state.models).some((m) => m.focus > 0 || m.conditions.includes('stationary')))
-  useEffect(() => {
-    if (!ambient || graphics === 'low') return
-    const t = setInterval(invalidate, 66)
-    return () => clearInterval(t)
-  }, [ambient, graphics, invalidate])
+  useAmbientFrames(ambient, graphics === 'low')
   return null
 }
 
@@ -150,6 +141,7 @@ function Scene(): ReactElement {
       <LosView />
       <TargetBadges />
       <Pops />
+      {fpsEnabled() && <FpsProbe />}
     </>
   )
 }
@@ -191,6 +183,7 @@ export function Battlefield(): ReactElement {
       </Canvas>
       <ModelProxies />
       <TerrainTooltip />
+      {fpsEnabled() && <FpsMeter />}
     </div>
   )
 }

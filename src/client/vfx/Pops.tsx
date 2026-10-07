@@ -1,7 +1,9 @@
 // Floating damage / heal / miss pops over models (DOM labels; the director owns their lifetime).
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { Html } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
 import { directorNow, useDamagePops, usePresentedState } from '../contract'
+import { useAmbientFrames } from '../board/frameRate'
 
 const COLOURS: Record<string, string> = { damage: '#ff6b5a', heal: '#7fd18b', focus: '#ffd866', miss: '#c8c8c8', crit: '#ffb02e', info: '#e8e6e1' }
 
@@ -9,11 +11,9 @@ export function Pops(): ReactElement | null {
   const pops = useDamagePops()
   const state = usePresentedState()
   const [, tick] = useState(0)
-  useEffect(() => {
-    if (!pops.length) return
-    const t = setInterval(() => tick((n) => n + 1), 120)
-    return () => clearInterval(t)
-  }, [pops.length])
+  // rise and fade on every rendered frame (was an 8 Hz timer, which made the numbers step)
+  useAmbientFrames(pops.length > 0, false)
+  useFrame(() => { if (pops.length) tick((n) => n + 1) })
   if (!state || !pops.length) return null
   const now = directorNow()
   return (

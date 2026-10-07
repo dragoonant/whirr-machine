@@ -20,6 +20,7 @@ import { usePresentedStore } from '../presentation/presentedStore'
 import { ProceduralBody } from './Procedural'
 import { dataArchetype, dataHeightIn, factionOf, factionPaint } from './profile'
 import { BASE_MATERIAL, GEO, HIT_MATERIAL, archetypeOf, baseRadiusOf, damageFraction, iceMaterial, lineMaterial, meshHeight, partMaterial, shellMaterial } from './kit'
+import { markShadowsDirty } from '../board/frameRate'
 
 const BASE_H = GLB_BASE_H
 const ORB_COUNT_MAX = 3
@@ -103,7 +104,7 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
       if (want !== null) {
         if (yaw.current === null) yaw.current = want
         const next = turnToward(yaw.current, want, delta * 6)
-        if (next !== yaw.current) { yaw.current = next; invalidate() }
+        if (next !== yaw.current) { yaw.current = next; markShadowsDirty(); invalidate() }
       }
     }
     if (yaw.current !== null) g.rotation.y = yaw.current
@@ -120,7 +121,7 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
       let cur = tipNow.current ?? want
       if (Math.abs(want - cur) > 0.005) {
         cur = speed <= 0 ? want : cur + (want - cur) * Math.min(1, delta * 8 * Math.max(0.5, speed))
-        invalidate()
+        markShadowsDirty(); invalidate()
       } else cur = want
       tipNow.current = cur
       bg.rotation.z = cur
@@ -132,7 +133,7 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
         fader.current?.set(1 - k)
         bg.scale.setScalar(1 - 0.18 * k)
         bg.position.y -= 0.35 * k
-        if (k < 1) invalidate()
+        if (k < 1) { markShadowsDirty(); invalidate() }
       } else if (bg.scale.x !== 1) bg.scale.setScalar(1)
     }
     if (stationary && !lowGfx) {

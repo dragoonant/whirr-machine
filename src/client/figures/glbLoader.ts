@@ -7,6 +7,7 @@ import { useThree } from '@react-three/fiber'
 import { Mesh, type Object3D } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
+import { markShadowsDirty } from '../board/frameRate'
 
 type Entry = { status: 'loading' | 'ready' | 'failed'; scene?: Object3D }
 const cache = new Map<string, Entry>()
@@ -61,7 +62,10 @@ export function useGlbInstance(slug: string | undefined): Object3D | null {
     }
   }, [slug, gl, invalidate])
   const scene = entry?.status === 'ready' ? entry.scene : undefined
-  return useMemo(() => (scene ? cloneSkinned(scene) : null), [scene])
+  const inst = useMemo(() => (scene ? cloneSkinned(scene) : null), [scene])
+  // after the commit that swaps the GLB in, so its shadow is in the next shadow pass
+  useEffect(() => { if (inst) { markShadowsDirty(); invalidate() } }, [inst, invalidate])
+  return inst
 }
 
 /** Load state of a slug ('idle' when never requested); the gallery shows it. */
