@@ -6,6 +6,7 @@ import {
 import './hud.css'
 import { PHASE_WORD, windowWord } from './format'
 import { isLegal } from './promptView'
+import { PaintButton } from './PaintPanel'
 import { SettingsButton } from './SettingsPopover'
 
 type Control = NonNullable<ReturnType<typeof queryControl>>
@@ -112,8 +113,11 @@ export function TopBar() {
             ))}
           </div>
         )}
-        <EndButtons />
-        <SettingsButton />
+        <div className="top-tools">
+          <EndButtons />
+          <PaintButton />
+          <SettingsButton />
+        </div>
       </header>
     </>
   )

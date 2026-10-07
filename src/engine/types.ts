@@ -363,6 +363,7 @@ export interface GameState {
   decisionSeq: number
   log: Action[]
   thresholdQueue?: ModelId[] // M9 C6: beasts still to check while a frenzy activation waits; cleared when C6 ends
+  maintAttackDone?: string[] // M10: "<turn>:<modelId>|<abilityId>" of the Maintenance attacks (trigger maintenance.effects, op makeAttack) already offered this turn
 }
 
 // ---------- engine API results (00 §2, §10) ----------

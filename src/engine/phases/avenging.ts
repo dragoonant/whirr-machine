@@ -3,7 +3,8 @@
 // and may make one basic attack, outside any activation (no focus can be spent on it).
 import type { Action } from '../actions'
 import { declareAttack, drive, moverInfo } from './activation'
-import { alive, isMelee, weaponsOf } from '../code-hooks'
+import { abilitiesOf, alive, evalCond, isMelee, rec, weaponsOf, type Rec } from '../code-hooks'
+import { hasCondition } from '../effects'
 import type { GameEvent } from '../events'
 import { avengingForceReady } from '../factions/khador'
 import { sentryReady } from '../factions/trollbloods'
@@ -16,8 +17,9 @@ const CODE = 'avengingForce'
 const ADVANCE = 3
 
 const SENTRY = 'sentry'
+const MAINT = 'maintenanceAttack'
 export const isAvengingDecision = (state: GameState): boolean =>
-  state.phase === 'maintenance' && (state.pending.context.data?.code === CODE || state.pending.context.data?.code === SENTRY)
+  state.phase === 'maintenance' && (state.pending.context.data?.code === CODE || state.pending.context.data?.code === SENTRY || state.pending.context.data?.code === MAINT)
 
 /** The armed Avenging Force effects whose warjack can act now. */
 function ready(state: GameState): { effectId: string; engineId: ModelId }[] {
@@ -70,6 +72,50 @@ function runSentry(state0: GameState, b: DataBundle, events: GameEvent[], next: 
     })
     return { state: p.state, events, pending: p.pending }
   }
+  return runMaintenanceAttacks(state, b, events, next)
+}
+
+// ---------- generic Maintenance attacks (M10): any model ability with trigger maintenance.effects and a makeAttack op ----------
+interface MaintDue { modelId: ModelId; abilityId: string; filter: string }
+const maintKey = (state: GameState, modelId: ModelId, abilityId: string): string => `${state.turn}:${modelId}|${abilityId}`
+
+/** Maintenance attacks the active player's models owe this turn and have not been offered yet (one offer per model and ability per turn). */
+function maintDue(state: GameState, b: DataBundle): MaintDue[] {
+  const done = state.maintAttackDone ?? []
+  const out: MaintDue[] = []
+  for (const m of Object.values(state.models).sort((x, y) => x.id.localeCompare(y.id))) {
+    if (m.owner !== state.activePlayer || !alive(m) || m.inert || m.life !== 'active') continue
+    if (hasCondition(state, m, 'knockedDown') || hasCondition(state, m, 'stationary')) continue
+    for (const abId of abilitiesOf(state, b, m.id)) {
+      const ab = rec(b, abId)
+      const node = ((ab.effect ?? []) as Rec[]).find((n) => n.op === 'makeAttack')
+      if (ab.trigger !== 'maintenance.effects' || !node || done.includes(maintKey(state, m.id, abId))) continue
+      if (!evalCond(state, b, ab.when, { selfId: m.id })) continue
+      out.push({ modelId: m.id, abilityId: abId, filter: String(node.weaponFilter ?? 'any') })
+    }
+  }
+  return out
+}
+
+/** After Avenging Force and Sentry: each due Maintenance attack is offered to its owner as a chooseAttack (pass to hold fire), then the Control Phase. */
+function runMaintenanceAttacks(state0: GameState, b: DataBundle, events: GameEvent[], next: (s: GameState, ev: GameEvent[]) => FlowOut): FlowOut {
+  let state = state0
+  for (const r of maintDue(state, b)) {
+    const key = maintKey(state, r.modelId, r.abilityId)
+    const prefix = `${state.turn}:`
+    state = { ...state, maintAttackDone: [...(state.maintAttackDone ?? []).filter((k) => k.startsWith(prefix)), key] }
+    const m = state.models[r.modelId]!
+    const did = `d:${state.decisionSeq + 1}`
+    const options = attackOptions(state, b, r.modelId, did, r.filter)
+    if (!options.length) continue
+    events.push({ type: 'WindowOpened', window: 'maintenance.effects', subjectId: r.modelId })
+    state = { ...state, window: 'maintenance.effects' }
+    const p = raise(state, {
+      player: m.owner, kind: 'chooseAttack', window: 'maintenance.effects', context: { modelId: r.modelId, data: { code: MAINT, abilityId: r.abilityId, step: 'attack' } },
+      options: [...options, { id: 'skip', label: 'Hold fire', action: { type: 'pass', decisionId: did, player: m.owner } as Action }], canPass: true,
+    })
+    return { state: p.state, events, pending: p.pending }
+  }
   return next(state, events)
 }
 
@@ -104,12 +150,15 @@ function raiseMove(state: GameState, b: DataBundle, events: GameEvent[], id: Mod
   return { state: r.state, events, pending: r.pending }
 }
 
-function attackOptions(state: GameState, b: DataBundle, id: ModelId, did: string, rangedOnly = false): DecisionOption[] {
+function attackOptions(state: GameState, b: DataBundle, id: ModelId, did: string, filter: boolean | string = false): DecisionOption[] {
   const m = state.models[id]!
   const out: DecisionOption[] = []
   const seen = new Set<string>()
   for (const w of weaponsOf(b, m)) {
-    if (rangedOnly && isMelee(w.w)) continue
+    // filter: true or 'ranged' = shots only (Sentry), 'melee' = blows only, a weapon id = that weapon, anything else = every weapon
+    if ((filter === true || filter === 'ranged') && isMelee(w.w)) continue
+    if (filter === 'melee' && !isMelee(w.w)) continue
+    if (typeof filter === 'string' && !['any', 'ranged', 'melee', 'same'].includes(filter) && filter !== w.weaponId) continue
     if (seen.has(w.weaponId)) continue
     seen.add(w.weaponId)
     for (const t of Object.values(state.models)) {

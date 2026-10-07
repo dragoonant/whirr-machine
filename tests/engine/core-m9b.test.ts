@@ -78,14 +78,14 @@ describe('CORE-M9b special actions and spells through the real pipeline', () => 
     expect((e as unknown as { afterDamageAdvance: number }).afterDamageAdvance).toBe(6)
   })
 
-  it('CORE-053 a Fury\'s Stygian Abyss is an arcane star attack with a weapon not on its card; Marionette is not offered', () => {
+  it('CORE-053 a Fury\'s Stygian Abyss is an arcane star attack with a weapon not on its card; Marionette is offered too', () => {
     let s = startList(CRY, 'core-53')
     s = park(s, ['A:u2.1', 'A:u2.2', 'A:u2.3', 'B:e0'])
     s = place(s, 'A:u2.1', { x: 0, z: 0 }); s = place(s, 'A:u2.2', { x: 2, z: 0 }); s = place(s, 'A:u2.3', { x: -2, z: 0 }); s = place(s, 'B:e0', { x: 0, z: 8 })
     let o = choose(asOut(s), 'A:u2')
     o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:u2.1' })
     expect(special(o, 'cry.a.stygian-abyss') ?? o.pending.options!.find((x) => (x.action as { abilityId?: string }).abilityId === 'cry.a.stygian-abyss')).toBeDefined()
-    expect(o.pending.options!.some((x) => (x.action as { abilityId?: string }).abilityId === 'cry.a.marionette')).toBe(false)
+    expect(o.pending.options!.some((x) => (x.action as { abilityId?: string }).abilityId === 'cry.a.marionette')).toBe(true)
     expect(special(o, 'cry.a.power-of-death')).toBeDefined()
     const sa = o.pending.options!.find((x) => (x.action as { abilityId?: string }).abilityId === 'cry.a.stygian-abyss')!
     o = send(o, raw(sa.action))

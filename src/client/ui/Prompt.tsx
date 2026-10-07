@@ -2,11 +2,22 @@ import { useEffect, useMemo } from 'react'
 import { game, uiActions, usePresentedState, usePrompt, usePromptLegal, useWaitingFor } from '../contract'
 import './hud.css'
 import { AllocateForm, BoardForm, LeechForm, ShakeForm, TransferForm, UpkeepForm, VentForm } from './PromptForms'
+import { panelActions, useRailCollapsed } from '../store/panelStore'
 import { buildPromptView, isLegal, optionTestId, type PromptView } from './promptView'
 
 const typing = (t: EventTarget | null): boolean => {
   const el = t as HTMLElement | null
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
+}
+
+/** Panel decisions are answered from the left rail; when it is folded away this offers to open it. */
+function PanelHint({ collapsed }: { collapsed: boolean }) {
+  if (!collapsed) return <p className="prompt-line">Pick from the activation panel on the left (it lists every legal choice).</p>
+  return (
+    <p className="prompt-line">
+      The activation panel lists every legal choice. <button type="button" className="hud-btn hud-btn-primary hud-btn-sm" data-testid="prompt-open-panel" onClick={() => panelActions.set('left', false)}>Show it</button>
+    </p>
+  )
 }
 
 /** Bottom-centre decision dock: says who, what and the exact odds, then offers the legal answers. Enter = default, Esc = pass. */
@@ -15,6 +26,7 @@ export function PromptDock() {
   const legal = usePromptLegal()
   const state = usePresentedState()
   const waiting = useWaitingFor()
+  const leftCollapsed = useRailCollapsed('left')
   const view: PromptView | null = useMemo(() => (pd && state ? buildPromptView(state, pd, legal) : null), [pd, state, legal])
 
   useEffect(() => {
@@ -49,7 +61,7 @@ export function PromptDock() {
       {view.form === 'leech' && <LeechForm key={pd.id} state={state} pd={pd} />}
       {view.form === 'transfer' && <TransferForm key={pd.id} state={state} pd={pd} />}
       {view.form === 'vent' && <VentForm key={pd.id} state={state} pd={pd} />}
-      {view.form === 'panel' && <p className="prompt-line">Pick from the activation panel on the left (it lists every legal choice).</p>}
+      {view.form === 'panel' && <PanelHint collapsed={leftCollapsed} />}
       {hasButtons && view.form === 'buttons' && (
         <div className="pbtns pbtns-wrap">
           {view.options.map((o) => (

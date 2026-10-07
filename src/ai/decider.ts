@@ -90,7 +90,7 @@ function spellValue(env: Env, a: Extract<Action, { type: 'castSpell' }>): number
     return 0.8
   }
   const foes = enemiesOf(s, env.me).filter((e) => dist(e.pos, caster.pos) < 20)
-  if (sp.scope?.who === 'warbeasts') {
+  if (sp.scope?.who === 'warbeasts' || sp.scope?.who === 'battlegroup') {
     const n = modelsOf(s, env.me).filter((m) => m.type === 'beast' && m.controllerId === caster.id && !m.activated).length
     return foes.length ? 0.7 * n : 0.2 * n
   }
@@ -312,10 +312,10 @@ function focusFor(env: Env, m: ModelState): number {
 const forcePen = (env: Env, m: ModelState, k: number): number => forcePenalty(env.s, m, k)
 
 /** Menoth combined melee attack (+1 to attack and damage per contributor, who give up their own attacks): take it when it out-damages them. */
-function combinedPick(env: Env, legal: Action[]): { a: Action; v: number } | null {
+function combinedPick(env: Env, legal: Action[], floor = 1.15): { a: Action; v: number } | null {
   let best: { a: Action; v: number } | null = null
   for (const a of legal) {
-    if (a.type !== 'combinedAttack') continue
+    if (a.type !== 'combinedAttack' || !a.contributorIds.length) continue // an empty list only opens the picker
     const t = env.s.models[a.targetId]
     if (!live(t)) continue
     let pv
@@ -326,9 +326,31 @@ function combinedPick(env: Env, legal: Action[]): { a: Action; v: number } | nul
     const combined = Math.min(0.97, pv.pHit + 0.13 * n) * (perHit + n)
     const apart = (n + 1) * pv.expectedDamage
     const bt = boxesTotal(t)
-    if (Math.min(combined, bt) > Math.min(apart, bt) * 1.15 + 0.2 && (!best || combined > best.v)) best = { a, v: combined + 1e6 }
+    if (Math.min(combined, bt) > Math.min(apart, bt) * floor + 0.2 && (!best || combined > best.v)) best = { a, v: combined + 1e6 }
   }
   return best
+}
+
+/** The combinedAttack decision: the group that joins is the one that gains the most over those mates attacking on their own; none worth it, back out. */
+function combinedGroup(env: Env, legal: Action[]): Action {
+  const pick = combinedPick(env, legal, 1)
+  if (pick) {
+    // among groups that beat attacking apart, the one with the best surplus (value minus what the contributors would have dealt alone)
+    let best = pick.a, bv = -Infinity
+    for (const a of legal) {
+      if (a.type !== 'combinedAttack' || !a.contributorIds.length) continue
+      let pv
+      try { pv = query.attackPreview(env.s, a.primaryId, a.weaponId, a.targetId) } catch { continue }
+      if (pv.legal || pv.pHit <= 0) continue
+      const n = a.contributorIds.length
+      const bt = boxesTotal(env.s.models[a.targetId]!)
+      const combined = Math.min(0.97, pv.pHit + 0.13 * n) * (pv.expectedDamage / pv.pHit + n)
+      const surplus = Math.min(combined, bt) - Math.min((n + 1) * pv.expectedDamage, bt)
+      if (surplus > bv) { bv = surplus; best = a }
+    }
+    return best
+  }
+  return legal.find((a) => a.type === 'pass') ?? legal[0]!
 }
 
 function chooseCombatAction(env: Env, legal: Action[], brain: Brain): Action {
@@ -389,6 +411,8 @@ function chooseAttack(env: Env, legal: Action[], brain: Brain): Action {
     const t = s.models[a.targetId]
     if (!live(t)) continue
     if (a.additional && !extra.ok) continue
+    // buying an additional attack gives up the initial attacks still to come: only when there is no initial attack to make
+    if (a.additional && initialLeftOf(s, m.id) > 0 && legal.some((x) => x.type === 'chooseAttack' && !x.additional)) continue
     let pv
     try { pv = query.attackPreview(s, m.id, a.weaponId, a.targetId, { additional: a.additional, ...(a.attackType ? { attackType: a.attackType } : {}) }) } catch { continue }
     if (pv.legal) continue
@@ -407,6 +431,56 @@ function chooseAttack(env: Env, legal: Action[], brain: Brain): Action {
   const wrap = furyWrapUp(s, m, reserve, !env.tier.knapsack)
   if (wrap) return wrap
   return legal.find((a) => a.type === 'endAttacks') ?? legal[0]!
+}
+
+/** Initial attacks the model still has this Combat Action. */
+const initialLeftOf = (s: GameState, id: ModelId): number => Object.values(s.activation?.perModel[id]?.initialAttacksLeft ?? {}).reduce((n, v) => n + v, 0)
+
+/** R1.6: an auto-hit may be rolled for a critical, but then the roll decides. Worth it when the crit chance outweighs the chance of a miss. */
+function rollAnyway(env: Env, legal: Action[]): Action {
+  const yes = legal.find((a) => a.type === 'rollAnyway' && a.roll)
+  const no = legal.find((a) => a.type === 'rollAnyway' && !a.roll) ?? legal[0]!
+  const o = env.s.pending.context.odds
+  if (!yes || !env.tier.knapsack || !o || o.pHit === undefined || o.pCrit === undefined) return no
+  return o.pCrit * 0.6 > (1 - o.pHit) + 0.02 ? yes : no
+}
+
+/** R1.12: reroll a roll that went against the holder: its own missed attack or weak damage, or an enemy's hit or strong damage. */
+function reroll(env: Env, legal: Action[]): Action {
+  const s = env.s
+  const pd = s.pending
+  const yes = legal.find((a) => a.type === 'reroll' && a.reroll)
+  const no = legal.find((a) => a.type === 'reroll' && !a.reroll) ?? legal[0]!
+  const d = (pd.context.data ?? {}) as { roll?: 'attack' | 'damage'; hit?: boolean; crit?: boolean; points?: number }
+  const atkOwner = pd.context.modelId ? s.models[pd.context.modelId]?.owner : undefined
+  if (!yes || !atkOwner) return no
+  const mine = atkOwner === pd.player // the holder's own roll (else it makes an enemy reroll)
+  const o = pd.context.odds
+  if (d.roll === 'damage') {
+    const cur = d.points ?? 0, again = o?.expectedDamage ?? cur
+    return mine ? (again > cur + 0.5 ? yes : no) : (again < cur - 0.5 ? yes : no)
+  }
+  const p = o?.pHit ?? 0.5
+  if (mine) return !d.hit && p > 0 ? yes : no
+  return d.hit && p < 0.9 ? yes : no
+}
+
+/** R3.7: the attacker picks a colossal's grid: the one nearest to full, so systems cripple sooner and the other grid keeps its reserve. */
+function chooseGrid(env: Env, legal: Action[]): Action {
+  const rows = ((env.s.pending.context.data ?? {}) as { grids?: { id: string; filled: number; boxes: number; open: boolean }[] }).grids ?? []
+  let best = legal[0]!, bv = Infinity
+  for (const a of legal) {
+    if (a.type !== 'chooseGrid') continue
+    const r = rows.find((x) => x.id === a.grid)
+    const left = r ? r.boxes - r.filled : 99
+    if (left > 0 && left < bv) { bv = left; best = a }
+  }
+  return best
+}
+
+/** The channel decision: cast from the caster unless it is the only way; a node only matters when the caster could not reach, which the engine already filtered. */
+function channelChoice(legal: Action[]): Action {
+  return legal.find((a) => a.type === 'channel' && a.via === null) ?? legal[0]!
 }
 
 /** Value of keeping one focus for later in this activation (an additional attack), per model. */
@@ -645,6 +719,11 @@ function route(env: Env, pd: PendingDecision, legal: Action[], brain: Brain): Ac
     case 'chooseAttack': return chooseAttack(env, legal, brain)
     case 'boostAttack': return boostAttack(env, legal)
     case 'boostDamage': return boostDamage(env, legal)
+    case 'rollAnyway': return rollAnyway(env, legal)
+    case 'reroll': return reroll(env, legal)
+    case 'chooseGrid': return chooseGrid(env, legal)
+    case 'channel': return channelChoice(legal)
+    case 'combinedAttack': return combinedGroup(env, legal)
     case 'powerField': return powerField(env, legal)
     case 'allocateFocus': return allocateFocus(env, legal)
     case 'payUpkeep': return payUpkeep(env, legal)

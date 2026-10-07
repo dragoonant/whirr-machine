@@ -23,7 +23,7 @@ export function Pops(): ReactElement | null {
         const m = state.models[p.modelId]
         if (!m || age > 1.2) return null
         return (
-          <Html key={p.id} position={[m.pos.x, 2.4 + Math.max(0, age) * 1.2, m.pos.z]} center zIndexRange={[20, 10]} style={{ pointerEvents: 'none' }}>
+          <Html key={p.id} position={[m.pos.x, 2.4 + Math.max(0, age) * 1.2, m.pos.z]} center zIndexRange={[20, 10]} pointerEvents="none" style={{ pointerEvents: 'none' }}>
             <span style={{ color: COLOURS[p.kind] ?? '#fff', font: '700 15px system-ui', textShadow: '0 1px 3px #000', opacity: Math.max(0, 1 - Math.max(0, age - 0.6) * 2.5), whiteSpace: 'nowrap' }}>{p.text}</span>
           </Html>
         )

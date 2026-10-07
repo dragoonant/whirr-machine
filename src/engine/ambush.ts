@@ -39,6 +39,11 @@ export function ambushStrips(state: GameState, b: DataBundle, player: PlayerId):
 
 const inStrips = (p: Vec2, r: number, strips: Rect[]): boolean => strips.some((z) => circleInRect(p, r, z))
 
+/** Grid step for arrival candidates: fine enough that five 40 mm bases can zig-zag inside a 3" strip. */
+const STEP = 0.25
+/** How many starting spots (nearest the enemy Leader first) a unit may try before it is given up as having no room. */
+const ANCHORS = 80
+
 /** A valid arrival for every waiting group that has room, built greedily toward the enemy Leader. */
 export function suggestAmbush(state: GameState, b: DataBundle, player: PlayerId): Placement[] {
   const ids = state.players[player].ambushIds.filter((id) => state.models[id]?.offTable)
@@ -46,28 +51,72 @@ export function suggestAmbush(state: GameState, b: DataBundle, player: PlayerId)
   const foe = state.models[state.players[player === 'A' ? 'B' : 'A'].leaderId]
   const want = foe ? foe.pos : { x: 0, z: 0 }
   const def = scenarioDef(b, state.scenario.id)
+  const spread = def.deployment.unitSpread
   const out: Placement[] = []
   const extra: { pos: Vec2; r: number }[] = []
   const cands: Vec2[] = []
-  for (const z of strips) for (let x = z.x0; x <= z.x1 + EPS; x += 1) for (let y = z.z0; y <= z.z1 + EPS; y += 1) cands.push({ x, z: y })
+  const seen = new Set<string>()
+  // hug both sides of each strip (a base touching its inner or outer limit) so two staggered rows fit the 3" depth
+  const radii = [...new Set(ids.map((id) => baseRadius(state.models[id]!.base)))]
+  const axis = (lo: number, hi: number): number[] => {
+    const v: number[] = []
+    for (let i = 0; lo + i * STEP <= hi + EPS; i++) v.push(lo + i * STEP)
+    for (const r of radii) if (hi - lo >= 2 * r - EPS) v.push(lo + r, hi - r)
+    return v
+  }
+  for (const z of strips) {
+    for (const x of axis(z.x0, z.x1)) {
+      for (const y of axis(z.z0, z.z1)) {
+        const k = `${x.toFixed(3)},${y.toFixed(3)}`
+        if (!seen.has(k)) { seen.add(k); cands.push({ x, z: y }) }
+      }
+    }
+  }
   cands.sort((p, q) => Math.hypot(p.x - want.x, p.z - want.z) - Math.hypot(q.x - want.x, q.z - want.z))
   for (const g of ambushGroupsOf(state, ids)) {
-    const done: Placement[] = []
-    let ok = true
-    for (const id of g) {
-      const m = state.models[id]!
-      const r = baseRadius(m.base)
-      const anchor = done[0]?.pos
-      const legal = (p: Vec2): boolean => inStrips(p, r, strips) && isLegalPlacement(state, id, p, m.base, { extra }).ok
-        && done.every((o) => edgeDistance(p, m.base, o.pos, state.models[o.modelId]!.base) <= def.deployment.unitSpread + EPS)
-      const pool = anchor ? [...cands].sort((p, q) => Math.hypot(p.x - anchor.x, p.z - anchor.z) - Math.hypot(q.x - anchor.x, q.z - anchor.z)) : cands
-      const best = pool.find(legal)
-      if (!best) { ok = false; break }
-      done.push({ modelId: id, pos: best })
-      extra.push({ pos: best, r })
+    const tryFrom = (start: Vec2): Placement[] | null => {
+      const done: Placement[] = []
+      const mine: { pos: Vec2; r: number }[] = []
+      for (const id of g) {
+        const m = state.models[id]!
+        const r = baseRadius(m.base)
+        const legal = (p: Vec2): boolean => inStrips(p, r, strips) && isLegalPlacement(state, id, p, m.base, { extra: [...extra, ...mine] }).ok
+          && done.every((o) => edgeDistance(p, m.base, o.pos, state.models[o.modelId]!.base) <= spread + EPS)
+        let best: Vec2 | undefined
+        if (!done.length) best = legal(start) ? start : undefined
+        else {
+          const anchor = done[0]!.pos
+          best = cands.filter((p) => Math.hypot(p.x - anchor.x, p.z - anchor.z) <= spread + 2 * r + EPS)
+            .sort((p, q) => Math.hypot(p.x - anchor.x, p.z - anchor.z) - Math.hypot(q.x - anchor.x, q.z - anchor.z))
+            .find(legal)
+        }
+        if (!best) return null
+        done.push({ modelId: id, pos: best })
+        mine.push({ pos: best, r })
+      }
+      return done
     }
-    if (ok) out.push(...done)
-    else extra.length -= done.length // the group found no room: its spots are free again
+    let found: Placement[] | null = null
+    if (g.length === 1) {
+      const m = state.models[g[0]!]!
+      const r = baseRadius(m.base)
+      const best = cands.find((p) => inStrips(p, r, strips) && isLegalPlacement(state, g[0]!, p, m.base, { extra }).ok)
+      if (best) found = [{ modelId: g[0]!, pos: best }]
+    } else {
+      // a unit: try several starting spots, nearest the enemy first (a clear stretch of edge may be the only room)
+      const r0 = baseRadius(state.models[g[0]!]!.base)
+      let tries = 0
+      for (const start of cands) {
+        if (!inStrips(start, r0, strips)) continue
+        if (++tries > ANCHORS) break
+        found = tryFrom(start)
+        if (found) break
+      }
+    }
+    if (found) {
+      out.push(...found)
+      for (const f of found) extra.push({ pos: f.pos, r: baseRadius(state.models[f.modelId]!.base) })
+    }
   }
   return out
 }

@@ -2,6 +2,7 @@
 import { cortexCrippled, isCaster, isDisrupted, isInert, isWarEngine, modelStat } from './effects'
 import type { GameEvent } from './events'
 import { canForce, force, isBeast, isFuryModel, isWarlock, maintenanceFury, spendFury } from './fury'
+import { sheafBlocked } from './factions/menoth'
 import type { DataBundle, ForcePurpose, FocusPurpose, FocusReason, FuryPurpose, GameState, ModelId, ModelState, Rejection } from './types'
 
 export const WAR_ENGINE_FOCUS_CAP = 3 // p100, p102
@@ -48,6 +49,7 @@ export function spendFocus(state: GameState, id: ModelId, n: number, purpose: Fo
   if (!m) return { rejection: { code: 'E_TARGET_INVALID', message: `no model ${id}` } }
   if (isFuryModel(m)) return pay(state, bundle, id, n, purpose) // M9: fury models never spend focus
   if (isWarEngine(m) && (cortexCrippled(m) || isDisrupted(state, m) || isInert(m))) return { rejection: { code: 'E_CRIPPLED', message: 'this war-engine cannot use focus' } }
+  if (n > 0 && bundle && sheafBlocked(state, bundle, id)) return { rejection: { code: 'E_NOT_AN_OPTION', message: 'the Gift of the Sheaf: this cohort model cannot spend focus' } } // menoth
   if (m.focus < n) return { rejection: { code: 'E_INSUFFICIENT_FOCUS', message: `${id} has ${m.focus} focus, needs ${n}` } }
   const after = m.focus - n
   return {
@@ -69,6 +71,7 @@ export function canPay(state: GameState, bundle: DataBundle | undefined, m: Mode
   if (isWarlock(m)) return (m.fury ?? 0) >= n
   if (isBeast(m)) return !!bundle && !canForce(state, bundle, m.id, n, purpose ? FORCE_PURPOSE[purpose] : undefined)
   if (isWarEngine(m) && (cortexCrippled(m) || isDisrupted(state, m) || isInert(m))) return false
+  if (bundle && n > 0 && sheafBlocked(state, bundle, m.id)) return false // menoth: the Gift of the Sheaf
   return m.focus >= n
 }
 /** Pay in the model's own currency (focus, fury or forced fury). Beasts need the bundle (FURY and CTRL are stats). */

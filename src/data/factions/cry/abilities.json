@@ -188,8 +188,8 @@
     "id": "cry.a.soul-phase",
     "name": "Soul Phase",
     "text": "During its activation this model may spend one soul token to become Incorporeal for the turn.",
-    "kind": "triggered",
-    "trigger": "activation.start",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
     "effect": [
       {
         "op": "grantAbility",
@@ -200,7 +200,7 @@
       "who": "self"
     },
     "duration": "turn",
-    "optional": true,
+    "verify": "Any-time self ability: offered before the move, at the Combat Action choice and between attacks (not only at activation start); core refuses it while the model is already Incorporeal.",
     "cost": {
       "soul": 1
     }

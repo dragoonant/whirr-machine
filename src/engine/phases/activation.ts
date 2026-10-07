@@ -8,15 +8,15 @@
 import type {
   Action, ChooseAttackAction, ChooseCombatActionAction, ChooseMovementAction, ChargeTargetAction, MoveModelAction,
 } from '../actions'
-import { hitProbabilityBoost, rollAttack } from '../attack'
+import { hitProbability, hitProbabilityBoost, rollAttack } from '../attack'
 import {
   abilitiesOf, actOf, alive, armOf, losOptsFor, isIncorporeal, INCORPOREAL_LOST, atkOf, appliedPassives, cannotKnockDown, cloudsOver, codeHooks, evalCond, hasAb, hasFlag,
   hasIgnore, ignoresGas, inPallCloud, isConstruct, layoutsOf, lookups, meleeReach, plugins, prof, rec, resistsDamageType,
   setAtk, setModel, statOf, weaponCrippled, weaponRange, weaponRangeFor, weaponsOf, isMelee, isSpray, runCodeEffect,
   type AtkCtx, type AtkX, type ActCtx, type ActX, type CondEnv, type DmgJob, type Rec, type WeaponInst,
 } from '../code-hooks'
-import { applyDamage, applyTransfer, damageDistribution, expectedDamage, pKill, resolveDeath, transferAvailable, validateTransfer } from '../damage'
-import { diceCount, rollD3, rollNd6, rollMaybeZero } from '../dice'
+import { applyDamage, applyTransfer, damageDistribution, expectedDamage, gridBoxCount, gridFilled, pKill, resolveDeath, transferAvailable, validateTransfer } from '../damage'
+import { diceCount, hasDouble, rerollDice, rollD3, rollNd6, rollMaybeZero, sum } from '../dice'
 import { addCondition, applyEffect, effectsOn, expireEffects, hasCondition, removeCondition, removeEffect } from '../effects'
 import type { GameEvent } from '../events'
 import { baseRadius, dist, angleOf, isLegalPlacement, isOnTable, norm, placeWithin, segPointDist, sub, sweepFrom, validateAdvancePath } from '../geometry'
@@ -36,12 +36,12 @@ import { activeWarp, admonitionReady, afflictionFloor, wraithbaneOn } from '../f
 import { wrathActive } from '../factions/cryx'
 import type { EffectExtras } from '../effects'
 import { circleOverlapsShape, hazardsUnder, terrainPieces, type WorldShape } from '../terrain'
-import { anytimeOptions, castSpell, channel, heal, isAnytimeAction, useFeat } from '../spells'
-import { applyBattlePlan, battlePlanChoices } from '../factions/menoth'
+import { anytimeOptions, castSpell, channel, channelChoices, heal, isAnytimeAction, useFeat } from '../spells'
+import { giftBlock, gladiatorBonus, marshalPassIds, runBonus as boilerBonus, THRESHER_ID, type GiftKind } from '../factions/menoth'
 import { raiseChooseActivation } from '../turnflow'
 import { finishFrenzyActivation } from './frenzy'
 import type {
-  AttackContext, DamageInstance, DamageType, DataBundle, DecisionKind, DecisionOption, EffectInstance, GameState, Id, Mod, ModelActivation,
+  AttackContext, DamageInstance, DamageType, DataBundle, DecisionKind, DecisionOdds, DecisionOption, EffectInstance, GameState, Id, Mod, ModelActivation,
   ModelId, ModelState, MovementOption, PendingDecision, PlayerId, Rejection, UnitId, Vec2,
 } from '../types'
 import { noteDamaged as khadorNoteDamaged } from '../factions/khador'
@@ -54,6 +54,7 @@ type B = DataBundle
 export const ACTIVATION_KINDS: ReadonlySet<DecisionKind> = new Set<DecisionKind>([
   'chooseMovement', 'moveModel', 'chargeTarget', 'placeTroopers', 'chooseCombatAction', 'chooseAttack', 'boostAttack', 'boostDamage',
   'powerField', 'chooseBoxes', 'triggerWindow', 'abilityChoice', 'transferDamage',
+  'rollAnyway', 'reroll', 'chooseGrid', 'combinedAttack', 'channel', // M10: the decisions the starter content never raised
 ])
 export const isActivationDecision = (s: GameState): boolean =>
   s.phase === 'activation' && (ACTIVATION_KINDS.has(s.pending.kind) || s.pending.kind === 'chooseActivation')
@@ -98,13 +99,15 @@ export function moverInfo(state: GameState, b: B, id: ModelId): MoverInfo {
   const veil = cloudsOver(state, m).some((c) => c.owner === m.owner && !!c.effectId && state.effects.find((e) => e.id === c.effectId)?.sourceId === 'cir.s.veil-of-mists')
   const ghostly = isIncorporeal(state, b, id) || activeWarp(state, b, id) === 'ghostly' || veil
   const seeFriends = effectsOn(state, id).some((e) => (e as EffectInstance & EffectExtras).ignoreFriendly)
+  const marshal = seeFriends ? [] : marshalPassIds(state, b, id) // Marshal [X] (menoth): may advance through those friends
   return {
     spd: statOf(state, b, id, 'SPD'),
     aggressive: hasFlag(state, b, id, 'aggressive'),
     blind: hasCondition(state, m, 'blind'),
     noAdvance: hasCondition(state, m, 'shadowBind'),
     ghostly,
-    ...(seeFriends ? { passIds: Object.values(state.models).filter((o) => o.owner === m.owner && o.id !== id).map((o) => o.id) } : {}),
+    ...(seeFriends ? { passIds: Object.values(state.models).filter((o) => o.owner === m.owner && o.id !== id).map((o) => o.id) } : marshal.length ? { passIds: marshal } : {}),
+    ...(boilerBonus(state, b, id) ? { runBonus: boilerBonus(state, b, id) } : {}),
     warEngine: m.type === 'warEngine',
     beast: m.type === 'beast', forceBlock: m.type === 'beast' ? forceGate(state, b, id, 1, 'run')?.block : undefined,
     hasMelee: wi.length > 0,
@@ -203,7 +206,6 @@ function startOfferable(state: GameState, b: B, id: ModelId, abId: Id): boolean 
   for (const n of (ab.effect ?? []) as Rec[]) {
     if (n.code === 'soulGenerator' && ((m.tokens?.soul ?? 0) < 1 || (m.type === 'warEngine' && (m.focus >= 3 || m.crippled.includes('C'))))) return false
     if (n.op === 'grantAbility' && n.ability && abilitiesOf(state, b, id).includes(n.ability)) return false
-    if (n.code === 'battlePlan' && !battlePlanChoices(state, b, id).length) return false
     // a heal with nothing to heal, or already used this activation, is not worth a prompt
     if (['regenerate', 'cirRegeneration', 'cirDeathFeast'].includes(n.code) && (markedOf(m) === 0 || (ab.limit && act(state).limitsUsed.includes(`${abId}:${ab.limit}`)))) return false
   }
@@ -228,12 +230,9 @@ function raiseStart(state0: GameState, b: B, events: GameEvent[]): Out {
       const rw = raise({ ...state, window: 'activation.start' }, { player: m.owner, kind: 'abilityChoice', window: 'activation.start', context: { modelId: id, data: { code: 'startTrigger', entry, warp: true } }, options: wopts, canPass: false })
       return ok(rw.state, events)
     }
-    const plans = ((ab.effect ?? []) as Rec[]).some((n) => n.code === 'battlePlan') ? battlePlanChoices(state, b, id) : null
     const options: DecisionOption[] = [
       { id: 'skip', label: 'Not now', action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'skip' } as Action },
-      ...(plans
-        ? plans.map((c) => ({ id: 'plan:' + c.optionId, label: c.label, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'plan:' + c.optionId } as Action }))
-        : [{ id: 'use', label: `Use ${ab.name}`, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'use' } as Action }]),
+      { id: 'use', label: `Use ${ab.name}`, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'use' } as Action },
     ]
     const r = raise({ ...state, window: 'activation.start' }, { player: m.owner, kind: 'abilityChoice', window: 'activation.start', context: { modelId: id, data: { code: 'startTrigger', entry } }, options, canPass: false })
     return ok(r.state, events)
@@ -252,11 +251,6 @@ function startTriggerAnswer(state0: GameState, b: B, a: import('../actions').Abi
   if (state.pending.context.data!.warp) {
     if (!WARP_OPTIONS.some((o) => o.id === a.optionId)) return reject('E_NOT_AN_OPTION', 'choose a warp: strength, ghostly or spellWard')
     const r = runCodeEffect(state, b, 'cirControlledWarping', { point: 'activation.start', selfId: id, activePlayer: state.activePlayer }, { choice: a.optionId })
-    state = r.state; events.push(...r.events)
-  } else if (typeof a.optionId === 'string' && a.optionId.startsWith('plan:')) {
-    // Battle Plan: the optionId names the plan and the group it aims at (menoth.ts battlePlanChoices)
-    const r = applyBattlePlan(state, b, id, a.optionId.slice(5))
-    if (!r) return reject('E_NOT_AN_OPTION', 'that plan is not available')
     state = r.state; events.push(...r.events)
   } else if (a.optionId === 'use') {
     const r = runOptionalAbility(state, b, id, abId)
@@ -426,6 +420,8 @@ function raiseMovement(state0: GameState, b: B, events: GameEvent[]): Out {
   if (!lead) return finishActivation(state, b, events, 'forfeit')
   const id = nextId(state)
   const options = [...movementOptionList(state, b, lead, id), ...(a.modelIds.length === 1 ? anytimeOptions(state, b, lead, id) : [])]
+  // a self ability that may be used any time in the activation (Soul Phase) is offered before the move too
+  if (a.modelIds.length === 1) for (const c of specialChoices(state, b, lead, true)) options.push({ id: `sa:${c.abilityId}`, label: c.label, action: { type: 'chooseCombatAction', decisionId: id, player: ownerOf(state, lead), modelId: lead, choice: 'specialAction', abilityId: c.abilityId } as Action })
   const r = raise(state, { player: ownerOf(state, lead), kind: 'chooseMovement', window: 'movement.choose', context: { modelId: lead, unitId: state.units[a.activeId]?.id }, options, canPass: false })
   return ok(r.state, events)
 }
@@ -456,7 +452,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
   const m = state.models[lead]!
   const events: GameEvent[] = []
   const info = moverInfo(state, b, lead)
-  events.push({ type: 'MovementChosen', modelId: lead, option: a.option, maxDist: a.option === 'run' ? info.spd + 5 : a.option === 'charge' || a.option === 'slam' || a.option === 'trample' ? info.spd + 3 : a.option === 'advance' ? info.spd : 0 })
+  events.push({ type: 'MovementChosen', modelId: lead, option: a.option, maxDist: a.option === 'run' ? info.spd + 5 + (info.runBonus ?? 0) : a.option === 'charge' || a.option === 'slam' || a.option === 'trample' ? info.spd + 3 : a.option === 'advance' ? info.spd : 0 })
   if (a.option === 'forfeit') {
     state = setAct(state, { ...act(state), movement: 'forfeit' })
     return startCombatFrom(state, b, events)
@@ -505,7 +501,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
       }
     }
     const id = nextId(state)
-    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id))
+    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['charge']))
       .map((e) => ({ id: e.id, label: `Charge ${e.id}`, action: { type: 'chargeTarget', decisionId: id, player: m.owner, targetId: e.id } as Action }))
     if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to charge')
     state = setAct(patchX(state, { stage: 'chargeTarget' }), { ...act(patchX(state, { stage: 'chargeTarget' })), movement: 'charge', movedModelId: lead })
@@ -515,7 +511,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
   if (a.option === 'slam') {
     // R7.12: declare a target that is in LOS now (the start of Normal Movement)
     const id = nextId(state)
-    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id))
+    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['special']))
       .map((e) => ({ id: e.id, label: `Slam ${e.id}`, action: { type: 'chargeTarget', decisionId: id, player: m.owner, targetId: e.id } as Action }))
     if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to slam')
     state = setAct(patchX(state, { stage: 'slamTarget' }), { ...act(patchX(state, { stage: 'slamTarget' })), movement: 'slam', movedModelId: lead })
@@ -537,7 +533,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
     return ok(r.state, events)
   }
   const kind = a.option === 'run' ? 'run' : 'advance'
-  const maxDist = kind === 'run' ? info.spd + 5 : info.spd
+  const maxDist = kind === 'run' ? info.spd + 5 + (info.runBonus ?? 0) : info.spd
   state = setAct(patchX(state, { stage: 'move', pendingMove: { kind } }), { ...act(patchX(state, { stage: 'move', pendingMove: { kind } })), movement: a.option, movedModelId: lead })
   const id = nextId(state)
   const samples = moveSamples(state, b, lead, kind, maxDist)
@@ -739,6 +735,7 @@ function chargeTargetAnswer(state0: GameState, b: B, a: ChargeTargetAction): Res
   const t = state.models[a.targetId]
   const m = state.models[lead]!
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'charge an enemy model')
+  { const gb = giftBlock(state, b, lead, a.targetId, ['charge']); if (gb) return reject('E_TARGET_INVALID', gb) } // menoth: the Gift of Flame
   if (!hl(state, b, lead, a.targetId)) return reject('E_NO_LOS', 'no line of sight to the charge target')
   const info = moverInfo(state, b, lead)
   // the default answer: straight at the target until contact (or SPD+3")
@@ -820,6 +817,7 @@ function slamTargetAnswer(state: GameState, b: B, a: ChargeTargetAction): Result
   const t = state.models[a.targetId]
   const m = state.models[lead]!
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'slam an enemy model')
+  { const gb = giftBlock(state, b, lead, a.targetId, ['special']); if (gb) return reject('E_TARGET_INVALID', gb) } // menoth: the Gift of Flame
   if (!hl(state, b, lead, a.targetId)) return reject('E_NO_LOS', 'the slam target must be in line of sight at the start of Normal Movement')
   const info = moverInfo(state, b, lead)
   const range = slamRange(m)
@@ -912,7 +910,7 @@ function trampleMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result 
     mat: statOf(s0, b, lead, 'MAT'),
     def: (id) => defFor(s0, b, null, mover, s0.models[id]!, 'melee').def,
     autoHit: (id) => defFor(s0, b, null, mover, s0.models[id]!, 'melee').autoHit,
-    look: lookups(s0, b), attackId: (n) => `a:${seq + 1 + n}`,
+    look: lookups(s0, b), attackId: (n) => `a:${seq + 1 + n}`, ...(gladiatorBonus(s0, b, lead) ? { damageBonus: gladiatorBonus(s0, b, lead) } : {}),
   })
   const declared = ta.events.filter((e) => e.type === 'AttackDeclared').length
   state = { ...ta.state, attackSeq: seq + declared }
@@ -927,7 +925,7 @@ function trampleMoveAnswer(state0: GameState, b: B, a: MoveModelAction): Result 
 }
 
 // ---------- Combat Action ----------
-const ATK_POINTS = new Set(['attack.declared', 'attack.beforeRoll', 'attack.hit', 'attack.crit', 'attack.miss', 'attack.resolved', 'damage.beforeRoll', 'damage.beforeApply', 'death.boxed'])
+const ATK_POINTS = new Set(['attack.declared', 'attack.beforeRoll', 'attack.rolled', 'attack.hit', 'attack.crit', 'attack.miss', 'attack.resolved', 'damage.beforeRoll', 'damage.rolled', 'damage.beforeApply', 'death.boxed'])
 
 function nextCombat(state0: GameState, b: B, events: GameEvent[]): Out {
   let state = state0
@@ -996,6 +994,7 @@ function specialActionOk(state: GameState, b: B, id: ModelId, abId: Id, targetId
   const nodes = (ab.effect ?? []) as Rec[]
   if (nodes.some((n) => n.code === 'cirBloodRage') && !(m.tokens?.corpse && weaponsOf(b, m).some((w) => isMelee(w.w)))) return false
   if (nodes.some((n) => ['regenerate', 'cirRegeneration'].includes(n.code)) && markedOf(m) === 0) return false
+  if (nodes.some((n) => n.op === 'grantAbility' && n.ability && abilitiesOf(state, b, id).includes(n.ability))) return false // already has it (Soul Phase while Incorporeal)
   if (costBlock(state, b, id, ab.cost as AbilityCost | undefined)) return false
   if (needsTarget(ab)) {
     if (!targetId || !specialTargets(state, b, id, ab).includes(targetId)) return false
@@ -1100,8 +1099,8 @@ function unmountedStar(b: B, abilityId: Id): WeaponInst | undefined {
   const wid = rec(b, abilityId).attack as Id | undefined
   return wid ? { weaponId: wid, loc: '-', w: rec(b, wid), index: 0 } : undefined
 }
-/** ★Attacks that are not modelled: Marionette's reroll has no rules engine yet, so it is never offered (RULING). */
-const NO_STAR = new Set<Id>(['cry.a.marionette'])
+/** ★Attacks that are not modelled and so never offered (none now: Marionette uses the reroll decision, see factions/cryx.ts). */
+const NO_STAR = new Set<Id>()
 const canSpendFocus = (state: GameState, id: ModelId, b?: B): boolean => {
   const m = state.models[id]
   if (m && isFuryModel(m)) return canPay(state, b, m, 1) // M9: warlock fury, or a beast that can be forced
@@ -1125,9 +1124,11 @@ function combatChoices(state: GameState, b: B, id: ModelId): CombatChoiceInfo[] 
       const starIds = [...new Set([...abilitiesOf(state, b, id), ...ws.flatMap((w) => (w.w.abilities ?? []) as Id[])])]
       for (const abId of starIds) {
         const ab = rec(b, abId)
-        if (ab.kind !== 'specialAttack' || ab.trigger !== 'combat.choose' || m.crippled.includes('m') || NO_STAR.has(abId)) continue
+        const thresher = abId === THRESHER_ID // menoth: a weapon quality that is a star attack
+        if ((!thresher && (ab.kind !== 'specialAttack' || ab.trigger !== 'combat.choose')) || m.crippled.includes('m') || NO_STAR.has(abId)) continue
         const w = starWeapon(state, b, id, abId)
         if (!w || (meleeOnly && !isMelee(w.w))) continue
+        if (thresher && !enemiesOf(state, m.owner).some((e) => within(m, e, w.w.rng ?? 1))) continue
         if (ab.limit && a.limitsUsed.includes(`${abId}:${ab.limit}`)) continue // one use per unit activation (the one-per-unit marker)
         if (hasCondition(state, m, 'blind') && !isMelee(w.w)) continue
         out.push({ choice: 'specialAttack', abilityId: abId, label: ab.name })
@@ -1289,6 +1290,8 @@ function candidateTargets(state: GameState, b: B, attackerId: ModelId, w: Weapon
       if (engagers.length && !engagers.includes(t.id) && !hasFlag(state, b, attackerId, 'gunfighter')) continue
     }
     if (!canSee(state, b, attackerId, t.id, w)) continue
+    // menoth: the Gifts of Flame (special attacks) and the Wall (ranged attacks) keep some targets off the list
+    if (giftBlock(state, b, attackerId, t.id, isMelee(w.w) ? (actOf(state)?.x.star?.modelId === attackerId ? ['special'] : []) : ['ranged'])) continue
     out.push(t.id)
   }
   return out
@@ -1345,11 +1348,17 @@ function attackOptionList(state: GameState, b: B, id: ModelId, did: string): Dec
           id: `comb:${w.weaponId}:${t}`, label: `Combined ${w.w.name} at ${t} (+${mates.length + 1})`,
           action: { type: 'combinedAttack', decisionId: did, player: m.owner, primaryId: id, contributorIds: mates, targetId: t, weaponId: w.weaponId } as Action,
         })
+        // with two or more mates available the player may leave some out: an empty contributor list opens the combinedAttack picker
+        if (mates.length >= 2) out.push({
+          id: `combpick:${w.weaponId}:${t}`, label: `Combined ${w.w.name} at ${t}: choose who joins`,
+          action: { type: 'combinedAttack', decisionId: did, player: m.owner, primaryId: id, contributorIds: [], targetId: t, weaponId: w.weaponId } as Action,
+        })
       }
     }
   }
   // additional attacks (R7.2): after the initial attacks, melee for 1 focus, Reload for ranged
-  const mayAdd = initialLeft === 0 && !a.x.meleeOnly.includes('__none') && (pmx.combat !== 'forfeit') && canSpendFocus(state, id, b)
+  // (R7.2, QS p47) the initial attacks need not all be made: once one has been, an additional attack may be bought in place of the rest
+  const mayAdd = (initialLeft === 0 || pmx.attacksMade > 0) && !a.x.meleeOnly.includes('__none') && (pmx.combat !== 'forfeit') && canSpendFocus(state, id, b)
   if (mayAdd && !(pmx.combat === 'specialAttack' && false)) {
     const seenA = new Set<Id>()
     for (const w of ws) {
@@ -1399,11 +1408,36 @@ function combinedAttackAnswer(state0: GameState, b: B, a: import('../actions').C
   if (!w || !hasFlag(state, b, cur, 'combinedMeleeAttack')) return reject('E_NOT_AN_OPTION', 'this model cannot make a combined melee attack')
   const ids = [...new Set(a.contributorIds ?? [])]
   const ok = combineMates(state, b, cur, w, a.targetId)
+  // an empty list from the attack choice opens the picker; the picker itself needs at least one contributor
+  if (!ids.length && state.pending.kind === 'chooseAttack' && ok.length >= 2) return raiseCombinedPicker(state, cur, w, a.targetId, ok)
   if (!ids.length || ids.some((c) => !ok.includes(c))) return reject('E_NOT_AN_OPTION', 'those models cannot join the attack')
   state = patchX(state, { queue: ac.x.queue.filter((q) => !ids.includes(q)), forfeit: [...ac.x.forfeit, ...ids] })
   for (const c of ids) state = setPm(state, c, { combat: 'forfeit', combatForfeited: true })
   const allCharged = !!ac.charge?.success && ids.every((c) => ac.x.meleeOnly.includes(c))
   return chooseAttackAnswer(state, b, { type: 'chooseAttack', decisionId: a.decisionId, player: a.player, modelId: cur, weaponId: a.weaponId, targetId: a.targetId, additional: false }, ids.length + 1, allCharged)
+}
+
+/** The combinedAttack decision (00 section 5): which of the unit mates in reach join the primary's attack. Every non-empty group is an option (the biggest first). */
+function raiseCombinedPicker(state0: GameState, primaryId: ModelId, w: WeaponInst, targetId: ModelId, mates: ModelId[]): Out {
+  const state = { ...state0, window: 'combat.chooseAttack' as const }
+  const m = state.models[primaryId]!
+  const did = nextId(state)
+  const groups: ModelId[][] = []
+  if (mates.length <= 5) {
+    for (let mask = 1; mask < (1 << mates.length); mask++) groups.push(mates.filter((_, i) => (mask >> i) & 1))
+    groups.sort((x, y) => y.length - x.length)
+  } else {
+    groups.push(mates, ...mates.map((x) => mates.filter((y) => y !== x)), ...mates.map((x) => [x]))
+  }
+  const options: DecisionOption[] = groups.map((ids) => ({
+    id: `join:${ids.join('+')}`, label: `${ids.length} join (+${ids.length + 1} to the attack and damage rolls)`,
+    action: { type: 'combinedAttack', decisionId: did, player: m.owner, primaryId, contributorIds: ids, targetId, weaponId: w.weaponId } as Action,
+  }))
+  const r = raise(state, {
+    player: m.owner, kind: 'combinedAttack', window: 'combat.chooseAttack',
+    context: { modelId: primaryId, targetId, data: { weaponId: w.weaponId, eligible: mates } }, options, canPass: true,
+  })
+  return ok(r.state, [])
 }
 
 function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
@@ -1428,7 +1462,7 @@ function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
         if (!wpn) continue
         const rng = kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn.w.rng ?? 1)
         if (!within(m, t, rng) || !lr(state, b, id, t.id).visible) continue
-        if (t.base > m.base) continue
+        if (t.base > m.base || giftBlock(state, b, id, t.id, ['special'])) continue
         opts.push({ id: `pa:${kind}:${t.id}`, label: `${kind} ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id, weaponId: wpn.weaponId } as Action, ...(m.type === 'warEngine' || m.type === 'beast' ? { cost: costFor(m, 1) } : {}) })
       }
     }
@@ -1533,6 +1567,7 @@ function powerAttackAnswer(state0: GameState, b: B, a: import('../actions').Powe
   const t = state.models[a.targetId]
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'power attacks target enemies')
   if (!lr(state, b, cur, a.targetId).visible) return reject('E_NO_LOS', 'no line of sight')
+  { const gb = giftBlock(state, b, cur, a.targetId, ['special']); if (gb) return reject('E_TARGET_INVALID', gb) } // menoth: the Gift of Flame
   if (a.kind === 'trample') return reject('E_POWER_ATTACK', 'a trample attacks as part of its move')
   const slam = a.kind === 'slam' ? ac.x.slam : undefined
   if (a.kind === 'slam' && (!slam || slam.targetId !== a.targetId)) return reject('E_TARGET_INVALID', 'the slam attack goes at the declared slam target')
@@ -1548,6 +1583,7 @@ function powerAttackAnswer(state0: GameState, b: B, a: import('../actions').Powe
     ...(a.kind === 'slam' && hasFlag(state, b, a.targetId, 'setDefense') ? { mods: [{ source: 'men.a.set-defense', label: 'Set Defense', value: -2 }] } : {}),
     // a slam's focus was paid when it was declared at the start of Normal Movement
     warEngine: m.type === 'warEngine' && a.kind !== 'slam', range: rng, attackId, movedDistance: slam?.moved,
+    ...(gladiatorBonus(state, b, cur) ? { damageBonus: gladiatorBonus(state, b, cur) } : {}), // Gladiator (menoth)
   })
   if (!r.ok) return reject((r.code ?? 'E_POWER_ATTACK') as Rejection['code'], r.message ?? 'power attack failed')
   state = { ...r.state, attackSeq: state.attackSeq + 1 }
@@ -1840,6 +1876,12 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
   }
   if (hasCondition(state, at, 'blind') && kind !== 'melee' && kind !== 'power') return { rejection: { code: 'E_NOT_AN_OPTION', message: 'a blind model cannot make ranged or magic attacks' } }
   if (spell && state.effects.some((e) => e.targetIds.includes(tg.id) && (e.forbid?.includes('beTargetedBySpell') || (e.forbid?.includes('beTargeted') && e.owner !== at.owner)))) return { rejection: { code: 'E_TARGET_INVALID', message: 'a ward stops spells targeting that model' } }
+  if (!p.flags?.frenzy) {
+    // menoth: the Gifts of Flame, Law and the Wall
+    const gk: GiftKind[] = spell ? ['spell'] : kind === 'power' ? ['special'] : kind === 'melee' || kind === 'arcane' ? (p.star ? ['special'] : []) : ['ranged', ...(p.star ? ['special' as const] : [])]
+    const gb = gk.length ? giftBlock(state, b, at.id, tg.id, gk) : null
+    if (gb) return { rejection: { code: 'E_TARGET_INVALID', message: gb } }
+  }
   const origin = (actOf(state)?.x.channelVia && spell) ? actOf(state)!.x.channelVia! : at.id
   const originM = state.models[origin]!
   const witch = !!spell && state.effects.some((e) => e.sourceId === 'cyg.a.witch-mark' && e.targetIds.includes(tg.id) && e.casterId === at.id)
@@ -1878,7 +1920,7 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
     stage: 'start', weaponId: spell ? spell.id : p.weaponId, wloc: inst?.loc, group: chosen, specs, rollTargets: [tg.id], results: {}, boosted: !!p.flags?.frenzy, powerful: false,
     noFocus: p.noFocus, atkAdd: 0, jobs: [], jobIdx: 0, aoe: (w.aoe ?? 0) > 0 ? w.aoe : undefined, blastPow: w.blastPow, star, starFlat, blessed: false, denyTough: false, rfp: false,
     needColumn: false, destroyed: [], hitModels: [], trig: [], trigIdx: 0, atkMods: [], dmgMods: {}, parent: p.parent,
-    flags: { ...(forced.length ? { declForced: forced } : {}), ...(specs.includes('cir.a.blood-reaper') && !p.additional && kind === 'melee' ? { multi: true } : {}), ...(p.flags ?? {}) }, chargeAttack: p.chargeAttack,
+    flags: { ...(forced.length ? { declForced: forced } : {}), ...((specs.includes('cir.a.blood-reaper') || p.star === THRESHER_ID) && !p.additional && kind === 'melee' ? { multi: true } : {}), ...(chosen === 'featherweight-arrow' && kind === 'ranged' ? { multi: true } : {}), ...(p.flags ?? {}) }, chargeAttack: p.chargeAttack,
     basicRanged: !!p.basic && kind === 'ranged',
   }
   const outOfAct = !a0 || !a0.modelIds.includes(at.id) || !!p.generatedBy
@@ -1941,6 +1983,8 @@ function measure(state0: GameState, b: B): { state: GameState; events: GameEvent
   const statv = statOf(state, b, at.id, attackStatName(atk.kind, atk.spellId), { atk: { kind: atk.kind } })
   const dropLowest = !!a2.x.flags.dropLowestAtk
   const [p0, p1] = hitProbabilityBoost({ stat: statv, mods, dice: { base: 2, added, removed }, target: df.def, autoHit, autoMiss, dropLowest })
+  // R1.6: an auto-hitting attacker may roll anyway; the chances of that roll (it can miss, and it can crit) back the rollAnyway decision
+  const [q0, q1] = autoHit && !autoMiss ? hitProbabilityBoost({ stat: statv, mods, dice: { base: 2, added, removed }, target: df.def, autoHit: false, autoMiss: false, dropLowest }) : [null, null]
   // spray: the rolling models are every model the line crosses
   let rollTargets = [tg.id]
   if (atk.kind === 'spray') rollTargets = sprayTargets(state, b, a2, w)
@@ -1948,7 +1992,7 @@ function measure(state0: GameState, b: B): { state: GameState; events: GameEvent
   const next: AtkCtx = {
     ...a2, dice: a2.x.boosted ? dice + 1 : dice, mods, hitTarget: df.def, pHit: a2.x.boosted ? p1.pHit : p0.pHit, pHitBoosted: p1.pHit, autoHit, autoMiss,
     losVerdict: { visible: true, reasons: ['clear'], blockers: [], inRange: !outOfRange, distance: dst }, step: 'attack.beforeRoll',
-    x: { ...a2.x, rollTargets, flags: { ...a2.x.flags, outOfRange, stealthMiss: sneaky } },
+    x: { ...a2.x, rollTargets, flags: { ...a2.x.flags, outOfRange, stealthMiss: sneaky, rollOdds: q0 && q1 ? { pHit: q0.pHit, pCrit: q0.pCrit, pHitBoosted: q1.pHit, pCritBoosted: q1.pCrit } : undefined } },
   }
   state = setAtk(state, next)
   return { state, events: [...pre.events, { type: 'AttackMeasured', attackId: atk.attackId, los: next.losVerdict, hitTarget: df.def, mods, dice: next.dice, autoHit: !!autoHit, autoMiss, pHit: next.pHit, pHitBoosted: p1.pHit }] }
@@ -1977,7 +2021,16 @@ function sprayTargets(state: GameState, b: B, atk: AtkCtx, w: Rec): ModelId[] {
 /** Blood Reaper: the attack hits every enemy in the weapon's melee range and line of sight at once; each rolls on its own. */
 function multiTargets(state: GameState, b: B, atk: AtkCtx, w: Rec): ModelId[] {
   const at = state.models[atk.attackerId]!
-  const out = enemiesOf(state, at.owner).filter((t) => within(at, t, w.rng ?? 1) && lr(state, b, at.id, t.id).visible).map((t) => t.id)
+  if (atk.x.group === 'featherweight-arrow') {
+    // menoth: two shots at once, each at a different enemy; the second goes at the nearest other enemy the bow can shoot
+    const inst = weaponsOf(b, at).find((x) => x.weaponId === atk.weaponId && x.loc === atk.x.wloc) ?? weaponsOf(b, at).find((x) => x.weaponId === atk.weaponId)
+    const others = (inst ? candidateTargets(state, b, at.id, inst) : []).filter((t) => t !== atk.targetId)
+      .sort((x, y) => modelDistance(at, state.models[x]!) - modelDistance(at, state.models[y]!) || x.localeCompare(y))
+    return others.length ? [atk.targetId, others[0]!] : [atk.targetId]
+  }
+  // Thresher (menoth) swings at every model in reach, friend or foe
+  const pool = atk.x.star === THRESHER_ID ? Object.values(state.models).filter((m) => m.id !== at.id && isOnTable(m)) : enemiesOf(state, at.owner)
+  const out = pool.filter((t) => within(at, t, w.rng ?? 1) && lr(state, b, at.id, t.id).visible).map((t) => t.id)
   if (!out.includes(atk.targetId)) out.unshift(atk.targetId)
   return out
 }
@@ -2114,7 +2167,12 @@ function runAbilityRec(state0: GameState, b: B, ab: Rec, abId: Id, ownerId: Mode
         break
       }
       case 'makeAttack':
-        if (a) state = patchAtk(state, { flags: { ...a.x.flags, makeAttack: { ownerId, target: n.target ?? 'target', weaponFilter: n.weaponFilter ?? 'any', basic: !!n.basic, abilityId: abId } } })
+        if (a) {
+          const mkv = { ownerId, target: n.target ?? 'target', weaponFilter: n.weaponFilter ?? 'any', basic: !!n.basic, abilityId: abId }
+          // a trigger in the trigger loop makes its attack at once; one that fires earlier (on a hit, a crit or a miss) waits until the attack is resolved (R7.19)
+          if (a.x.stage === 'trigWait') state = patchAtk(state, { flags: { ...a.x.flags, makeAttack: mkv } })
+          else state = patchAtk(state, { flags: { ...a.x.flags, deferredMake: [...((a.x.flags.deferredMake as unknown[] | undefined) ?? []), mkv] } })
+        }
         break
       default: break
     }
@@ -2223,6 +2281,19 @@ export function drive(state0: GameState, b: B, events: GameEvent[]): Out {
           const r = raise({ ...state, window: 'attack.declared' }, { player: at.owner, kind: 'abilityChoice', window: 'attack.declared', context: { modelId: at.id, targetId: atk.targetId, attackId: atk.attackId, data: { code: 'declOpt', abilityId: opt }, odds: { pHit: atk.pHit } }, options, canPass: false })
           return fin(r.state, events)
         }
+        // R1.6: an automatic hit may still be rolled for a critical (then the roll decides); asked only when a crit would do something
+        const ro = atk.x.flags.rollOdds as RollOdds | undefined
+        if (atk.autoHit && !atk.autoMiss && ro && atk.x.flags.rollAnyway === undefined && !atk.x.flags.frenzy && critMatters(b, atk)) { // a frenzied beast attacks on its own: never asked
+          const did = nextId(state)
+          const options: DecisionOption[] = [
+            { id: 'accept', label: 'Take the automatic hit', action: { type: 'rollAnyway', decisionId: did, player: at.owner, roll: false } as Action, odds: { pHit: 1, pCrit: 0 } },
+            { id: 'roll', label: `Roll anyway (${Math.round(ro.pHit * 100)}% to hit, ${Math.round(ro.pCrit * 100)}% to crit)`, action: { type: 'rollAnyway', decisionId: did, player: at.owner, roll: true } as Action, odds: { pHit: ro.pHit, pCrit: ro.pCrit } },
+          ]
+          state = patchAtk(state, { stage: 'rollAnywayWait' })
+          const r = raise({ ...state, window: 'attack.beforeRoll' }, { player: at.owner, kind: 'rollAnyway', window: 'attack.beforeRoll', context: { modelId: at.id, targetId: atk.targetId, attackId: atk.attackId, odds: { pHit: ro.pHit, pCrit: ro.pCrit, pHitBoosted: ro.pHitBoosted } }, options, canPass: false })
+          return fin(r.state, events)
+        }
+        if (atk.autoHit && ro && atk.x.flags.rollAnyway === false) { state = patchAtk(state, { stage: 'roll' }); continue }
         const hasPowerful = atk.x.specs.includes('cyg.a.powerful-attack') || ((atk.weaponId && ((rec(b, atk.weaponId).abilities ?? []) as Id[]).includes('cyg.a.powerful-attack')) ?? false)
         if (hasPowerful && canSpendAttackFocus(state, b, atk) && !atk.autoMiss) {
           const did = nextId(state)
@@ -2241,11 +2312,14 @@ export function drive(state0: GameState, b: B, events: GameEvent[]): Out {
         // raise the boost decision unless nothing could change (no focus, auto result)
         if (!atk.x.boosted && !atk.autoMiss && canSpendAttackFocus(state, b, atk)) {
           const did = nextId(state)
+          // an auto-hitter that chose to roll is boosting a real roll: the chances are the roll's, not the automatic 100%
+          const rolled = atk.x.flags.rollAnyway === true ? (atk.x.flags.rollOdds as RollOdds | undefined) : undefined
+          const pNo = rolled ? rolled.pHit : atk.pHit, pYes = rolled ? rolled.pHitBoosted : atk.pHitBoosted
           const options: DecisionOption[] = [
-            { id: 'no', label: `No boost (${Math.round(atk.pHit * 100)}%)`, action: { type: 'boostAttack', decisionId: did, player: at.owner, boost: false } as Action, odds: { pHit: atk.pHit } },
-            { id: 'boost', label: `Boost for 1 focus (${Math.round(atk.pHitBoosted * 100)}%)`, action: { type: 'boostAttack', decisionId: did, player: at.owner, boost: true } as Action, cost: costFor(at, 1), odds: { pHit: atk.pHitBoosted } },
+            { id: 'no', label: `No boost (${Math.round(pNo * 100)}%)`, action: { type: 'boostAttack', decisionId: did, player: at.owner, boost: false } as Action, odds: { pHit: pNo } },
+            { id: 'boost', label: `Boost for 1 focus (${Math.round(pYes * 100)}%)`, action: { type: 'boostAttack', decisionId: did, player: at.owner, boost: true } as Action, cost: costFor(at, 1), odds: { pHit: pYes } },
           ]
-          const r = raise({ ...state, window: 'attack.beforeRoll' }, { player: at.owner, kind: 'boostAttack', window: 'attack.beforeRoll', context: { modelId: at.id, targetId: atk.targetId, attackId: atk.attackId, odds: { pHit: atk.pHit, pHitBoosted: atk.pHitBoosted } }, options, canPass: false })
+          const r = raise({ ...state, window: 'attack.beforeRoll' }, { player: at.owner, kind: 'boostAttack', window: 'attack.beforeRoll', context: { modelId: at.id, targetId: atk.targetId, attackId: atk.attackId, odds: { pHit: pNo, pHitBoosted: pYes } }, options, canPass: false })
           return fin(r.state, events)
         }
         state = patchAtk(state, { stage: 'roll' })
@@ -2254,6 +2328,18 @@ export function drive(state0: GameState, b: B, events: GameEvent[]): Out {
       case 'roll': {
         const r = rollStep(state, b)
         state = r.state; events.push(...r.events)
+        continue
+      }
+      case 'rerollNext': {
+        const r = rerollNext(state, b)
+        state = r.state; events.push(...r.events)
+        if (r.wait) return fin(state, events)
+        continue
+      }
+      case 'dmgRerollNext': {
+        const r = dmgRerollNext(state, b)
+        state = r.state; events.push(...r.events)
+        if (r.wait) return fin(state, events)
         continue
       }
       case 'dmgNext': {
@@ -2308,6 +2394,8 @@ function rollStep(state0: GameState, b: B): { state: GameState; events: GameEven
   const boost = atk.x.boosted || atk.x.powerful
   if (boost) events.push({ type: 'RollBoosted', attackId: atk.attackId, roll: 'attack', modelId: at.id, source: atk.x.flags.frenzy ? 'frenzy' : atk.x.powerful || atk.x.flags.freeBoost ? 'effect' : isFuryModel(at) ? 'fury' : 'focus' })
   const results: AtkX['results'] = {}
+  const rollTn: Record<ModelId, number> = {}
+  const rollIds: Record<ModelId, string> = {}
   const dk = atk.kind === 'melee' || atk.kind === 'power' ? 'melee' : atk.kind === 'arcane' ? 'arcane' : atk.kind === 'spray' ? 'spray' : 'ranged'
   for (const tid of atk.x.rollTargets) {
     const t = state.models[tid]
@@ -2321,15 +2409,28 @@ function rollStep(state0: GameState, b: B): { state: GameState; events: GameEven
     }
     const mods = atkModsFor(state, b, atk, tid)
     const stv = statOf(state, b, at.id, attackStatName(atk.kind, atk.spellId), { atk: { kind: atk.kind } })
-    const r = rollAttack(state, { stat: stv, mods, dice: { base: 2, added: atk.x.atkAdd, removed, boost }, target: hitTarget, autoHit, autoMiss, ownerId: at.id, dropLowest: !!atk.x.flags.dropLowestAtk })
+    const r = rollAttack(state, { stat: stv, mods, dice: { base: 2, added: atk.x.atkAdd, removed, boost }, target: hitTarget, autoHit, autoMiss, ownerId: at.id, dropLowest: !!atk.x.flags.dropLowestAtk, rollAnyway: atk.x.flags.rollAnyway === true })
     state = r.state; events.push(...r.events)
     results[tid] = { hit: r.hit, crit: r.crit, auto: r.auto, total: r.total, dice: r.dice }
+    rollTn[tid] = hitTarget
+    if (r.rollId) rollIds[tid] = r.rollId
     events.push({ type: 'AttackResolved', attackId: atk.attackId, rollId: r.rollId, hit: r.hit, crit: r.crit, auto: r.auto })
   }
   void w
-  state = patchAtk(state, { results, stage: 'dmgNext', boosted: boost })
+  state = patchAtk(state, { results, stage: 'rerollNext', boosted: boost, flags: { ...atkOf(state)!.x.flags, rollTn, rollIds } })
   { const pr = results[atk.targetId]; if (pr) state = setAtk(state, { ...atkOf(state)!, hit: pr.hit, crit: pr.crit, dieValues: pr.dice, boosted: boost }) }
-  // hit / crit / miss triggers (A1 step 8), per rolling model
+  return { state, events }
+}
+
+/** A1 steps 8-9 once the attack roll(s) are final (rerolls come first, R1.12): hit / crit / miss triggers per rolling model, then the damage jobs. */
+function afterRolls(state0: GameState, b: B): { state: GameState; events: GameEvent[] } {
+  let state = state0
+  const events: GameEvent[] = []
+  for (const p of plugins()) if (p.beforeHits) { const r = p.beforeHits(state, b, atkOf(state)!); if (r) { state = r.state; events.push(...r.events) } } // Shield Guard
+  const atk = atkOf(state)!
+  const results = atk.x.results
+  state = patchAtk(state, { stage: 'dmgNext' })
+  { const pr = results[atk.targetId]; if (pr) state = setAtk(state, { ...atkOf(state)!, hit: pr.hit, crit: pr.crit, dieValues: pr.dice }) }
   for (const tid of atk.x.rollTargets) {
     const res = results[tid]
     if (!res) continue
@@ -2346,6 +2447,181 @@ function rollStep(state0: GameState, b: B): { state: GameState; events: GameEven
   state = j.state; events.push(...j.events)
   state = patchAtk(state, { jobs: j.jobs, jobIdx: 0 })
   return { state, events }
+}
+
+// ---------- roll anyway (R1.6) ----------
+interface RollOdds { pHit: number; pCrit: number; pHitBoosted: number; pCritBoosted: number }
+
+/** Would a critical hit do anything for this attack? Only then is "roll anyway" worth a prompt (an auto-hit already hits). */
+function critMatters(b: B, atk: AtkCtx): boolean {
+  const ids = [...atk.x.specs, ...(atk.x.star ? [atk.x.star] : [])]
+  return ids.some((id) => {
+    const ab = rec(b, id)
+    if (ab.trigger === 'attack.crit') return true
+    if (ab.trigger === 'attack.resolved' && JSON.stringify(ab.when ?? null).includes('"crit"')) return true
+    return id === atk.x.star && ab.kind === 'specialAttack' && ((ab.effect ?? []) as Rec[]).some((n) => n.op === 'applyCondition')
+  })
+}
+
+function rollAnywayAnswer(state0: GameState, b: B, a: import('../actions').RollAnywayAction): Result {
+  let state = state0
+  const atk = needAtk(state, ['rollAnywayWait'])
+  if (!isAtk(atk)) return atk
+  state = patchAtk(state, { stage: a.roll ? 'boostWait' : 'roll', flags: { ...atk.x.flags, rollAnyway: !!a.roll } })
+  return drive(state, b, [])
+}
+
+// ---------- rerolls (R1.12) ----------
+/**
+ * A reroll somebody holds for the roll just made: an ability with trigger attack.rolled or damage.rolled and a `reroll` op (on the attacker, or on
+ * the model rolled against when its scope is the attacker: its controller may make the attacker reroll), or an effect carrying a `rerollRight`
+ * (Marionette style: the effect's owner may make the affected model reroll one of its own rolls; the effect ends when used).
+ */
+interface RerollSrc { key: string; name: string; holder: PlayerId; ownerId: ModelId; abilityId?: Id; effectId?: string; cost?: AbilityCost }
+
+function rerollSources(state: GameState, b: B, atk: AtkCtx, roll: 'attack' | 'damage', rolledAgainst: ModelId, job?: DmgJob): RerollSrc[] {
+  const trigger = roll === 'attack' ? 'attack.rolled' : 'damage.rolled'
+  const out: RerollSrc[] = []
+  const seen = new Set<string>()
+  const consider = (ownerId: ModelId, abId: Id): void => {
+    if (seen.has(abId)) return
+    const ab = rec(b, abId)
+    if (ab.trigger !== trigger) return
+    if (!((ab.effect ?? []) as Rec[]).some((n) => n.op === 'reroll' && (n.roll === roll || n.roll === 'any'))) return
+    const owner = state.models[ownerId]
+    if (!owner || !alive(owner)) return
+    if (!evalCond(state, b, ab.when, { selfId: ownerId, attackerId: atk.attackerId, targetId: rolledAgainst, atk, ...(job ? { job } : {}) })) return
+    if (ab.cost && !canPayCost(state, b, ownerId, ab.cost as AbilityCost)) return
+    seen.add(abId)
+    out.push({ key: abId, abilityId: abId, name: String(ab.name ?? abId), holder: owner.owner, ownerId, ...(ab.cost ? { cost: ab.cost as AbilityCost } : {}) })
+  }
+  for (const abId of atk.x.specs) consider(atk.attackerId, abId)
+  const t = state.models[rolledAgainst]
+  if (t) for (const abId of abilitiesOf(state, b, t.id)) if (rec(b, abId).scope?.who === 'attacker') consider(t.id, abId)
+  for (const e of state.effects) {
+    const rr = (e as EffectInstance & EffectExtras).rerollRight
+    if (!rr || !e.targetIds.includes(atk.attackerId) || (rr.roll !== 'any' && rr.roll !== roll)) continue
+    out.push({ key: e.id, effectId: e.id, name: e.name, holder: e.owner, ownerId: e.casterId ?? atk.attackerId })
+  }
+  return out
+}
+
+/** The first reroll source that has not been asked about this roll yet (a roll is never rerolled twice by the same rule). */
+function nextRerollSource(state: GameState, b: B, atk: AtkCtx, roll: 'attack' | 'damage', rollKey: string, rolledAgainst: ModelId, job?: DmgJob): RerollSrc | undefined {
+  const done = (atk.x.flags.rerolled as string[] | undefined) ?? []
+  return rerollSources(state, b, atk, roll, rolledAgainst, job).find((s) => !done.includes(`${roll}:${rollKey}:${s.key}`))
+}
+
+const keptDice = (dice: number[], dropLowest: boolean): number[] => (dropLowest && dice.length >= 2 ? [...dice].sort((x, y) => y - x).slice(0, dice.length - 1) : dice)
+
+/** Raise the reroll decision for one source. `odds` are the prompt's numbers (hit chances for an attack roll, damage for a damage roll). */
+function raiseReroll(state0: GameState, atk: AtkCtx, src: RerollSrc, roll: 'attack' | 'damage', rollKey: string, tid: ModelId, rollId: string | undefined, data: Record<string, unknown>, odds: { reroll: DecisionOdds; keep: DecisionOdds }): Out {
+  const did = nextId(state0)
+  const options: DecisionOption[] = [
+    { id: 'reroll', label: `Re-roll (${src.name})`, action: { type: 'reroll', decisionId: did, player: src.holder, reroll: true, sourceId: src.key } as Action, odds: odds.reroll, ...(src.cost?.focus ? { cost: { focus: src.cost.focus } } : {}) },
+    { id: 'keep', label: 'Keep the roll', action: { type: 'reroll', decisionId: did, player: src.holder, reroll: false, sourceId: src.key } as Action, odds: odds.keep },
+  ]
+  const win = roll === 'attack' ? 'attack.rolled' : 'damage.rolled'
+  const state = patchAtk(state0, { stage: roll === 'attack' ? 'rerollWait' : 'dmgRerollWait', flags: { ...atk.x.flags, rerollAsk: { roll, rollKey, tid, srcKey: src.key } } })
+  const r = raise({ ...state, window: win }, {
+    player: src.holder, kind: 'reroll', window: win,
+    context: { modelId: atk.attackerId, targetId: tid, attackId: atk.attackId, ...(rollId ? { rollId } : {}), odds: odds.reroll, data: { code: src.abilityId ?? src.name, source: src.key, roll, holder: src.holder, ...data } },
+    options, canPass: false,
+  })
+  return ok(r.state, [])
+}
+
+/** After the attack roll(s): offer each held reroll in turn, then run the hit, crit and miss triggers on the final dice. */
+function rerollNext(state0: GameState, b: B): { state: GameState; events: GameEvent[]; wait: boolean } {
+  const state = state0
+  const atk = atkOf(state)!
+  for (const tid of atk.x.rollTargets) {
+    const res = atk.x.results[tid]
+    if (!res || res.auto || !res.dice.length) continue
+    const src = nextRerollSource(state, b, atk, 'attack', tid, tid)
+    if (!src) continue
+    const tn = (atk.x.flags.rollTn as Record<ModelId, number> | undefined)?.[tid] ?? atk.hitTarget
+    const drop = !!atk.x.flags.dropLowestAtk
+    const bonus = res.total - sum(keptDice(res.dice, drop))
+    const pr = hitProbability({ stat: bonus, dice: { base: res.dice.length }, target: tn, dropLowest: drop })
+    const out = raiseReroll(state, atk, src, 'attack', tid, tid, (atk.x.flags.rollIds as Record<ModelId, string> | undefined)?.[tid],
+      { before: res.dice, total: res.total, hit: res.hit, crit: res.crit, targetNumber: tn },
+      { reroll: { pHit: pr.pHit, pCrit: pr.pCrit }, keep: { pHit: res.hit ? 1 : 0, pCrit: res.crit ? 1 : 0 } })
+    return { state: out.state, events: [], wait: true }
+  }
+  const r = afterRolls(state, b)
+  return { state: r.state, events: r.events, wait: false }
+}
+
+/** After the damage roll: offer each held reroll in turn, then work out the points. */
+function dmgRerollNext(state0: GameState, b: B): { state: GameState; events: GameEvent[]; wait: boolean } {
+  const state = state0
+  const atk = atkOf(state)!
+  const job = atk.x.jobs[atk.x.jobIdx]!
+  const cur = atk.x.cur!
+  const rolled = cur.rolled
+  if (rolled && rolled.dice.length) {
+    const src = nextRerollSource(state, b, atk, 'damage', job.id, job.targetId, job)
+    if (src) {
+      const d = damageDistribution({ pow: job.pow, armor: rolled.arm, dice: { base: rolled.nDice }, flat: cur.flat, dropLowest: cur.dropLowest })
+      const points = Math.max(0, rolled.total - rolled.arm)
+      const out = raiseReroll(state, atk, src, 'damage', job.id, job.targetId, cur.rollId,
+        { before: rolled.dice, total: rolled.total, points, armor: rolled.arm },
+        { reroll: { expectedDamage: expectedDamage(d) }, keep: { expectedDamage: points } })
+      return { state: out.state, events: [], wait: true }
+    }
+  }
+  return finishDamageRoll(state, b)
+}
+
+function rerollAnswer(state0: GameState, b: B, a: import('../actions').RerollAction): Result {
+  let state = state0
+  const atk = needAtk(state, ['rerollWait', 'dmgRerollWait'])
+  if (!isAtk(atk)) return atk
+  const ask = atk.x.flags.rerollAsk as { roll: 'attack' | 'damage'; rollKey: string; tid: ModelId; srcKey: string } | undefined
+  if (!ask) return reject('E_WRONG_DECISION', 'no reroll is waiting')
+  const events: GameEvent[] = []
+  const done = [...(((atk.x.flags.rerolled as string[] | undefined) ?? [])), `${ask.roll}:${ask.rollKey}:${ask.srcKey}`]
+  if (a.reroll) {
+    if (a.sourceId !== undefined && a.sourceId !== ask.srcKey) return reject('E_NOT_AN_OPTION', `the waiting reroll is ${ask.srcKey}`)
+    const job = ask.roll === 'damage' ? atk.x.jobs[atk.x.jobIdx] : undefined
+    const src = rerollSources(state, b, atk, ask.roll, ask.tid, job).find((s) => s.key === ask.srcKey)
+    if (!src) return reject('E_NOT_AN_OPTION', 'that reroll is no longer available')
+    if (src.cost) {
+      const p = payCost(state, b, src.ownerId, src.cost, src.key)
+      if ('rejection' in p) return p
+      state = p.state; events.push(...p.events)
+    }
+    if (src.effectId) { const rm = removeEffect(state, src.effectId, 'other'); state = rm.state; events.push(...rm.events) }
+    const cur0 = atkOf(state)!
+    if (ask.roll === 'attack') {
+      const res = cur0.x.results[ask.tid]!
+      const drop = !!cur0.x.flags.dropLowestAtk
+      const tn = (cur0.x.flags.rollTn as Record<ModelId, number> | undefined)?.[ask.tid] ?? cur0.hitTarget
+      const rollId = (cur0.x.flags.rollIds as Record<ModelId, string> | undefined)?.[ask.tid] ?? `r:${state.rollSeq}`
+      const flat = res.total - sum(keptDice(res.dice, drop))
+      const rr = rerollDice(state, rollId, res.dice, src.abilityId ?? src.name)
+      const kept = keptDice(rr.dice, drop)
+      const total = sum(kept) + flat
+      const all1 = kept.every((d) => d === 1)
+      const all6 = kept.length > 1 && kept.every((d) => d === 6)
+      const hit = !all1 && (all6 || total >= tn)
+      const crit = hit && hasDouble(kept)
+      state = rr.state; events.push(rr.event)
+      events.push({ type: 'AttackResolved', attackId: cur0.attackId, rollId, hit, crit, auto: null }) // supersedes the first outcome of this roll
+      state = patchAtk(state, { results: { ...cur0.x.results, [ask.tid]: { ...res, hit, crit, total, dice: rr.dice } } })
+      if (ask.tid === cur0.targetId) state = setAtk(state, { ...atkOf(state)!, hit, crit, dieValues: rr.dice })
+    } else {
+      const cur = cur0.x.cur!
+      const rolled = cur.rolled!
+      const rr = rerollDice(state, cur.rollId ?? `r:${state.rollSeq}`, rolled.dice, src.abilityId ?? src.name)
+      const total = sum(keptDice(rr.dice, cur.dropLowest)) + rolled.flat
+      state = rr.state; events.push(rr.event)
+      state = patchAtk(state, { cur: { ...cur, rolled: { ...rolled, dice: rr.dice, total } } })
+    }
+  }
+  state = patchAtk(state, { stage: ask.roll === 'attack' ? 'rerollNext' : 'dmgRerollNext', flags: { ...atkOf(state)!.x.flags, rerolled: done, rerollAsk: undefined } })
+  return drive(state, b, events)
 }
 
 /** An offensive spell's effect on a model it hit (Venom's corrosion, Rift's rough ground): plain operations and hooks, run on the target. */
@@ -2367,6 +2643,7 @@ function buildJobs(state0: GameState, b: B): { state: GameState; events: GameEve
   const types: DamageType[] = [...((w.damageTypes ?? []) as DamageType[])]
   const magical = ((w.qualities ?? []) as Id[]).includes('core.q.magical') || !!spell || wraithbaneOn(state, atk.attackerId)
   if (magical && !types.includes('magical')) types.push('magical')
+  for (const p of plugins()) for (const t of p.damageTypes?.(state, b, atk) ?? []) if (!types.includes(t)) types.push(t)
   const jobs: DmgJob[] = []
   let n = 0
   const jid = () => `${atk.attackId}.${++n}`
@@ -2439,23 +2716,25 @@ export function blastSet(state0: GameState, b: B, atk: AtkCtx, N: number): { sta
 function prepareJob(state0: GameState, b: B, job: DmgJob): { state: GameState; events: GameEvent[] } {
   let state = state0
   const atk = atkOf(state)!
-  state = patchAtk(state, { cur: { addDice: 0, flat: 0, boost: false, dropLowest: false, armorPiercing: false }, flags: { ...atk.x.flags, column: undefined } })
+  state = patchAtk(state, { cur: { addDice: 0, flat: 0, boost: false, dropLowest: false, armorPiercing: false }, flags: { ...atk.x.flags, column: undefined, grid: undefined, rerollAsk: undefined } })
   const r = runSpecs(state, b, 'damage.beforeRoll', job.targetId, job)
   state = r.state
   const a = atkOf(state)!
   let flat = a.x.cur!.flat
+  let addDice = a.x.cur!.addDice
   if (job.kind === 'direct') {
     flat += a.x.starFlat
     for (const p of appliedPassives(state, b, a.attackerId, { attackerId: a.attackerId, targetId: job.targetId })) {
       for (const n of (p.ability.effect ?? []) as Rec[]) if (n.op === 'modRoll' && (n.roll === 'damage' || n.roll === 'any')) flat += n.value
     }
     for (const p of plugins()) if (p.damageFlat) flat += p.damageFlat(state, b, a, job)
+    for (const p of plugins()) if (p.damageDice) addDice += p.damageDice(state, b, a, job)
     if (typeof a.x.flags.combined === 'number') flat += a.x.flags.combined as number
     for (const e of effectsOn(state, a.attackerId)) for (const rm of (e as EffectInstance & EffectExtras).rollMods ?? []) {
       if (rm.roll === 'damage' && (!rm.kinds || rm.kinds.includes(a.kind))) flat += rm.value
     }
   }
-  state = patchAtk(state, { cur: { ...a.x.cur!, flat } })
+  state = patchAtk(state, { cur: { ...a.x.cur!, flat, addDice } })
   return { state, events: r.events }
 }
 
@@ -2466,6 +2745,7 @@ function attackDamageTypes(state: GameState, b: B, atk: AtkCtx): DamageType[] {
   const types: DamageType[] = [...((w.damageTypes ?? []) as DamageType[])]
   const magical = ((w.qualities ?? []) as Id[]).includes('core.q.magical') || !!spell || (!!atk.weaponId && wraithbaneOn(state, atk.attackerId))
   if (magical && !types.includes('magical')) types.push('magical')
+  for (const p of plugins()) for (const t of p.damageTypes?.(state, b, atk) ?? []) if (!types.includes(t)) types.push(t)
   return types
 }
 
@@ -2557,13 +2837,28 @@ function damageRoll(state0: GameState, b: B): { state: GameState; events: GameEv
   const roll = nDice >= 1 ? rollNd6(state, nDice, 'damage', { ownerId: job.targetId, target: arm, flat: job.pow + cur.flat, dropLowest: cur.dropLowest ? 1 : 0, boosted: cur.boost })
     : rollMaybeZero(state, 0, 'damage', { ownerId: job.targetId, target: arm, flat: job.pow + cur.flat })
   state = roll.state; events.push(roll.event)
-  let points = Math.max(0, roll.total - arm)
+  // R1.12: the roll may be rerolled before anything reads it; the points are worked out once it is final (finishDamageRoll)
+  state = patchAtk(state, { cur: { ...cur, rollId: roll.event.rollId, rolled: { dice: roll.dice, total: roll.total, flat: job.pow + cur.flat, arm, nDice, resist } }, stage: 'dmgRerollNext' })
+  return { state, events, wait: false }
+}
+
+/** The damage roll is final: points, the DamageRolled event, then Power Field and the warlock's damage transfer. */
+function finishDamageRoll(state0: GameState, b: B): { state: GameState; events: GameEvent[]; wait: boolean } {
+  let state = state0
+  const events: GameEvent[] = []
+  const atk = atkOf(state)!
+  const job = atk.x.jobs[atk.x.jobIdx]!
+  const cur = atk.x.cur!
+  const rolled = cur.rolled!
+  const arm = rolled.arm
+  let points = Math.max(0, rolled.total - arm)
   // Affliction: a direct hit that fails to beat ARM still deals 1; an Incorporeal model takes no non-magical damage
   points = afflictionFloor(state, job.targetId, points, job.kind === 'direct')
   if (isIncorporeal(state, b, job.targetId) && !job.types.includes('magical')) points = 0
-  const inst2: DamageInstance = { id: job.id, targetId: job.targetId, kind: job.kind, pow: job.pow, dice: nDice, boosted: cur.boost, damageTypes: job.types, mods: [], arm, rollId: roll.event.rollId, total: roll.total }
-  events.push({ type: 'DamageRolled', instance: inst2, rollId: roll.event.rollId, arm, points })
-  state = patchAtk(state, { cur: { ...cur, points, rollId: roll.event.rollId } })
+  for (const p of plugins()) if (p.adjustPoints) { const r = p.adjustPoints(state, b, atkOf(state)!, job, points); if (r) { state = r.state; events.push(...r.events); points = r.points } } // Holy Martyrs
+  const inst2: DamageInstance = { id: job.id, targetId: job.targetId, kind: job.kind, pow: job.pow, dice: rolled.nDice, boosted: cur.boost, damageTypes: job.types, mods: [], arm, rollId: cur.rollId, total: rolled.total }
+  events.push({ type: 'DamageRolled', instance: inst2, rollId: cur.rollId!, arm, points })
+  state = patchAtk(state, { cur: { ...cur, points, rolled: undefined } })
   // Power Field: the damaged model may spend 1 of its own focus to cut this instance by 5 (R7.18 step 12)
   const t = state.models[job.targetId]!
   if (points > 0 && hasAb(state, b, t.id, 'core.a.power-field') && t.focus >= 1 && alive(t) && !t.crippled.includes('C')) {
@@ -2612,10 +2907,37 @@ function applyJob(state0: GameState, b: B): { state: GameState; events: GameEven
     }
   }
   atk = atkOf(state)!
+  // R3.7: a colossal has two grids and the attacker picks the one its attack damage goes to (one open grid: nothing to pick)
+  const gridsOf = tgt.damage.track === 'grid' ? tgt.damage.grids : []
+  if (points > 0 && gridsOf.length > 1 && atk.x.flags.grid === undefined) {
+    const open = gridsOf.filter((g) => gridFilled(g) < gridBoxCount(g))
+    if (open.length <= 1) {
+      const only = (open[0] ?? gridsOf[0]!).id
+      events.push({ type: 'DecisionAutoResolved', kind: 'chooseGrid', optionId: only })
+      state = patchAtk(state, { flags: { ...atk.x.flags, grid: only } })
+      atk = atkOf(state)!
+    } else {
+      const did = nextId(state)
+      const at = state.models[atk.attackerId]!
+      const rows = gridsOf.map((g) => ({ id: g.id, filled: gridFilled(g), boxes: gridBoxCount(g), open: gridFilled(g) < gridBoxCount(g) }))
+      const options: DecisionOption[] = open.map((g) => ({
+        id: g.id, label: `${g.id === 'left' ? 'Left' : g.id === 'right' ? 'Right' : g.id} grid (${gridBoxCount(g) - gridFilled(g)} boxes open)`,
+        action: { type: 'chooseGrid', decisionId: did, player: at.owner, grid: g.id } as Action,
+      }))
+      state = patchAtk(state, { stage: 'gridWait' })
+      const r = raise({ ...state, window: 'damage.beforeApply' }, {
+        player: at.owner, kind: 'chooseGrid', window: 'damage.beforeApply',
+        context: { modelId: atk.attackerId, targetId: job.targetId, attackId: atk.attackId, data: { points, instanceId: job.id, grids: rows } }, options, canPass: false,
+      })
+      return { state: r.state, events, wait: true }
+    }
+  }
   const look = lookups(state, b)
   const column = atk.x.flags.column as number | undefined
+  const gridId = atk.x.flags.grid as import('../types').GridState['id'] | undefined
   const ap = applyDamage(state, job.targetId, points, {
     layouts: look.layouts?.(job.targetId), attackId: atk.attackId, instanceId: job.id, source: job.kind === 'direct' ? 'direct' : 'blast', damageTypes: job.types, column,
+    ...(gridId ? { gridId } : {}),
   })
   state = ap.state; events.push(...ap.events)
   if (points > 0 || cur.transferred) state = khadorNoteDamaged(state, job.targetId)
@@ -2728,8 +3050,13 @@ function resolveAttack(state0: GameState, b: B): { state: GameState; events: Gam
     const rm = removeEffect(state, e.id, 'other'); state = rm.state; events.push(...rm.events)
     list.push({ ownerId: tid, tier: 2, abilityId: e.sourceId })
   }
+  // attacks that a hit, crit or miss trigger asked for join the list; the loop runs the ability again and starts the attack
+  for (const d of ((atk.x.flags.deferredMake as { ownerId: ModelId; abilityId: Id }[] | undefined) ?? [])) {
+    if (!alive(state.models[d.ownerId])) continue
+    list.push({ ownerId: d.ownerId, tier: state.models[d.ownerId]!.owner === attackerOwner ? 3 : 2, abilityId: d.abilityId })
+  }
   list.sort((x, y) => x.tier - y.tier)
-  state = patchAtk(state, { trig: list, trigIdx: 0, stage: 'trigWait', flags: { ...atk.x.flags, take: undefined, asked: undefined } })
+  state = patchAtk(state, { trig: list, trigIdx: 0, stage: 'trigWait', flags: { ...atk.x.flags, take: undefined, asked: undefined, deferredMake: undefined } })
   return { state, events }
 }
 
@@ -2776,29 +3103,88 @@ function triggerLoop(state0: GameState, b: B): { state: GameState; events: GameE
   return { state, events, wait: false }
 }
 
-/** A trigger that makes an attack (Reciprocate, Critical Shred): pick a legal basic weapon and run the pipeline nested. */
-function startTriggeredAttack(state0: GameState, b: B, mk: { ownerId: ModelId; target: string; weaponFilter: string; basic: boolean; abilityId: Id }): { state: GameState; events: GameEvent[]; wait: boolean } | null {
+// ---------- attacks a trigger makes outside the activation (Reciprocate, Critical Shred and the like; 00 section 5) ----------
+interface MakeAtk { ownerId: ModelId; target: string; weaponFilter: string; basic: boolean; abilityId: Id }
+interface TrigAtkOpt { weaponId: Id; targetId: ModelId; pHit: number; name: string }
+
+/** The weapons the trigger's owner could make its generated attack with now: legal, and (for a shot) in range. No focus can be spent on it. */
+function triggeredAttackOptions(state0: GameState, b: B, mk: MakeAtk): TrigAtkOpt[] {
   const parent = atkOf(state0)!
   const owner = state0.models[mk.ownerId]
-  if (!owner || !alive(owner)) return null
+  if (!owner || !alive(owner)) return []
   const targetId = mk.target === 'attacker' ? parent.attackerId : parent.targetId
   const tm = state0.models[targetId]
-  if (!tm || !alive(tm)) return null
-  const ws = weaponsOf(b, owner)
-  const cand = ws.filter((w) => mk.weaponFilter === 'same' ? w.weaponId === parent.weaponId : mk.weaponFilter === 'ranged' ? !isMelee(w.w) : mk.weaponFilter === 'melee' ? isMelee(w.w) : true)
-  for (const w of cand) {
-    const kind = isMelee(w.w) ? 'melee' : undefined
-    void kind
-    const paused = { ...state0, attack: null } as GameState
-    const dec = declareAttack(paused, b, { attackerId: owner.id, targetId, weaponId: w.weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
+  if (!tm || !alive(tm)) return []
+  const out: TrigAtkOpt[] = []
+  const seen = new Set<Id>()
+  for (const w of weaponsOf(b, owner)) {
+    if (seen.has(w.weaponId)) continue
+    seen.add(w.weaponId)
+    const f = mk.weaponFilter
+    if (f === 'same' ? w.weaponId !== parent.weaponId : f === 'ranged' ? isMelee(w.w) : f === 'melee' ? !isMelee(w.w) : f !== 'any' && f !== w.weaponId) continue
+    const dec = declareAttack({ ...state0, attack: null } as GameState, b, { attackerId: owner.id, targetId, weaponId: w.weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
     if ('rejection' in dec) continue
     // an out-of-range ranged shot is pointless: skip weapons that cannot reach
     const nested = atkOf(dec.state)!
     if (nested.autoMiss && nested.x.flags.outOfRange) continue
-    const o = drive(dec.state, b, [])
-    return { state: o.state, events: [...dec.events, ...o.events], wait: true }
+    out.push({ weaponId: w.weaponId, targetId, pHit: nested.pHit, name: String(w.w.name ?? w.weaponId) })
   }
-  return null
+  return out
+}
+
+function runTriggeredAttack(state0: GameState, b: B, mk: MakeAtk, weaponId: Id): { state: GameState; events: GameEvent[] } {
+  const parent = atkOf(state0)!
+  const targetId = mk.target === 'attacker' ? parent.attackerId : parent.targetId
+  const dec = declareAttack({ ...state0, attack: null } as GameState, b, { attackerId: mk.ownerId, targetId, weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
+  if ('rejection' in dec) throw new Error('triggered attack no longer legal: ' + dec.rejection.message)
+  const o = drive(dec.state, b, [])
+  return { state: o.state, events: [...dec.events, ...o.events] }
+}
+
+/**
+ * A trigger that makes an attack: one way to attack runs at once (00 section 2 rule 2); with several weapons the owner picks one (or declines)
+ * in a chooseAttack decision raised outside any activation (the attack is flagged outOfActivation, so no boost or additional attack is offered).
+ */
+function startTriggeredAttack(state0: GameState, b: B, mk: MakeAtk): { state: GameState; events: GameEvent[]; wait: boolean } | null {
+  const opts = triggeredAttackOptions(state0, b, mk)
+  if (!opts.length) return null
+  if (opts.length === 1) {
+    const o = runTriggeredAttack(state0, b, mk, opts[0]!.weaponId)
+    return { ...o, wait: true }
+  }
+  const parent = atkOf(state0)!
+  const owner = state0.models[mk.ownerId]!
+  const did = nextId(state0)
+  const options: DecisionOption[] = opts.map((o) => ({
+    id: 'atk:' + o.weaponId + ':' + o.targetId, label: (isMelee(rec(b, o.weaponId)) ? 'Strike ' : 'Shoot ') + o.targetId + ' with ' + o.name,
+    action: { type: 'chooseAttack', decisionId: did, player: owner.owner, modelId: owner.id, weaponId: o.weaponId, targetId: o.targetId, additional: false } as Action,
+    odds: { pHit: o.pHit },
+  }))
+  const state = patchAtk(state0, { stage: 'trigAtkWait', flags: { ...parent.x.flags, makeAttack: undefined, trigAtk: mk } })
+  const r = raise({ ...state, window: 'attack.resolved' }, {
+    player: owner.owner, kind: 'chooseAttack', window: 'attack.resolved',
+    context: { modelId: owner.id, targetId: opts[0]!.targetId, attackId: parent.attackId, data: { code: 'triggerAttack', abilityId: mk.abilityId } }, options, canPass: true,
+  })
+  return { state: r.state, events: [], wait: true }
+}
+
+function triggeredAttackAnswer(state0: GameState, b: B, a: ChooseAttackAction): Result {
+  const atk = needAtk(state0, ['trigAtkWait'])
+  if (!isAtk(atk)) return atk
+  const mk = atk.x.flags.trigAtk as MakeAtk | undefined
+  if (!mk) return reject('E_WRONG_DECISION', 'no triggered attack is waiting')
+  if (a.modelId !== mk.ownerId) return reject('E_TARGET_INVALID', 'the model that attacks is ' + mk.ownerId)
+  if (a.additional) return reject('E_NOT_AN_OPTION', 'no additional attack outside an activation')
+  if (!triggeredAttackOptions(state0, b, mk).some((o) => o.weaponId === a.weaponId && o.targetId === a.targetId)) return reject('E_NOT_AN_OPTION', 'that attack is not available')
+  const state = patchAtk(state0, { stage: 'trigWait', flags: { ...atk.x.flags, trigAtk: undefined } })
+  const o = runTriggeredAttack(state, b, mk, a.weaponId)
+  return { state: o.state, events: o.events, pending: o.state.pending }
+}
+
+function triggeredAttackDeclined(state0: GameState, b: B): Result {
+  const atk = needAtk(state0, ['trigAtkWait'])
+  if (!isAtk(atk)) return atk
+  return drive(patchAtk(state0, { stage: 'trigWait', flags: { ...atk.x.flags, trigAtk: undefined } }), b, [])
 }
 
 // ---------- finishing ----------
@@ -2970,6 +3356,21 @@ function chooseBoxesAnswer(state0: GameState, b: B, a: import('../actions').Choo
   return drive(state, b, [])
 }
 
+/** R3.7: the attacker's pick of a colossal's grid; the damage then fills that grid (and spills to the other once it is full). */
+function chooseGridAnswer(state0: GameState, b: B, a: import('../actions').ChooseGridAction): Result {
+  let state = state0
+  const atk = needAtk(state, ['gridWait'])
+  if (!isAtk(atk)) return atk
+  const job = atk.x.jobs[atk.x.jobIdx]!
+  const t = state.models[job.targetId]!
+  const grids = t.damage.track === 'grid' ? t.damage.grids : []
+  const g = grids.find((x) => x.id === a.grid)
+  if (!g) return reject('E_NOT_AN_OPTION', 'that model has no such grid')
+  if (gridFilled(g) >= gridBoxCount(g)) return reject('E_NOT_AN_OPTION', 'that grid is already full')
+  state = patchAtk(state, { stage: 'applyDmg', flags: { ...atk.x.flags, grid: a.grid } })
+  return drive(state, b, [])
+}
+
 function triggerWindowAnswer(state0: GameState, b: B, take: boolean, triggerId?: string): Result {
   let state = state0
   const atk = needAtk(state, ['trigWait'])
@@ -3028,13 +3429,15 @@ function abilityChoiceAnswer(state0: GameState, b: B, a: import('../actions').Ab
 /** A self ability used any time in the Combat Action (Regeneration, Blood Rage) while the model picks its attacks. */
 function anytimeAbilityAnswer(state0: GameState, b: B, a: ChooseCombatActionAction): Result {
   let state = state0
-  const cur = act(state).x.cur
-  if (!cur || a.modelId !== cur) return reject('E_TARGET_INVALID', `${cur} is the model attacking`)
+  const inMove = state.pending.kind === 'chooseMovement'
+  const cur = inMove ? state.pending.context.modelId : act(state).x.cur
+  if (!cur || a.modelId !== cur) return reject('E_TARGET_INVALID', `${cur} is the model ${inMove ? 'moving' : 'attacking'}`)
   const ab = rec(b, a.abilityId ?? '')
   if (!a.abilityId || !isAnytimeAbility(ab)) return reject('E_NOT_AN_OPTION', 'only a self ability can be used between attacks')
   const r = performSpecialAction(state, b, cur, a.abilityId)
   if ('rejection' in r) return r
   state = r.state
+  if (inMove) return raiseMovement(state, b, r.events) // the movement choice is still to make
   // Blood Rage bought extra melee attacks: add them to the melee weapon now
   const extra = act(state).x.extraMelee?.[cur] ?? 0
   const m = state.models[cur]!
@@ -3048,8 +3451,36 @@ function anytimeAbilityAnswer(state0: GameState, b: B, a: ChooseCombatActionActi
 }
 
 // ---------- any-time actions (spells, feat, heal, channel) ----------
-function anytimeAnswer(state0: GameState, b: B, a: Action): Result {
+/** The channel decision: cast from the caster or through a node. The answer sets the origin, then the waiting cast goes ahead. */
+function raiseChannel(state0: GameState, cast: import('../actions').CastSpellAction, nodes: ModelId[]): Out {
+  const state = { ...state0, window: 'spell.declare' as const }
+  const m = state.models[cast.casterId]!
+  const did = nextId(state)
+  const options: DecisionOption[] = [
+    { id: 'caster', label: `Cast it from ${cast.casterId}`, action: { type: 'channel', decisionId: did, player: m.owner, via: null } as Action },
+    ...nodes.map((n): DecisionOption => ({ id: `via:${n}`, label: `Channel it through ${n}`, action: { type: 'channel', decisionId: did, player: m.owner, via: n } as Action })),
+  ]
+  const r = raise(state, {
+    player: m.owner, kind: 'channel', window: 'spell.declare',
+    context: { modelId: cast.casterId, ...(cast.targetId ? { targetId: cast.targetId } : {}), data: { spellId: cast.spellId, cast, nodes } }, options, canPass: true,
+  })
+  return ok(r.state, [])
+}
+
+function channelDecisionAnswer(state: GameState, b: B, a: import('../actions').ChannelAction): Result {
+  const cast = state.pending.context.data?.cast as import('../actions').CastSpellAction | undefined
+  if (!cast) return reject('E_WRONG_DECISION', 'no spell is waiting to be channelled')
+  const r = channel(state, b, a, cast.casterId)
+  if ('rejection' in r) return r
+  return anytimeAnswer(r.state, b, cast, true)
+}
+
+function anytimeAnswer(state0: GameState, b: B, a: Action, channelAsked = false): Result {
   const state = state0
+  if (a.type === 'castSpell' && !channelAsked) {
+    const nodes = channelChoices(state, b, a)
+    if (nodes.length) return raiseChannel(state, a, nodes)
+  }
   const casterId = ('casterId' in a ? a.casterId : state.pending.context.modelId) as ModelId
   let r: import("../spells").SpellResult
   if (a.type === 'castSpell') r = castSpell(state, b, a)
@@ -3070,10 +3501,13 @@ function anytimeAnswer(state0: GameState, b: B, a: Action): Result {
   }
   if ('offensive' in r && r.offensive) {
     const o = r.offensive
-    const dec = declareAttack(r.state, b, { attackerId: o.casterId, targetId: o.targetId, spellId: o.spellId, additional: false, noFocus: false, chargeAttack: false })
+    // a channelled spell attacks from the node (R6.8): the origin is read when the attack is declared, then the channel is spent
+    const withVia = (st: GameState, via: ModelId | null): GameState => (actOf(st) ? patchX(st, { channelVia: via }) : st)
+    const dec = declareAttack(withVia(r.state, o.via ?? null), b, { attackerId: o.casterId, targetId: o.targetId, spellId: o.spellId, additional: false, noFocus: false, chargeAttack: false })
     if ('rejection' in dec) return dec
-    return drive(dec.state, b, [...r.events, ...dec.events])
+    return drive(withVia(dec.state, null), b, [...r.events, ...dec.events])
   }
+  if ('endActivation' in r && r.endActivation) return finishActivation(r.state, b, r.events, 'normal') // menoth: Teleport ends the caster's activation
   return reraise(r.state, b, r.events)
 }
 
@@ -3108,6 +3542,7 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
   if (a.decisionId !== pd.id) return reject('E_WRONG_DECISION', `expected an answer to ${pd.id}`)
   if (a.player !== pd.player) return reject('E_NOT_YOUR_DECISION', `the decision belongs to player ${pd.player}`)
   if (pd.kind === 'chooseActivation') return a.type === 'chooseActivation' ? beginActivation(state, b, a.activate) : reject('E_WRONG_DECISION', 'choose a model or unit to activate')
+  if (pd.kind === 'channel' && a.type === 'channel') return channelDecisionAnswer(state, b, a)
   if (isAnytimeAction(a)) {
     if (!ANYTIME_KINDS.has(pd.kind)) return reject('E_WRONG_DECISION', 'spells, feats and healing are not allowed in the middle of an attack or move')
     return anytimeAnswer(state, b, a)
@@ -3116,9 +3551,12 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
     if (!pd.canPass) return reject('E_NOT_AN_OPTION', 'this decision cannot be passed')
     if (pd.kind === 'triggerWindow') return triggerWindowAnswer(state, b, false)
     if (pd.kind === 'moveModel' && pd.context.data?.trigger) return afterTriggerMove(state, b, [], pd.context.data.trigger as TriggerMoveSpec, false)
+    if (pd.kind === 'combinedAttack') return reraise(state, b, [])
+    if (pd.kind === 'channel') return reraise(state, b, [])
+    if (pd.kind === 'chooseAttack' && pd.context.data?.code === 'triggerAttack') return triggeredAttackDeclined(state, b)
     return reject('E_NOT_AN_OPTION', 'nothing to pass')
   }
-  if (a.type === 'chooseCombatAction' && a.choice === 'specialAction' && pd.kind === 'chooseAttack') return anytimeAbilityAnswer(state, b, a)
+  if (a.type === 'chooseCombatAction' && a.choice === 'specialAction' && (pd.kind === 'chooseAttack' || pd.kind === 'chooseMovement')) return anytimeAbilityAnswer(state, b, a)
   const wrong = (): Result => reject('E_WRONG_DECISION', `${a.type} does not answer a ${pd.kind} decision`)
   switch (pd.kind) {
     case 'chooseMovement': return a.type === 'chooseMovement' ? chooseMovementAnswer(state, b, a) : wrong()
@@ -3127,7 +3565,7 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
     case 'placeTroopers': return a.type === 'placeTroopers' ? placeTroopersAnswer(state, b, a) : wrong()
     case 'chooseCombatAction': return a.type === 'chooseCombatAction' ? combatAnswer(state, b, a) : wrong()
     case 'chooseAttack':
-      if (a.type === 'chooseAttack') return chooseAttackAnswer(state, b, a)
+      if (a.type === 'chooseAttack') return pd.context.data?.code === 'triggerAttack' ? triggeredAttackAnswer(state, b, a) : chooseAttackAnswer(state, b, a)
       if (a.type === 'combinedAttack') return combinedAttackAnswer(state, b, a)
       if (a.type === 'powerAttack') return powerAttackAnswer(state, b, a)
       if (a.type === 'endAttacks') {
@@ -3137,9 +3575,13 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
       return wrong()
     case 'boostAttack': return a.type === 'boostAttack' ? boostAttackAnswer(state, b, a) : wrong()
     case 'boostDamage': return a.type === 'boostDamage' ? boostDamageAnswer(state, b, a) : wrong()
+    case 'rollAnyway': return a.type === 'rollAnyway' ? rollAnywayAnswer(state, b, a) : wrong()
+    case 'reroll': return a.type === 'reroll' ? rerollAnswer(state, b, a) : wrong()
     case 'powerField': return a.type === 'powerField' ? powerFieldAnswer(state, b, a) : wrong()
     case 'transferDamage': return a.type === 'transferDamage' ? transferAnswer(state, b, a) : wrong()
     case 'chooseBoxes': return a.type === 'chooseBoxes' ? chooseBoxesAnswer(state, b, a) : wrong()
+    case 'combinedAttack': return a.type === 'combinedAttack' ? combinedAttackAnswer(state, b, a) : wrong()
+    case 'chooseGrid': return a.type === 'chooseGrid' ? chooseGridAnswer(state, b, a) : wrong()
     case 'triggerWindow': return a.type === 'triggerWindow' ? triggerWindowAnswer(state, b, true, a.triggerId) : wrong()
     case 'abilityChoice': return a.type === 'abilityChoice' ? abilityChoiceAnswer(state, b, a) : wrong()
     default: return null

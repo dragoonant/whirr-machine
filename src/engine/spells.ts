@@ -2,7 +2,7 @@
 // Pure: (state, bundle, action) -> {state, events} | {rejection}. Offensive spells hand an `offensive` request back to
 // activation.ts, which runs them through the normal attack pipeline as an arcane attack.
 import type { Action, AdjustFuryAction, CastSpellAction, ChannelAction, HealAction, TakeControlAction, UseFeatAction } from './actions'
-import { runCodeEffect, actOf, layoutsOf, losOptsFor, prof, rec, statOf, hasAb, type Rec } from './code-hooks'
+import { runCodeEffect, actOf, layoutsOf, losOptsFor, meleeReach, prof, rec, statOf, hasAb, type Rec } from './code-hooks'
 import { applyDamage, healDamage } from './damage'
 import { applyEffect, expiryFor, hasCondition, removeCondition, removeEffect, type EffectExtras } from './effects'
 import type { GameEvent } from './events'
@@ -12,15 +12,16 @@ import * as fury from './fury'
 import { baseRadius, dist, fromAngle, angleOf, sub } from './geometry'
 import { losReport } from './los'
 import { inCtrl, modelDistance } from './measure'
+import { engagedBy } from './movement'
 import { rollD3 } from './dice'
 import { circleAnimusCostForWarlock, circleSpellCost, ritesChannelers, vitalMagicKeep, vitalMagicOffer } from './factions/circle'
 import { wrathActive } from './factions/cryx'
-import { fireStepSpent, stokeFreeVictim } from './factions/menoth'
+import { giftBlock, menothSpellEffect, stokeFreeVictim, teleportCheck, teleportSamples, useIllumination } from './factions/menoth'
 import type {
   Cloud, DataBundle, DecisionOption, EffectDuration, GameState, Id, ModelId, ModelState, Rejection, StatMod, Vec2,
 } from './types'
 
-export type SpellOut = { state: GameState; events: GameEvent[]; offensive?: { casterId: ModelId; spellId: Id; targetId: ModelId } }
+export type SpellOut = { state: GameState; events: GameEvent[]; endActivation?: boolean; offensive?: { casterId: ModelId; spellId: Id; targetId: ModelId; via?: ModelId | null } }
 export type SpellResult = SpellOut | { rejection: Rejection }
 const rej = (code: Rejection['code'], message: string): { rejection: Rejection } => ({ rejection: { code, message } })
 const setModel = (s: GameState, m: ModelState): GameState => ({ ...s, models: { ...s.models, [m.id]: m } })
@@ -56,8 +57,13 @@ function affected(state: GameState, b: DataBundle, casterId: ModelId, sp: Rec, t
   if (!t || t.life !== 'active' || t.offTable) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'spell needs a target' } }
   if (who === 'warEngines' && !(t.type === 'warEngine' && t.owner === caster.owner)) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'target must be a war-engine of the battlegroup' } }
   if (who === 'warbeasts' && !(isBeast(t) && t.owner === caster.owner && t.controllerId === caster.id && !t.wild)) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'target must be a warbeast of the battlegroup' } }
+  if (who === 'battlegroup' && !(t.id === caster.id || (isBeast(t) && t.owner === caster.owner && t.controllerId === caster.id && !t.wild))) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'target must be in the battlegroup (the caster counts)' } }
   if (who === 'friendly' && !sp.offensive && t.owner !== caster.owner) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'friendly target only' } }
   if (who === 'enemy' && t.owner === caster.owner) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'enemy target only' } }
+  // a spell for "a model or unit" (scope.filter {code:'wholeUnit'}, Snipe) covers every living model of the target's unit; one effect, so one upkeep
+  if ((sp.scope?.filter as { code?: string } | undefined)?.code === 'wholeUnit' && t.unitId) {
+    return { ids: Object.values(state.models).filter((m) => m.unitId === t.unitId && m.life === 'active' && !m.offTable).map((m) => m.id) }
+  }
   return { ids: [t.id] }
 }
 
@@ -127,7 +133,7 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
   } else if (!known.includes(a.spellId)) return rej('E_NOT_AN_OPTION', 'the caster does not know that spell')
   const sp = rec(b, a.spellId)
   const act = actOf(state)!
-  if (fireStepSpent(state, a.spellId)) return rej('E_ALREADY_USED', 'Fire Step can be cast once per activation')
+  if (a.spellId === 'men.s.teleport') { const tp = teleportCheck(state, a.casterId, a.point); if (tp) return { rejection: tp } } // menoth: the landing point
   const cc = castCost(state, b, caster, sp, a)
   const cost = cc.cost
   if (!isFuryModel(caster) && !cc.wrath && caster.focus < cost) return rej('E_INSUFFICIENT_FOCUS', `needs ${cost} focus`)
@@ -138,7 +144,8 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
   const tgt = affected(state, b, a.casterId, sp, a.targetId)
   if (tgt.code) return { rejection: tgt.code }
   if (a.targetId && spellWarded(state, caster.owner, a.targetId)) return rej('E_TARGET_INVALID', 'a ward stops spells targeting that model')
-  if (a.targetId && sp.rng !== 'CTRL' && sp.rng !== 'SELF' && !witch && !losReport(state, originId, a.targetId, losOptsFor(state, b, originId)).visible) return rej('E_NO_LOS', 'no line of sight to the target')
+  { const gb = a.targetId ? giftBlock(state, b, a.casterId, a.targetId, ['spell']) : null; if (gb) return rej('E_TARGET_INVALID', gb) } // menoth: the Gift of Law
+  if (a.targetId && a.targetId !== originId && sp.rng !== 'CTRL' && sp.rng !== 'SELF' && !witch && !losReport(state, originId, a.targetId, losOptsFor(state, b, originId)).visible) return rej('E_NO_LOS', 'no line of sight to the target')
   if (via && sp.rng === 'SELF') return rej('E_TARGET_INVALID', 'a SELF spell cannot be channelled')
   if (sp.scope?.who === 'point' && a.point) {
     if (modelDistance(state.models[originId]!, { ...caster, pos: a.point, base: 30 }) > (sp.rng === 'CTRL' ? statOf(state, b, a.casterId, 'CTRL') : (sp.rng as number)) + 1e-6) return rej('E_OUT_OF_RANGE', 'the point is outside the spell\'s range')
@@ -146,12 +153,6 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
 
   let s = state
   const events: GameEvent[] = []
-  // Hex Hammer (spell.declare): an enemy declaring a spell in the CTRL of a Hex Hammer caster takes damage first; if it dies the spell fails
-  if (s.effects.some((e) => e.sourceId === 'men.s.hex-hammer' && e.owner !== caster.owner)) {
-    const hh = runCodeEffect(s, b, 'hexHammer', { point: 'spell.declare', selfId: a.casterId, activePlayer: s.activePlayer })
-    s = hh.state; events.push(...hh.events)
-    if (s.models[a.casterId]!.life !== 'active') return { state: s, events }
-  }
 
   // payment: focus, fury, forced fury, 1 damage (Wrath of Lyliss) or nothing (Stoke the Pyre)
   if (cc.wrath) {
@@ -164,7 +165,7 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
     if (isRejection(pay)) return pay
     s = pay.state; events.push(...pay.events)
   }
-  if (cc.stoke) { const r = removeCondition(s, cc.stoke, 'fire', 'effect'); s = r.state; events.push(...r.events) }
+  if (cc.stoke) { const r = useIllumination(s, cc.stoke); s = r.state; events.push(...r.events) } // Illumination: the fire goes out, once per turn
   const act2 = actOf(s)!
   const point: Vec2 | undefined = a.point
   events.push({ type: 'SpellCast', casterId: a.casterId, spellId: a.spellId, originId, targetId: a.targetId, point, cost: cc.cost, ...(sp.animus ? { animus: true } : {}), ...(isBeast(caster) ? { forced: true } : {}) })
@@ -172,7 +173,7 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
 
   if (isOffensive(sp)) {
     if (!a.targetId) return rej('E_TARGET_INVALID', 'offensive spells need a target')
-    return { state: s, events, offensive: { casterId: a.casterId, spellId: a.spellId, targetId: a.targetId } }
+    return { state: s, events, offensive: { casterId: a.casterId, spellId: a.spellId, targetId: a.targetId, via } } // via: the node the attack comes from (R6.8)
   }
 
   // out of range: a non-offensive spell is still cast (cost paid) and does nothing (R8.5)
@@ -190,7 +191,9 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
     return cur
   }
   const isPoint = sp.scope?.who === 'point'
-  // an instant spell has no lasting effect, but its code still runs (Stoke refunds, Convection plugin hooks, Hex Hammer's marker)
+  // a spell the descriptors cannot say (Teleport) is done by its faction file
+  { const fx = menothSpellEffect(s, a.casterId, a.spellId, a.point); if (fx) return { state: fx.state, events: [...events, ...fx.events], ...(fx.endActivation ? { endActivation: true } : {}) } }
+  // an instant spell has no lasting effect, but its code still runs
   if (dur === 'instant') {
     if (tgt.ids.length) s = runCodes(s, events, tgt.ids[0])
     return { state: s, events }
@@ -349,7 +352,28 @@ export function channel(state: GameState, b: DataBundle, a: ChannelAction, caste
   if (!node || node.owner !== caster.owner || !channelers(state, b, casterId).includes(node.id)) return rej('E_TARGET_INVALID', 'only an Arc Node (or a beast under Rites of the Wurm) can channel')
   if (!inCtrl(caster, node, statOf(state, b, casterId, 'CTRL'))) return rej('E_OUT_OF_CTRL', 'the node is outside CTRL')
   if (hasCondition(state, node, 'knockedDown') || hasCondition(state, node, 'stationary')) return rej('E_TARGET_INVALID', 'the node cannot channel')
+  if (engagedBy(state, node.id, (x) => meleeReach(state, b, x)).length) return rej('E_ENGAGED', 'an engaged node cannot channel') // R8.7
   return { state: { ...state, activation: { ...act, x: { ...act.x, channelVia: a.via } } as typeof state.activation }, events: [] }
+}
+
+/**
+ * The channel decision (00 section 5): a spell the caster could cast itself that an Arc Node (or a Rites of the Wurm beast) could just as well
+ * carry. Returns those nodes; empty when channelling is already chosen, the spell is SELF, an animus, or no node can carry it.
+ */
+export function channelChoices(state: GameState, b: DataBundle, a: CastSpellAction): ModelId[] {
+  if (a.animusOf) return []
+  const act = actOf(state)
+  const caster = state.models[a.casterId]
+  if (!act || act.x.channelVia || !caster || isBeast(caster)) return []
+  if (rec(b, a.spellId).rng === 'SELF') return []
+  if ('rejection' in castSpell(state, b, a)) return []
+  const out: ModelId[] = []
+  for (const n of channelers(state, b, a.casterId)) {
+    const ch = channel(state, b, { type: 'channel', decisionId: a.decisionId, player: a.player, via: n }, a.casterId)
+    if ('rejection' in ch) continue
+    if (!('rejection' in castSpell(ch.state, b, a))) out.push(n)
+  }
+  return out
 }
 
 /** Any-time options a caster can take now (used to widen chooseMovement / chooseCombatAction / chooseAttack). */
@@ -365,11 +389,12 @@ export function anytimeOptions(state: GameState, b: DataBundle, casterId: ModelI
   for (const spId of (prof(b, m).spells ?? []) as Id[]) {
     const sp = rec(b, spId)
     if (isFuryModel(m) ? (m.fury ?? 0) < circleSpellCost(state, b, casterId, spId, sp.cost) : false) continue
-    const mk = (targetId?: ModelId) => {
-      const action: CastSpellAction = { type: 'castSpell', decisionId, player, casterId, spellId: spId, ...(targetId ? { targetId } : {}) }
-      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${spId}${targetId ? ':' + targetId : ''}`, label: `Cast ${sp.name}`, action, cost: costFor(m, circleSpellCost(state, b, casterId, spId, sp.cost)) })
+    const mk = (targetId?: ModelId, point?: Vec2) => {
+      const action: CastSpellAction = { type: 'castSpell', decisionId, player, casterId, spellId: spId, ...(targetId ? { targetId } : {}), ...(point ? { point } : {}) }
+      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${spId}${targetId ? ':' + targetId : ''}${point ? `:${point.x.toFixed(1)},${point.z.toFixed(1)}` : ''}`, label: `Cast ${sp.name}`, action, cost: costFor(m, circleSpellCost(state, b, casterId, spId, sp.cost)) })
     }
     if (sp.scope?.who === 'friendly' && sp.scope?.range === 'CTRL' && sp.rng === 'CTRL') mk()
+    else if (spId === 'men.s.teleport') { for (const p of teleportSamples(state, casterId)) mk(undefined, p) } // menoth: a few landing spots to pick from
     else if (sp.rng === 'SELF' || sp.scope?.who === 'point') mk()
     else {
       // a targeted spell: every model in range that its scope allows (castSpell has the last word)
@@ -381,6 +406,7 @@ export function anytimeOptions(state: GameState, b: DataBundle, casterId: ModelI
         if (who === 'enemy' || sp.offensive) { if (t.owner === m.owner) continue }
         else if (who === 'warEngines') { if (t.owner !== m.owner || t.type !== 'warEngine') continue }
         else if (who === 'warbeasts') { if (t.owner !== m.owner || !isBeast(t) || t.controllerId !== m.id || t.wild) continue }
+        else if (who === 'battlegroup') { if (t.id !== m.id && (t.owner !== m.owner || !isBeast(t) || t.controllerId !== m.id || t.wild)) continue }
         else if (t.owner !== m.owner) continue
         if (modelDistance(origin, t) > reach) continue
         mk(t.id)

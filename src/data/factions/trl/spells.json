@@ -73,9 +73,10 @@
     ],
     "scope": {
       "who": "friendly",
-      "count": 1
+      "count": 1,
+      "filter": { "code": "wholeUnit" }
     },
-    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
+    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10. Model or unit: wholeUnit makes a cast on a trooper cover its whole unit."
   },
   {
     "id": "trl.s.far-strike",

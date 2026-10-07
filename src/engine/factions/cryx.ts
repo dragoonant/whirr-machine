@@ -11,7 +11,7 @@ import { relocate } from '../movement'
 import { raise } from '../pending'
 import { modelDistance, within } from '../measure'
 import {
-  abilitiesOf, atkOf, envOf, hasFlag, layoutsOf, noop, prof, rec, setAtk, type AtkCtx, type AttackPlugin,
+  abilitiesOf, atkOf, envOf, hasFlag, INCORPOREAL_LOST, layoutsOf, noop, prof, rec, setAtk, type AtkCtx, type AttackPlugin,
 } from '../code-hooks'
 import type { DataBundle, DecisionOption, GameState, Id, ModelId, ModelState, PendingDecision, Rejection, TokenKind, Vec2 } from '../types'
 import type { Action } from '../actions'
@@ -257,6 +257,38 @@ const mortalFear = (state: GameState, b: DataBundle, attackerId: ModelId): numbe
   return near ? -2 : 0
 }
 
+/**
+ * Marionette (a Fury's arcane star attack, no damage): a hit puts a round-long reroll right on the model hit. The Furies' player may make
+ * that model reroll one of its own attack or damage rolls (the core reroll decision serves it), and the effect then ends. A second hit on
+ * the same model refreshes it instead of stacking (same name, RB p10).
+ */
+export const MARIONETTE = 'cry.w.marionette'
+function marionetteHit(state: GameState, atk: AtkCtx): { state: GameState; events: GameEvent[] } | null {
+  if (atk.weaponId !== MARIONETTE) return null
+  const t = state.models[atk.targetId]
+  const me = state.models[atk.attackerId]
+  if (!t || !me || t.owner === me.owner || !isOnTable(t) || t.life !== 'active' || !atk.x.results[atk.targetId]?.hit) return null
+  const r = applyEffect(state, { sourceId: 'cry.a.marionette', name: 'Marionette', owner: me.owner, casterId: me.id, targetIds: [t.id], mods: [], duration: 'round', rerollRight: { roll: 'any' } })
+  return { state: r.state, events: r.events }
+}
+
+/**
+ * Blood Shadow (Hellspike, or any weapon of a Crimson Veil model): boxing a living or undead model makes the attacker Incorporeal for a round. A model
+ * that attacked in melee had just lost Incorporeal (RB p113) and the grant must win over that marker, so the loss is cleared when the grant was
+ * made during this attack. RULING: the later effect (the grant) wins.
+ */
+function bloodShadowRestore(state: GameState, atk: AtkCtx): { state: GameState; events: GameEvent[] } | null {
+  if (!atk.x.destroyed.length) return null // only an attack that boxed something can have made the grant
+  const granted = state.effects.some((e) => e.sourceId === 'cry.a.blood-shadow' && e.targetIds.includes(atk.attackerId) && (e as { grants?: string[] }).grants?.includes('cry.a.incorporeal'))
+  if (!granted) return null
+  const lost = state.effects.filter((e) => e.sourceId === INCORPOREAL_LOST && e.targetIds.includes(atk.attackerId))
+  if (!lost.length) return null
+  let st = state
+  const events: GameEvent[] = []
+  for (const e of lost) { const r = removeEffect(st, e.id, 'replaced'); st = r.state; events.push(...r.events) }
+  return { state: st, events }
+}
+
 export const cryxPlugins: AttackPlugin[] = [{
   id: 'cry.souls-and-fear',
   damageFlat(state, b, atk) {
@@ -265,6 +297,10 @@ export const cryxPlugins: AttackPlugin[] = [{
   onResolved(state, b, atk) {
     let st = state
     const events: GameEvent[] = []
+    const marionette = marionetteHit(st, atk)
+    if (marionette) { st = marionette.state; events.push(...marionette.events) }
+    const shadow = bloodShadowRestore(st, atk)
+    if (shadow) { st = shadow.state; events.push(...shadow.events) }
     const devour = atk.weaponId === SOUL_CANNON && ((rec(b, SOUL_CANNON).abilities ?? []) as Id[]).includes('cry.a.devour-soul')
     for (const id of atk.x.destroyed) {
       const dead = st.models[id]

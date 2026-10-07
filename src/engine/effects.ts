@@ -45,6 +45,8 @@ export interface EffectExtras {
   rollMods?: { roll: 'attack' | 'damage' | 'any'; value: number; kinds?: string[] }[]
   /** Enliven: after an enemy attack damages the model it may advance this far at once, then the effect ends */
   afterDamageAdvance?: number
+  /** M10 (R1.12): the effect's owner may make the affected model reroll one of its own attack or damage rolls, once; the effect then ends (Marionette style) */
+  rerollRight?: { roll: 'attack' | 'damage' | 'any' }
 }
 /** Apply an effect. A same-named effect on the same targets never stacks: keep one instance with the later expiry (R9.10). */
 export function applyEffect(

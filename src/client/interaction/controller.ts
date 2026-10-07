@@ -111,6 +111,54 @@ export function clampMovePoint(p: PendingDecision | null, at: Vec2, prefix: Vec2
   return lo > 0 ? lerp(from, end, lo) : from
 }
 
+// ---------- multi-waypoint paths and drag (M11) ----------
+/** A click this close to the last waypoint is a double-click on it: the path is done. */
+export const COMMIT_RADIUS = 0.6
+/** Pixels a press must travel before it counts as a drag (below that it is a click). */
+export const DRAG_PX = 5
+
+/**
+ * What a table click does to the staged path. A plain click adds a waypoint (clamped by the engine's own move check
+ * for the leg and the distance still left); a click ON the last waypoint (a double-click) confirms; shift-click starts
+ * the path over. A click that can reach nowhere new (blocked, or no distance left) changes nothing, so it never confirms
+ * a move by accident.
+ */
+export function nextPath(p: PendingDecision | null, staged: Vec2[], at: Vec2, shift = false): { path: Vec2[]; commit: boolean } {
+  const append = !shift && staged.length > 0
+  const end = staged[staged.length - 1]
+  if (append && end && sub(end, at) < COMMIT_RADIUS) return { path: staged, commit: true }
+  const q = clampMovePoint(p, at, append ? staged : [])
+  if (append && end && sub(end, q) < 0.05) return { path: staged, commit: false }
+  return { path: append ? [...staged, q] : [q], commit: false }
+}
+
+/** Can a press on this model start a drag? Only the model the open free move belongs to, in move mode, when it is not a straight-line move. */
+export function canDrag(id: ModelId): boolean {
+  const p = currentPrompt()
+  return p?.kind === 'moveModel' && !p.constraints?.straightLine && p.constraints?.modelId === id && useUiStore.getState().mode === 'move'
+}
+
+export function startDrag(id: ModelId, sx: number, sy: number): boolean {
+  const p = currentPrompt()
+  if (!p || !canDrag(id)) return false
+  interactionActions.startDrag(id, p.id, sx, sy)
+  return true
+}
+
+/**
+ * Release of a drag: the clamped drop point becomes the whole staged path (one waypoint), ready to Confirm.
+ * A drop on the spot the model started from stages nothing.
+ */
+export function dropDrag(at: Vec2): boolean {
+  const p = currentPrompt()
+  const c = p?.kind === 'moveModel' ? p.constraints : undefined
+  if (!p || !c || c.straightLine) return false
+  const q = clampMovePoint(p, at)
+  if (sub(c.from, q) < 0.05) { interactionActions.setStaged([]); return false }
+  interactionActions.setStaged([q])
+  return true
+}
+
 // ---------- commit / cancel ----------
 export function commitStaged(): ClientRejection | null {
   const p = currentPrompt()
@@ -150,13 +198,21 @@ const ruler = (end: { modelId: ModelId } | { point: Vec2 }): void => {
   else uiActions.setMeasure(measureFrom, end)
 }
 
-export function handleModelClick(id: ModelId): void {
+/**
+ * A click on a figure. `through` is the table point under the pointer (the camera ray's hit on y = 0): during a free
+ * move, a click on any model but the mover is a click on the table behind it, so waypoints can go next to other figures.
+ */
+export function handleModelClick(id: ModelId, through?: { at: Vec2 | null; shift?: boolean }): void {
   const s = truthState()
   const m = s?.models[id]
   if (!m) return
   const { mode } = useUiStore.getState()
   if (mode === 'measure') { ruler({ modelId: id }); return }
   const p = currentPrompt()
+  if (through?.at && mode === 'move' && p?.kind === 'moveModel' && !p.constraints?.straightLine && p.constraints?.modelId !== id) {
+    handleGroundClick(through.at, through.shift ?? false)
+    return
+  }
   if (mode === 'los') { uiActions.select(id); return }
   if (p && TARGET_KINDS.has(p.kind)) {
     const opt = pickTargetOption(p, id, useInteractionStore.getState().weaponId)
@@ -178,12 +234,9 @@ export function handleGroundClick(at: Vec2, shift = false): void {
   const st = useInteractionStore.getState()
   if (p.kind === 'moveModel') {
     if (p.constraints?.straightLine) return // the engine's own straight-line option is staged by the overlay
-    // clicking on the staged end point commits it
-    const append = shift && st.staged.length > 0
-    const q = clampMovePoint(p, at, append ? st.staged : [])
-    const end = st.staged[st.staged.length - 1]
-    if (end && Math.hypot(end.x - q.x, end.z - q.z) < 0.6) { commitStaged(); return }
-    interactionActions.setStaged(append ? [...st.staged, q] : [q])
+    const r = nextPath(p, st.staged, at, shift)
+    if (r.commit) { commitStaged(); return }
+    interactionActions.setStaged(r.path)
     return
   }
   if (PLACEMENT_KINDS.has(p.kind)) {

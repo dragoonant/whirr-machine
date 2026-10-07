@@ -11,6 +11,7 @@ import type { GameState, ModelId, ModelState, MovementOption, RejectionCode, Uni
 
 export interface MoverInfo {
   spd: number
+  runBonus?: number // Heavy Boiler (menoth): extra inches on a run
   warEngine?: boolean
   beast?: boolean // M9: run, charge, slam and trample cost a force (1 fury put on the beast)
   forceBlock?: string // why the beast cannot be forced right now (fury.forceGate block code)
@@ -75,7 +76,7 @@ export function movementOptions(
     mk('forfeit', 0, 0, true, ''),
     mk('aim', 0, 0, true, ''),
     mk('advance', info.spd, 0, !blocked && !bound, blocked ?? bound ?? ''),
-    mk('run', info.spd + 5, fc, !blocked && !engaged && !noMove && canPay && !standing, why(!canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
+    mk('run', info.spd + 5 + (info.runBonus ?? 0), fc, !blocked && !engaged && !noMove && canPay && !standing, why(!canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
     mk('charge', info.spd + 3, fc, !blocked && !engaged && !noMove && canPay && !!info.hasMelee && !opts.combatForfeited && !standing,
       why(!info.hasMelee ? 'no melee weapon' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
     // R7.10-R7.14: slam and trample are power attacks that use Normal Movement and the Combat Action; a war-engine pays 1 focus
@@ -117,7 +118,7 @@ const stopId = (sw: SweepResult): string | undefined => sw.stoppedBy.id ?? (sw.s
 export interface AdvanceArgs { modelId: ModelId; waypoints: Vec2[]; kind: 'advance' | 'run'; info: MoverInfo; ignoreIds?: ModelId[] }
 export function resolveAdvance(state: GameState, a: AdvanceArgs): MoveOk | Rejected {
   const m = state.models[a.modelId]!
-  const maxMove = a.kind === 'run' ? a.info.spd + 5 : a.info.spd
+  const maxMove = a.kind === 'run' ? a.info.spd + 5 + (a.info.runBonus ?? 0) : a.info.spd
   const chk = validateAdvancePath(state, a.modelId, a.waypoints, maxMove, { pathfinder: a.info.pathfinder || a.info.ghostly, flying: a.info.flying || a.info.ghostly, ignoreIds: a.ignoreIds, passModels: a.info.ghostly ? true : a.info.passIds })
   if (!chk.ok) return rej(chk.code ?? 'E_PATH_BLOCKED', chk.message ?? 'illegal path')
   const before = engagedBy(state, a.modelId, a.info.rangeOf)
@@ -365,7 +366,7 @@ export function push(state: GameState, id: ModelId, from: Vec2, x: number, look:
  * Slam/throw movement of the target (R5.16/R5.17) away from `from`, up to `x`. Rolls collateral for the models it
  * hits; the mover's own knockdown and damage are the caller's (power-attacks.ts).
  */
-export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, mode: 'slam' | 'throw', look: HitLookups, collateralOverride?: number): InvoluntaryResult {
+export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, mode: 'slam' | 'throw', look: HitLookups, collateralOverride?: number, collateralBonus = 0): InvoluntaryResult {
   const m = state.models[id]!
   if (look.immovable?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
   const sw = sweepFrom(state, m, m.pos, norm(sub(m.pos, from)), x, { passThrough: 'smaller', obstacles: 'stop' })
@@ -387,7 +388,7 @@ export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, 
   for (const cid of contacted) {
     const kd = knockDownUnless(s, cid, look, 'collateral')
     s = kd.state; events.push(...kd.events)
-    const d = plainDamage(s, cid, collateralOverride ?? collateralPow(m.base, s.models[cid]!.base), 2, 'collateral', look)
+    const d = plainDamage(s, cid, (collateralOverride ?? collateralPow(m.base, s.models[cid]!.base)) + collateralBonus, 2, 'collateral', look)
     s = d.state; events.push(...d.events)
   }
   if (mode === 'throw') {

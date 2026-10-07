@@ -100,14 +100,14 @@ describe('Cryx fixes', () => {
     expect(statOf(o.state, bundle, F1, 'ARM')).toBe(14)
   })
 
-  it('FAC-CRY-015 Marionette: limited to one use per unit activation and, with no reroll engine yet, never offered (RULING in docs/needs-rules-check.md)', () => {
+  it('FAC-CRY-015 Marionette: limited to one use per unit activation and offered as an arcane star attack (the reroll itself is in cryx-m10.test.ts)', () => {
     const ab = bundle.byId['cry.a.marionette'] as unknown as { limit?: string; kind: string }
     expect(ab.kind).toBe('specialAttack')
     expect(ab.limit).toBe('oncePerActivation')
     const s = furyField('cry-mar')
     let o = choose(asOut(s), 'A:u2')
     o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: F1 })
-    expect(offers(o, F1, 'cry.a.marionette')).toBe(false)
+    expect(offers(o, F1, 'cry.a.marionette')).toBe(true)
     expect(offers(o, F1, 'cry.a.stygian-abyss')).toBe(true)
   })
 

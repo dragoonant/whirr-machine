@@ -14,7 +14,7 @@ import { useUiStore } from '../store/uiStore'
 import { currentPrompt } from './adapter'
 import { FigurePreview } from '../figures/FigurePreview'
 import { facingYaw } from '../figures/facing'
-import { clampPointer, handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
+import { clampMovePoint, clampPointer, handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
 import { interactionActions, useInteractionStore } from './store'
 
 const Y = 0.08
@@ -22,7 +22,7 @@ const v3 = (p: Vec2, y = Y): [number, number, number] => [p.x, y, p.z]
 
 function Tag({ at, y = 1.2, children, tone = '#e8e6e1' }: { at: Vec2; y?: number; children: ReactNode; tone?: string }): ReactElement {
   return (
-    <Html position={[at.x, y, at.z]} center zIndexRange={[15, 5]} style={{ pointerEvents: 'none' }}>
+    <Html position={[at.x, y, at.z]} center zIndexRange={[15, 5]} pointerEvents="none" style={{ pointerEvents: 'none' }}>
       <div style={{ background: '#1e2127ee', color: tone, border: '1px solid #c9a22788', borderRadius: 6, padding: '2px 7px', font: '600 12px system-ui', whiteSpace: 'nowrap', textAlign: 'center' }}>{children}</div>
     </Html>
   )
@@ -71,31 +71,47 @@ function MoveOverlayInner({ prompt }: { prompt: PendingDecision }): ReactElement
   const mode = useUiMode()
   const staged = useInteractionStore((s) => s.staged)
   const ghost = useInteractionStore((s) => s.ghost)
+  const dragging = useInteractionStore((s) => s.drag?.moved ?? false)
   const models = usePresentedModels()
   const c = prompt.constraints
   const m = c ? models?.[c.modelId] : undefined
   const straight = useMemo(() => defaultStraightPath(prompt), [prompt])
-  const preview = staged.length === 0 && !straight
+  const preview = staged.length === 0 && !straight && !dragging
   const path: Vec2[] = staged.length ? staged : straight ?? (ghost && mode === 'move' ? [ghost] : [])
   const check = useMemo(() => (m && path.length ? queryMoveCheck(m.id, path) : null), [m?.id, prompt.id, JSON.stringify(path)]) // eslint-disable-line react-hooks/exhaustive-deps
+  // with waypoints staged the next click adds one: show that leg faintly, clamped by what is left
+  const next = useMemo(
+    () => (staged.length && ghost && mode === 'move' && !dragging ? clampMovePoint(prompt, ghost, staged) : null),
+    [prompt.id, mode, dragging, ghost?.x, ghost?.z, JSON.stringify(staged)], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const nextOk = useMemo(() => (m && next ? !!queryMoveCheck(m.id, [...staged, next])?.ok : false), [m?.id, next?.x, next?.z, JSON.stringify(staged)]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!c || !m) return null
   const r = baseRadius(m.base)
   const end = path[path.length - 1]
   const colour = straight ? '#c9a227' : check ? (check.ok ? '#7fd18b' : '#e0483a') : '#c9a227'
   const pts: [number, number, number][] = [v3(m.pos), ...path.map((p) => v3(p))]
+  // distance left after the staged waypoints (the engine's own path cost): the ring around the last one shrinks as the path grows
+  const left = check && Number.isFinite(c.maxDist) ? Math.max(0, c.maxDist - check.cost) : null
+  const waypoints = staged.length
   return (
     <group>
       {Number.isFinite(c.maxDist) && <Circle c={c.from} r={r + c.maxDist} colour="#c9a227" dashed width={1.2} opacity={0.7} />}
       {c.minDist ? <Circle c={c.from} r={r + c.minDist} colour="#c9a227" dashed width={1} opacity={0.5} /> : null}
+      {waypoints > 0 && left !== null && left > 0.05 && end && <Circle c={end} r={r + left} colour="#7fd18b" dashed width={1.2} opacity={0.75} />}
+      {next && end && (Math.hypot(next.x - end.x, next.z - end.z) > 0.05) && <Line points={[v3(end), v3(next)]} color={nextOk ? '#7fd18b' : '#e0483a'} lineWidth={1.5} dashed dashSize={0.4} gapSize={0.3} transparent opacity={0.6} />}
+      {staged.slice(0, -1).map((w, i) => (
+        <mesh key={i} geometry={GEO.disc} material={lineMaterial(`wp:${colour}`, colour, 0.7)} rotation={[-Math.PI / 2, 0, 0]} position={v3(w, 0.09)} scale={[0.32, 0.32, 1]} />
+      ))}
       {end && (
         <>
           <Line points={pts} color={colour} lineWidth={2.5} transparent opacity={preview ? 0.6 : 1} />
           <mesh geometry={GEO.disc} material={lineMaterial(`ghost:${colour}`, colour, preview ? 0.28 : 0.5)} rotation={[-Math.PI / 2, 0, 0]} position={v3(end, 0.07)} scale={[r, r, 1]} />
           <Circle c={end} r={r} colour={colour} width={2} />
           <Tag at={end} y={1.6} tone={colour}>
-            <div>{check ? `${check.distance.toFixed(1)}"` : ''}{Number.isFinite(c.maxDist) ? ` of ${c.maxDist.toFixed(1)}"` : ''}</div>
-            <div style={{ fontWeight: 500, fontSize: 11 }}>{straight ? 'Straight-line move' : check ? moveReasonText(check.reason) : ''}</div>
-            {!preview && <div style={{ fontWeight: 500, fontSize: 10, opacity: 0.8 }}>Enter to confirm, Esc to clear</div>}
+            <div>{check ? `${check.distance.toFixed(1)}"` : ''}{Number.isFinite(c.maxDist) ? ` of ${c.maxDist.toFixed(1)}"` : ''}{left !== null ? ` · ${left.toFixed(1)}" left` : ''}</div>
+            <div style={{ fontWeight: 500, fontSize: 11 }}>{straight ? 'Straight-line move' : check ? moveReasonText(check.reason) : ''}{waypoints > 1 ? ` · ${waypoints} waypoints` : ''}</div>
+            {dragging && <div style={{ fontWeight: 500, fontSize: 10, opacity: 0.8 }}>Release to place</div>}
+            {!preview && !dragging && !straight && <div style={{ fontWeight: 500, fontSize: 10, opacity: 0.8 }}>Click to add a waypoint, Enter to confirm, Backspace undoes</div>}
           </Tag>
         </>
       )}

@@ -199,8 +199,10 @@ const rapidHealing = (c: HookContext): HookResult => {
 }
 
 /**
- * Affliction (spell hit): the model hit gets the upkeep effect -2 DEF; afflictionFloor() reads it in the damage roll. One casting per caster
- * (a new hit moves it), and the effect is registered as the target's enemy upkeep so the Control Phase asks the caster to pay for it.
+ * Affliction (spell hit): the model hit gets the upkeep effect -2 DEF; afflictionFloor() reads it in the damage roll. The card allows a
+ * model or a unit: when the model hit belongs to a unit the effect lands on every on-table model of that unit (one effect, one upkeep);
+ * any other model gets it alone. One casting per caster (a new hit moves it), and the effect is registered as the targets' enemy upkeep
+ * so the Control Phase asks the caster to pay for it once.
  */
 const affliction = (c: HookContext): HookResult => {
   const caster = c.state.models[c.selfId]
@@ -209,13 +211,18 @@ const affliction = (c: HookContext): HookResult => {
   let s = c.state
   const events: GameEvent[] = []
   for (const e of s.effects.filter((x) => x.sourceId === 'cir.s.affliction' && x.casterId === caster.id)) { const r = removeEffect(s, e.id, 'replaced'); s = r.state; events.push(...r.events) }
+  const ids = t.unitId
+    ? Object.values(s.models).filter((m) => m.unitId === t.unitId && m.owner === t.owner && isOnTable(m) && m.life === 'active').map((m) => m.id)
+    : [t.id]
+  if (!ids.includes(t.id)) ids.push(t.id)
   const made = applyEffect(s, {
-    sourceId: 'cir.s.affliction', name: 'Affliction', owner: caster.owner, casterId: caster.id, targetIds: [t.id],
+    sourceId: 'cir.s.affliction', name: 'Affliction', owner: caster.owner, casterId: caster.id, targetIds: ids,
     mods: [{ stat: 'DEF', value: -2, mode: 'add' }], duration: 'upkeep', upkeep: { casterId: caster.id },
   })
   s = made.state; events.push(...made.events)
-  s = { ...s, upkeeps: { ...s.upkeeps, [t.id]: { ...s.upkeeps[t.id], enemy: made.effect.id } } }
-  return { state: s, events }
+  const ups = { ...s.upkeeps }
+  for (const id of ids) ups[id] = { ...ups[id], enemy: made.effect.id }
+  return { state: { ...s, upkeeps: ups }, events }
 }
 
 /** Critical Consume (attack.crit; the data `when` limits it to small bases that are not Leaders): remove the target from play. */

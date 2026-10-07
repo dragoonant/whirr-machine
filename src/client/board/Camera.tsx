@@ -42,8 +42,18 @@ export function CameraRig(): ReactElement {
 
   // test hook (?test=1 only): window.__camera(position, target) jumps the camera, for e2e screenshots
   useEffect(() => {
-    const w = window as unknown as { __game?: unknown; __camera?: (p: [number, number, number], t: [number, number, number]) => void; __render?: () => unknown }
+    const w = window as unknown as {
+      __game?: unknown; __camera?: (p: [number, number, number], t: [number, number, number]) => void; __render?: () => unknown
+      __screen?: (x: number, z: number, y?: number) => { x: number; y: number }
+    }
     if (!w.__game) return
+    // table point (inches) to page pixels, so e2e can press on a model and click or drag to a spot on the table
+    w.__screen = (x, z, y = 0) => {
+      camera.updateMatrixWorld()
+      const v = new THREE.Vector3(x, y, z).project(camera)
+      const r = gl.domElement.getBoundingClientRect()
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height }
+    }
     w.__camera = (p, t) => {
       const c = controls.current
       if (!c) return
@@ -64,7 +74,7 @@ export function CameraRig(): ReactElement {
       heavy.sort((a, b) => b[1] - a[1])
       return { info: { ...gl.info.render }, mem: { ...gl.info.memory }, programs: gl.info.programs?.length, heavy: heavy.slice(0, 15) }
     }
-    return () => { delete w.__camera; delete w.__render }
+    return () => { delete w.__camera; delete w.__render; delete w.__screen }
   }, [camera, invalidate, gl, scene])
 
   // WASD pan (ignored while typing)

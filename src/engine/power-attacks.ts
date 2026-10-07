@@ -24,6 +24,7 @@ export interface PowerAttackInput {
   mods?: Mod[]
   attackId?: string
   autoHit?: boolean // knocked-down / stationary target in melee (R7.18 step 4)
+  damageBonus?: number // Gladiator (menoth): flat added to the power attack damage roll and to its collateral damage rolls
 }
 export interface PowerAttackResult {
   ok: boolean
@@ -51,7 +52,7 @@ function damageStep(
 ): GameState {
   const t = inp.targetId
   if (inp.look.noMundaneDamage?.(t)) return state
-  const r = rollDamage(state, { pow, armor: inp.look.arm(t), dice: { added: extraDice, boost: inp.boostDamage }, ownerId: t })
+  const r = rollDamage(state, { pow, armor: inp.look.arm(t), dice: { added: extraDice, boost: inp.boostDamage }, flat: inp.damageBonus, ownerId: t })
   events.push(...r.events)
   const a = applyDamage(r.state, t, r.points, { source: 'direct', attackId: inp.attackId, layouts: inp.look.layouts?.(t) })
   events.push(...a.events)
@@ -94,7 +95,7 @@ export function resolvePowerAttack(state: GameState, inp: PowerAttackInput): Pow
     const d = rollNd6(s, 1, inp.kind === 'throw' ? 'throwDist' : 'slamDist', { ownerId: a.id })
     s = d.state; events.push(d.event)
     const x = slamDistance(d.dice[0]!, a.base, t.base)
-    moved = slideAway(s, t.id, a.pos, x, inp.kind === 'throw' ? 'throw' : 'slam', inp.look)
+    moved = slideAway(s, t.id, a.pos, x, inp.kind === 'throw' ? 'throw' : 'slam', inp.look, undefined, inp.damageBonus ?? 0)
     s = moved.state; events.push(...moved.events)
     if (moved.stoppedAgainst) extra = 1
     const kd = knockDownUnless(s, t.id, inp.look, inp.kind); s = kd.state; events.push(...kd.events)
@@ -111,6 +112,7 @@ export interface TrampleAttackInput {
   def: (id: ModelId) => number
   look: HitLookups
   boost?: boolean
+  damageBonus?: number // Gladiator (menoth)
   autoHit?: (id: ModelId) => boolean
   /** attack ids for the AttackDeclared/AttackResolved events, one per roll (default a:tr.<n>) */
   attackId?: (n: number) => string
@@ -133,7 +135,7 @@ export function resolveTrampleAttacks(state: GameState, inp: TrampleAttackInput)
     if (!roll.hit) continue
     hits.push(id)
     if (inp.look.noMundaneDamage?.(id)) continue
-    const d = rollDamage(s, { pow: powerPow(a.base, t.base), armor: inp.look.arm(id), ownerId: id })
+    const d = rollDamage(s, { pow: powerPow(a.base, t.base), armor: inp.look.arm(id), flat: inp.damageBonus, ownerId: id })
     events.push(...d.events)
     const ap = applyDamage(d.state, id, d.points, { source: 'direct', layouts: inp.look.layouts?.(id) })
     s = ap.state; events.push(...ap.events)

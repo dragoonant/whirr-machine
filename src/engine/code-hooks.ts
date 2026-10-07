@@ -19,7 +19,7 @@ import { khadorHooks, khadorPlugins } from './factions/khador'
 import { trollbloodsHooks, trollbloodsPlugins } from './factions/trollbloods'
 import { circleHooks, circlePlugins, deathPoweredArm, scythingTouchArmPenalty, treewalkerDefBonus } from './factions/circle'
 import { cryxHooks, cryxPlugins } from './factions/cryx'
-import { menothHooks, menothPlugins } from './factions/menoth'
+import { lawgiverStrips, marshalPassIds, menothHooks, menothPlugins } from './factions/menoth'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Rec = Record<string, any>
@@ -30,6 +30,9 @@ export const prof = (b: DataBundle, m: Pick<ModelState, 'profileId'>): Rec => re
 export interface DmgJob { id: string; targetId: ModelId; kind: 'direct' | 'blast'; pow: number; types: DamageType[]; autoBoost?: boolean; unboostable?: boolean }
 export interface AtkX {
   stage: 'start' | 'declOptWait' | 'powerfulWait' | 'boostWait' | 'roll' | 'dmgNext' | 'dmgBoostWait' | 'dmgRoll' | 'pfWait' | 'applyDmg' | 'xferWait' | 'boxWait' | 'resolved' | 'trigWait' | 'moveWait' | 'done'
+    // M10 core gaps: roll anyway on an auto-hit, rerolls after the attack roll (rerollNext/Wait) and the damage roll
+    // (dmgRerollNext/Wait), the colossal grid pick, and the weapon pick of an attack a trigger makes outside the activation
+    | 'rollAnywayWait' | 'rerollNext' | 'rerollWait' | 'dmgRerollNext' | 'dmgRerollWait' | 'gridWait' | 'trigAtkWait'
   weaponId?: Id // weapon or spell record id
   wloc?: string // location letter of the weapon instance used
   group?: string // chosen Attack Type
@@ -42,7 +45,11 @@ export interface AtkX {
   atkAdd: number // extra added attack dice
   jobs: DmgJob[]
   jobIdx: number
-  cur?: { addDice: number; flat: number; boost: boolean; dropLowest: boolean; points?: number; rollId?: string; armorPiercing: boolean; transferred?: boolean }
+  cur?: {
+    addDice: number; flat: number; boost: boolean; dropLowest: boolean; points?: number; rollId?: string; armorPiercing: boolean; transferred?: boolean
+    // the damage roll as rolled, kept while a reroll may still replace it (every die, the total, the flat part, the ARM it faces)
+    rolled?: { dice: number[]; total: number; flat: number; arm: number; nDice: number; resist: boolean }
+  }
   aoe?: number
   blastPow?: number
   star?: Id // ★Attack ability id
@@ -93,6 +100,7 @@ export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec): n
 export const weaponCrippled = (m: ModelState, loc: string): boolean => loc !== '-' && m.crippled.includes(loc)
 export const layoutsOf = (b: DataBundle, m: ModelState): GridLayout[] | undefined => {
   const d = prof(b, m).damage
+  if (d && d.track === 'dualGrid' && d.grids) return [{ id: 'left', columns: d.grids.left as string[] }, { id: 'right', columns: d.grids.right as string[] }] // M10: a colossal's two grids
   if (d && d.track === 'spiral') return [{ id: 'main', columns: (d.branches as string[]).map((x) => x.toLowerCase()), spiral: true }] // M9: aspects as lowercase letters
   return d && d.track === 'grid' ? [{ id: 'main', columns: d.columns as string[] }] : undefined
 }
@@ -124,6 +132,7 @@ function scopeMatch(state: GameState, b: DataBundle, src: ModelState, cand: Mode
   if (who === 'self') return src.id === cand.id
   if (who === 'unit') return !!src.unitId && src.unitId === cand.unitId
   if (who === 'warEngines') return cand.type === 'warEngine' && cand.owner === src.owner
+  if (who === 'battlegroup') return cand.owner === src.owner && (cand.id === src.id || (cand.type === 'beast' && cand.controllerId === src.id && !cand.wild)) // M10 (Admonition)
   if (who === 'friendly' || who === 'warbeasts') {
     if (cand.owner !== src.owner) return false
     // 'warbeasts': the beasts of the carrier's own battlegroup (81 E7)
@@ -216,8 +225,10 @@ export function losOptsFor(state: GameState, b: DataBundle, viewerId: ModelId, e
   const v = state.models[viewerId]
   // Precision Strike: friendly models never block this viewer's LOS
   const seeThroughFriends = !!v && effectsOn(state, viewerId).some((e) => (e as EffectInstance & EffectExtras).ignoreFriendly)
+  // Marshal [X] (menoth): friendly models of that kind never block the viewer's LOS
+  const marshal = v && !seeThroughFriends ? new Set(marshalPassIds(state, b, viewerId)) : null
   return {
-    skipModel: (m) => isIncorporeal(state, b, m.id) || (seeThroughFriends && !!v && m.owner === v.owner),
+    skipModel: (m) => isIncorporeal(state, b, m.id) || (seeThroughFriends && !!v && m.owner === v.owner) || (!!marshal && marshal.has(m.id)),
     ignoreForest: hasIgnore(state, b, viewerId, 'forest'), ...extra,
   }
 }
@@ -284,6 +295,8 @@ export function armOf(state: GameState, b: DataBundle, id: ModelId, o: { armorPi
 export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, types: DamageType[]): boolean {
   const me = state.models[id]
   if (!me) return false
+  // Lawgiver's Judgement (menoth): enemies in the caster's CTRL lose Resistance: Fire and cannot gain it
+  if (types.includes('fire') && lawgiverStrips(state, b, id)) { types = types.filter((t) => t !== 'fire'); if (!types.length) return false }
   if (isOnTable(me) && terrainResistance(state, me.pos, baseRadius(me.base)).some((t) => types.includes(t))) return true
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
@@ -439,6 +452,14 @@ export interface AttackPlugin {
   id: string
   /** extra flat damage on a roll */
   damageFlat?(state: GameState, b: DataBundle, atk: AtkCtx, job: DmgJob): number
+  /** extra damage dice on a direct damage roll (Heroic Inspiration) */
+  damageDice?(state: GameState, b: DataBundle, atk: AtkCtx, job: DmgJob): number
+  /** extra damage types the attack's damage carries (Conflagration and the Incendiary arrow are fire) */
+  damageTypes?(state: GameState, b: DataBundle, atk: AtkCtx): DamageType[]
+  /** the attack roll is final and nothing has been triggered yet: may change who the hits land on (Shield Guard) */
+  beforeHits?(state: GameState, b: DataBundle, atk: AtkCtx): { state: GameState; events: GameEvent[] } | null
+  /** the damage points of a roll before they are applied: may replace them (Holy Martyrs); null leaves them as they are */
+  adjustPoints?(state: GameState, b: DataBundle, atk: AtkCtx, job: DmgJob, points: number): { state: GameState; events: GameEvent[]; points: number } | null
   /** a direct hit landed (before damage) */
   onHit?(state: GameState, b: DataBundle, atk: AtkCtx, targetId: ModelId): { state: GameState; events: GameEvent[] }
   /** after the attack resolved (everything applied) */

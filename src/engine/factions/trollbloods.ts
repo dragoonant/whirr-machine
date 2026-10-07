@@ -24,8 +24,8 @@ const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe' || k 
  * Luck, run at attack.miss for each model the roll missed. Rerolls all the dice once (R1.12), re-evaluates the hit with
  * the target number the attack was declared with and updates the stored result, so damage jobs (built after the hit/miss
  * pass) see the new outcome. Hit and crit triggers of the rerolled roll do not fire (the pistols have none).
- * TODO(core, trl.a.luck): the engine's own `reroll` decision (RerollAction) is not raised by starter content; this hook
- * rerolls automatically because a miss can only be improved by the reroll.
+ * The engine's own `reroll` decision (RerollAction, M10) serves rerolls that are a choice; Luck stays automatic here because it is free
+ * and a miss can only be improved by the reroll.
  */
 const luck = (c: HookContext): HookResult => {
   const a = atkOf(c.state)
@@ -241,7 +241,8 @@ export function hasGrantedCover(state: GameState, b: DataBundle, id: ModelId): b
 }
 
 export const trollbloodsHooks: CodeHookRegistry = {
-  conditions: {},
+  // wholeUnit: a scope marker read by spells.ts (Snipe covers the target's whole unit); true wherever it is evaluated as a plain condition
+  conditions: { wholeUnit: () => true },
   effects: { luck, criticalDevastation, guidedFire, guidedFireDie, rockWall, sentry, grantCover, regenerate },
 }
 

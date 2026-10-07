@@ -1,7 +1,9 @@
-// Board keyboard: M ruler, L LOS view, T threat rings, Enter commit staged move/placement, Esc clear, V cycle camera.
+// Board keyboard: M ruler, L LOS view, T threat rings, Enter commit staged move/placement, Esc clear, Backspace drops the
+// last waypoint, [ and ] fold the side rails, V cycle camera.
 // WASD panning lives in the camera rig. Keys are ignored while typing and never answer a rules decision on their own.
 import { useEffect } from 'react'
 import { uiActions } from '../contract'
+import { panelActions } from '../store/panelStore'
 import { modeForDecision, useUiStore } from '../store/uiStore'
 import type { CameraPresetId } from '../board/layout'
 import { currentPrompt } from './adapter'
@@ -20,6 +22,9 @@ export function onBoardKey(e: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' 
     case 'l': uiActions.toggleTool('los', fallback); return true
     case 't': uiActions.toggleThreat(); return true
     case 'v': cycleIdx = (cycleIdx + 1) % CYCLE.length; interactionActions.cameraPreset(CYCLE[cycleIdx]!); return true
+    case 'backspace': return currentPrompt()?.kind === 'moveModel' && interactionActions.popWaypoint()
+    case '[': panelActions.toggle('left'); return true
+    case ']': panelActions.toggle('right'); return true
     case 'enter': {
       const straight = defaultStraightPath(currentPrompt()) !== null
       if (!hasStaged() && !straight) return false // leave Enter to the prompt UI

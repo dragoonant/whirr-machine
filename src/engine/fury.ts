@@ -6,6 +6,7 @@ import { sumDistribution } from './dice'
 import { applyEffect, effectsOn, modelStat, profileOf } from './effects'
 import type { GameEvent } from './events'
 import { modelDistance, within } from './measure'
+import { sheafBlocked } from './factions/menoth'
 import type {
   DamageState, DataBundle, ForcePurpose, FuryPurpose, FuryReason, GameState, ModelId, ModelState, PlayerId, Rejection,
 } from './types'
@@ -141,6 +142,7 @@ export function forceGate(state: GameState, b: DataBundle, id: ModelId, n: numbe
   const w = controllerOf(state, m)
   if (!w) return bad('noController', 'E_CANNOT_FORCE', `${id} has no warlock to force it`)
   if (effectsOn(state, id).some((e) => e.forbid?.includes('force') || e.forbid?.includes('gainFury'))) return bad('noController', 'E_CANNOT_FORCE', 'an effect stops this beast being forced')
+  if (sheafBlocked(state, b, id)) return bad('noController', 'E_CANNOT_FORCE', 'the Gift of the Sheaf: this beast cannot be forced') // menoth
   if (!inCtrlOf(state, b, w, m)) return bad('outOfCtrl', 'E_OUT_OF_CTRL', `${id} is outside ${w.id}'s CTRL`)
   if (aspectCrippled(m, 'spirit')) return bad('spirit', 'E_CRIPPLED', 'Spirit is crippled: this beast cannot be forced')
   if (purpose === 'animus' && state.activation?.limitsUsed.includes(`animus:${id}`)) return { block: 'cap', rejection: { code: 'E_ALREADY_USED', message: 'one animus cast per activation' } }

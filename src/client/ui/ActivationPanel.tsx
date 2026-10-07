@@ -4,9 +4,6 @@ import type { GameState, ModelState } from '../../engine/index'
 import { game, modelName, uiActions, usePresentedState, usePrompt, usePromptLegal, useSelectedId } from '../contract'
 import './hud.css'
 import { groupActions, type ActionGroups, type Button } from './activationView'
-import { niceName } from './format'
-import { StatRow, WeaponList, Conditions } from './ModelBits'
-import { BattlegroupStrip, ResourcePips } from './fury/FuryPips'
 import { kindWord } from './fury/furyView'
 
 /** Hover delay before a button's explanation pops up. */
@@ -120,20 +117,16 @@ function Body({ state, model, g }: { state: GameState; model: ModelState; g: Act
       <header className="card-head">
         <h3 className="hud-h card-name">{modelName(state, model.id)}</h3>
         <span className="hud-dim">{kindWord(model)}{model.activated ? ' — activated' : ''}{model.life !== 'active' ? ` — ${model.life}` : ''}</span>
-        <ResourcePips state={state} model={model} />
       </header>
-      <StatRow state={state} model={model} />
-      <BattlegroupStrip state={state} model={model} />
-      <Conditions state={state} model={model} />
+      {!g.active && <p className="hud-dim act-idle" data-testid="act-idle">Nothing to choose for this model right now. Its stats and weapons are on the card.</p>}
       <Actions g={g} />
       <FuryActions g={g} />
       <Spells g={g} />
-      <Section title="Weapons" testid="act-weapons"><WeaponList state={state} model={model} /></Section>
     </>
   )
 }
 
-/** Left rail: the selected model's stats, weapons and every legal choice the open decision offers it. */
+/** Left rail: every legal choice the open decision offers the selected model. Its stats, weapons and damage live on the card on the right. */
 export function ActivationPanel() {
   const state = usePresentedState()
   const pd = usePrompt()

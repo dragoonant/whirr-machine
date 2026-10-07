@@ -14,6 +14,7 @@ import { battlegroupInfo, furyInfo, leechPreviewInfo, thresholdInfo } from './fu
 import { frenzyTarget as frenzyTargetInfo } from './phases/frenzy'
 import { pAttackHit, pAttackHitDropLowest } from './dice'
 import { effectsOn } from './effects'
+import { runBonus } from './factions/menoth'
 import { dist, isOnTable } from './geometry'
 import { defModifiers, losReport } from './los'
 import { modelDistance, modelToPoint } from './measure'
@@ -338,7 +339,7 @@ export const query = {
     const fz = m.type === 'beast' && m.fury !== undefined ? furyInfo(state, b, modelId) : null
     const noForce = !!fz && !fz.forceable
     return {
-      advance: spd, run: noForce ? spd : spd + 5, charge: noForce ? (hasMelee ? spd + reach : spd) : hasMelee ? spd + 3 + reach : spd + 3,
+      advance: spd, run: noForce ? spd : spd + 5 + runBonus(state, b, modelId), charge: noForce ? (hasMelee ? spd + reach : spd) : hasMelee ? spd + 3 + reach : spd + 3,
       slam: m.type === 'warEngine' ? spd + 3 : m.type === 'beast' && !noForce ? spd + 3 : null,
       ranged: ranged.length ? spd + Math.max(...ranged) : null,
       meleeRange: reach,

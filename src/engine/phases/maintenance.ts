@@ -6,6 +6,7 @@ import type { GameEvent } from '../events'
 import { maintenanceFocus } from '../focus'
 import { afterDeaths } from '../scenario'
 import { isIncorporeal } from '../code-hooks'
+import { lawgiverStrips, menothMaintenance } from '../factions/menoth'
 import type { DataBundle, GameState } from '../types'
 
 export interface PhaseOut { state: GameState; events: GameEvent[]; ended: boolean }
@@ -37,6 +38,7 @@ export function runMaintenance(state: GameState, bundle: DataBundle): PhaseOut {
   const player = s.activePlayer
 
   const f = maintenanceFocus(s, bundle, player); s = f.state; events.push(...f.events)
+  const gifts = menothMaintenance(s, bundle, player); s = gifts.state; events.push(...gifts.events) // the Four Gifts of Menoth: the Leader takes one for the round
 
   s = { ...s, window: 'maintenance.effects' }
   events.push({ type: 'WindowOpened', window: 'maintenance.effects' })
@@ -46,7 +48,7 @@ export function runMaintenance(state: GameState, bundle: DataBundle): PhaseOut {
     for (const cond of CONTINUOUS) {
       const m = s.models[id]!
       if (m.life !== 'active' || !m.conditions.includes(cond)) continue
-      if (immuneToContinuous(bundle, m, cond) || isIncorporeal(s, bundle, id)) { const r = removeCondition(s, id, cond, 'effect'); s = r.state; events.push(...r.events); continue }
+      if ((immuneToContinuous(bundle, m, cond) && !(cond === 'fire' && !hasAbility(bundle, m, 'core.a.immunity-fire') && lawgiverStrips(s, bundle, id))) || isIncorporeal(s, bundle, id)) { const r = removeCondition(s, id, cond, 'effect'); s = r.state; events.push(...r.events); continue }
       const roll = rollNd6(s, 1, 'continuous', { ownerId: id })
       s = roll.state
       const expires = roll.dice[0]! <= 2 // 1-2 expires, 3-6 resolves (R4.2)

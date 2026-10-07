@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { cannotKnockDown, codeHooks, hasFlag, runCodeEffect, statOf } from '../../src/engine/code-hooks'
 import { applyEffect } from '../../src/engine/effects'
 import type { GameEvent } from '../../src/engine/events'
-import { shieldBonusArm, shieldedByFlameguard } from '../../src/engine/factions/menoth'
+import { shieldBonusArm, stokeFreeVictim } from '../../src/engine/factions/menoth'
 import type { GameSetup, GameState } from '../../src/engine/types'
 import { asOut, bundle, choose, openCombat, place, send, settle, trySend, withModel } from './action-helpers'
 import { newGame, runControlTo, runSetup } from './turn-helpers'
@@ -43,7 +43,9 @@ const damageRolls = (es: GameEvent[]): Ev<'DiceRolled'>[] => evs(es, 'DiceRolled
 describe('FAC-MEN data wiring', () => {
   it('FAC-MEN-000 every code hook the Menoth data names is registered', () => {
     const have = new Set(Object.keys(codeHooks().effects))
-    for (const c of ['stokeStripAttack', 'stokeStripDamage', 'stokeRefund', 'blessingOfTheFirstGift']) expect(have.has(c), c).toBe(true)
+    for (const c of ['stokeStripAttack', 'stokeStripDamage', 'blessingOfTheFirstGift']) expect(have.has(c), c).toBe(true)
+    // the hooks of the old guessed kit are gone: no data names them
+    for (const c of ['stokeRefund', 'fireStep', 'hexHammer', 'inciteAttack', 'battlePlan']) expect(have.has(c), c).toBe(false)
   })
 
   it('FAC-MEN-000 the starter list builds a legal 30-point army and starts a game', () => {
@@ -149,17 +151,23 @@ describe('FAC-MEN Stoke the Pyre', () => {
     expect(seen).toBe(true)
   })
 
-  it('FAC-MEN-002 casting with an enemy on fire in CTRL strips it and refunds the focus', () => {
+  it('FAC-MEN-002 Illumination: the first spell with an enemy on fire in CTRL is free and puts the fire out; the second pays', () => {
     let s = startMen('st3')
-    s = park(s, ['A:L', 'B:e1'])
+    s = park(s, ['A:L', 'B:e1', 'B:e0'])
     s = withModel(s, 'A:L', { focus: 6 })
     s = place(s, 'A:L', { x: 0, z: 0 })
     s = place(s, 'B:e1', { x: 6, z: 0 })
-    s = burning(s, 'B:e1')
+    s = place(s, 'B:e0', { x: -6, z: 0 })
+    s = burning(burning(s, 'B:e1'), 'B:e0')
     let o = choose(asOut(s), 'A:L')
     o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.sacred-paragon' })
     expect(o.state.models['A:L']!.focus).toBe(6)
-    expect(o.state.models['B:e1']!.conditions).not.toContain('fire')
+    expect(o.state.models['B:e0']!.conditions).not.toContain('fire') // the lowest id is put out first
+    expect(o.state.models['B:e1']!.conditions).toContain('fire')
+    // the second spell this turn is paid for, and the other fire stays
+    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.lawgivers-judgement' })
+    expect(o.state.models['A:L']!.focus).toBe(4)
+    expect(o.state.models['B:e1']!.conditions).toContain('fire')
     // nothing burning: the spell costs its focus
     let t = startMen('st3b')
     t = park(t, ['A:L'])
@@ -169,20 +177,33 @@ describe('FAC-MEN Stoke the Pyre', () => {
     p = send(p, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.sacred-paragon' })
     expect(p.state.models['A:L']!.focus).toBe(4)
   })
+
+  it('FAC-MEN-002 Illumination is once per turn, so a second activation after a new turn gets it again; a burning enemy outside CTRL gives nothing', () => {
+    let s = startMen('st3c')
+    s = park(s, ['A:L', 'B:e1'])
+    s = withModel(s, 'A:L', { focus: 6 })
+    s = place(s, 'A:L', { x: 0, z: 0 })
+    s = place(s, 'B:e1', { x: 14, z: 0 }) // beyond CTRL 12
+    s = burning(s, 'B:e1')
+    let o = choose(asOut(s), 'A:L')
+    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.sacred-paragon' })
+    expect(o.state.models['A:L']!.focus).toBe(4)
+    expect(o.state.models['B:e1']!.conditions).toContain('fire')
+    expect(stokeFreeVictim(o.state, bundle, 'A:L')).toBeNull()
+    expect(stokeFreeVictim(place(s, 'B:e1', { x: 6, z: 0 }), bundle, 'A:L')).toBeNull() // not in her activation yet
+  })
 })
 
 describe('FAC-MEN Resistance, Steady, Relentless Charge, Shield Wall', () => {
-  it('COND-007 Resistance: Fire: Feora takes the feat damage roll (one die fewer) but never catches fire', () => {
+  it('COND-007 Resistance: Fire: the feat never sets a model that resists fire alight', () => {
     let s = startMen('res', 'B')
     s = park(s, ['A:L', 'B:L'])
     s = place(s, 'A:L', { x: 0, z: 0 })
     s = place(s, 'B:L', { x: 3, z: 0 })
     // run the feat's code as if the enemy warcaster used it
     const r = runCodeEffect(s, bundle, 'blessingOfTheFirstGift', { point: 'feat.used', selfId: 'B:L', activePlayer: 'B' })
-    const roll = evs(r.events, 'DiceRolled').find((e) => e.purpose === 'damage')!
-    expect(roll.dice.length).toBe(1)
     expect(r.state.models['A:L']!.conditions).not.toContain('fire')
-    expect(evs(r.events, 'DamageApplied').some((e) => e.targetId === 'A:L')).toBe(true)
+    expect(r.events).toEqual([])
     expect(statOf(s, bundle, 'A:L', 'ARM')).toBe(17)
   })
 
@@ -272,41 +293,22 @@ describe('FAC-MEN Critical Fire, Continuous Effect: Fire, Chain Weapon', () => {
   })
 })
 
-describe('FAC-MEN-013 Fire Step, FAC-MEN-014 Hex Hammer, FAC-MEN-016 feat', () => {
-  it('FAC-MEN-014 Hex Hammer: an enemy declaring a spell inside Feora\'s CTRL takes d3 first; outside it does not', () => {
-    let s = startMen('hh', 'B')
-    s = park(s, ['A:L', 'B:L'])
-    s = place(s, 'A:L', { x: 0, z: 0 })
-    s = place(s, 'B:L', { x: 5, z: 0 })
-    s = applyEffect(s, { sourceId: 'men.s.hex-hammer', name: 'Hex Hammer', owner: 'A', casterId: 'A:L', targetIds: ['A:L'], mods: [], duration: 'round' }).state
-    const r = runCodeEffect(s, bundle, 'hexHammer', { point: 'spell.declare', selfId: 'B:L', activePlayer: 'B' })
-    const dmg = r.state.models['B:L']!.damage as { filled: number }
-    expect(dmg.filled).toBeGreaterThanOrEqual(1)
-    expect(dmg.filled).toBeLessThanOrEqual(3)
-    const far = place(s, 'B:L', { x: 15, z: 0 })
-    const r2 = runCodeEffect(far, bundle, 'hexHammer', { point: 'spell.declare', selfId: 'B:L', activePlayer: 'B' })
-    expect((r2.state.models['B:L']!.damage as { filled: number }).filled).toBe(0)
-    // cast time: the marker does nothing
-    const r3 = runCodeEffect(s, bundle, 'hexHammer', { point: 'spell.cast', selfId: 'A:L', activePlayer: 'A' })
-    expect(r3.events).toEqual([])
-  })
-  // Hex Hammer at spell.declare in play: CORE-031 (core-m9.test.ts)
-
-  it('FAC-MEN-016 Blessing of the First Gift: every enemy in CTRL takes fire damage and catches fire; models outside do not', () => {
+describe('FAC-MEN-016 feat: Blessing of the First Gift', () => {
+  it('FAC-MEN-016 every enemy in CTRL catches fire with no damage roll; models outside do not; the whole unit burns', () => {
     let s = startMen('feat')
-    s = park(s, ['A:L', 'B:e0', 'B:e1', 'B:L'])
+    s = park(s, ['A:L', 'B:e0', 'B:e1', 'B:L', 'B:u2.1', 'B:u2.2'])
     s = place(s, 'A:L', { x: 0, z: 0 })
     s = place(s, 'B:e0', { x: 5, z: 0 })
     s = place(s, 'B:e1', { x: 0, z: 5 })
     s = place(s, 'B:L', { x: 20, z: 0 })
+    s = place(s, 'B:u2.1', { x: 0, z: -8 }) // in CTRL
+    s = place(s, 'B:u2.2', { x: -2, z: -20 }) // out of CTRL, but a unit-mate of a model in CTRL
     let o = choose(asOut(s), 'A:L')
     o = send(o, { type: 'useFeat', casterId: 'A:L', featId: 'men.f.blessing-of-the-first-gift' })
-    expect(o.state.models['B:e0']!.conditions).toContain('fire') // Deuce survives and burns
-    const hurt = evs(o.events, 'DamageApplied').map((e) => e.targetId).sort()
-    expect(hurt).toEqual(['B:e0', 'B:e1']) // Falk too (he may die first); Caine is outside CTRL
-    const falk = evs(o.events, 'DamageApplied').find((e) => e.targetId === 'B:e1')!
-    expect(falk.points).toBeGreaterThan(0) // 2d6 + 12 vs ARM 12 always hurts
+    for (const id of ['B:e0', 'B:e1', 'B:u2.1', 'B:u2.2']) expect(o.state.models[id]!.conditions, id).toContain('fire')
     expect(o.state.models['B:L']!.conditions).not.toContain('fire')
+    expect(evs(o.events, 'DiceRolled').filter((e) => e.purpose === 'damage')).toEqual([]) // the card has no damage roll
+    expect(evs(o.events, 'DamageApplied')).toEqual([])
     expect(o.state.models['A:L']!.featUsed).toBe(true)
   })
 })

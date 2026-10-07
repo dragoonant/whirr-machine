@@ -8,7 +8,8 @@ import type * as THREE from 'three'
 import type { ModelId, ModelState, PlayerId } from '../../engine/index'
 import { directorNow, tweenPosition, uiActions, useHoverId, usePresentedModel, useSelectedId, useSettings, useTween, useUiMode } from '../contract'
 import { SIDE_COLOURS } from '../board/layout'
-import { handleModelClick } from '../interaction/controller'
+import { handleModelClick, startDrag } from '../interaction/controller'
+import { rayToTable } from '../interaction/ray'
 import { StatusFx } from '../vfx/StatusFx'
 import { FuryBoardTag } from '../ui/fury/FuryPips'
 import { VfxHost } from '../vfx/VfxLayer'
@@ -157,10 +158,15 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
     <group
       ref={root}
       position={[m.pos.x, m.elev, m.pos.z]}
+      onPointerDown={(e) => {
+        // press on the model that is moving: a drag starts (the camera never uses the left button; touch keeps panning)
+        if (gone || e.nativeEvent.button !== 0 || e.nativeEvent.pointerType === 'touch') return
+        if (startDrag(id, e.nativeEvent.clientX, e.nativeEvent.clientY)) e.stopPropagation()
+      }}
       onClick={(e) => {
         if (gone || e.nativeEvent.button !== 0 || e.delta > 4) return // camera drags and right/middle clicks never act
         e.stopPropagation()
-        handleModelClick(id)
+        handleModelClick(id, { at: rayToTable(e.ray.origin, e.ray.direction), shift: e.nativeEvent.shiftKey })
       }}
     >
       <VfxHost />
@@ -205,13 +211,13 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
         </group>
       )}
       {showUi && m.type === 'leader' && m.focus > 0 && (
-        <Html position={[0, h + 0.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
+        <Html position={[0, h + 0.9, 0]} center zIndexRange={[5, 0]} pointerEvents="none" style={{ pointerEvents: 'none' }}>
           <span style={{ background: '#1e2127cc', color: '#ffd866', border: '1px solid #c9a227', borderRadius: 8, padding: '0 5px', font: '600 11px system-ui' }}>{m.focus}</span>
         </Html>
       )}
       {/* fury flames and frenzy chance (warlocks and warbeasts only; renders nothing for other models) */}
       {showUi && m.fury !== undefined && (
-        <Html position={[0, h + (m.type === 'leader' ? 1.5 : 0.9), 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}><FuryBoardTag id={id} /></Html>
+        <Html position={[0, h + (m.type === 'leader' ? 1.5 : 0.9), 0]} center zIndexRange={[5, 0]} pointerEvents="none" style={{ pointerEvents: 'none' }}><FuryBoardTag id={id} /></Html>
       )}
       {/* crippled systems: sparks / smoke / steam / flicker from the nearest socket; static icons in Low graphics */}
       {showUi && <StatusFx root={root} r={r} h={h} crippled={m.crippled} conditions={m.conditions} enabled={particles} />}

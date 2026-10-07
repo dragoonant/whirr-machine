@@ -62,7 +62,16 @@ function score(state: GameState, pending: PendingDecision, a: Action, rnd: Rng):
     case 'castSpell': return 3
     case 'useFeat': return state.round >= 2 ? 3 : 1
     case 'heal': return 0.5
-    case 'channel': return 1
+    case 'channel': return a.via === null ? 2 : 1 // cast from the caster unless a node is the point
+    case 'rollAnyway': return a.roll ? 1 : 2 // the automatic hit is the safe answer
+    case 'reroll': {
+      // reroll a miss, keep a hit (a bot has no stake in an enemy's roll worth the code)
+      const d = (pending.context.data ?? {}) as { roll?: string; hit?: boolean; points?: number }
+      const own = !!pending.context.modelId && state.models[pending.context.modelId]?.owner === pending.player
+      const bad = d.roll === 'damage' ? (d.points ?? 0) < (pending.context.odds?.expectedDamage ?? 0) : !d.hit
+      return a.reroll === (own ? bad : !bad) ? 3 : 1
+    }
+    case 'chooseGrid': return 1 + rnd()
     case 'moveModel': {
       const id = a.modelId
       const end = a.path[a.path.length - 1] ?? state.models[id]?.pos
@@ -93,7 +102,7 @@ function score(state: GameState, pending: PendingDecision, a: Action, rnd: Rng):
       return 4 + 4 * p + (t?.type === 'leader' ? 1 : 0) - (a.additional ? 0.5 : 0)
     }
     case 'powerAttack': return 3
-    case 'combinedAttack': return 3
+    case 'combinedAttack': return a.contributorIds.length ? 3 : 2
     case 'endAttacks': return 0.6
     case 'boostAttack': return a.boost ? 1 + rnd() : 1 + rnd()
     case 'boostDamage': return a.boost ? 1.2 + rnd() : 1 + rnd()

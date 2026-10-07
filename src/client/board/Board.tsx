@@ -10,6 +10,7 @@ import { Figure } from '../figures/Figure'
 import { Ground, LosView, MoveOverlay, PlacementGhosts, Rings, Ruler, TargetBadges } from '../interaction/Overlays'
 import { handleModelClick } from '../interaction/controller'
 import { useBoardKeys } from '../interaction/keys'
+import { MoveDrag } from '../interaction/MoveDrag'
 import { useInteractionStore } from '../interaction/store'
 import { Clouds } from '../vfx/Clouds'
 import { Pops } from '../vfx/Pops'
@@ -38,10 +39,11 @@ function Invalidator(): null {
   const ghost = useInteractionStore((s) => s.ghost)
   const staged = useInteractionStore((s) => s.staged)
   const placements = useInteractionStore((s) => s.placements)
+  const dragging = useInteractionStore((s) => s.drag?.moved ?? false)
   const weapon = useInteractionStore((s) => s.weaponId)
   const { graphics, showZones } = useSettings()
   const board = useBoard()
-  useEffect(() => { invalidate() }, [invalidate, rev, mode, sel, hover, measure, threat, prompt?.id, ghost, staged, placements, weapon, graphics, showZones, board])
+  useEffect(() => { invalidate() }, [invalidate, rev, mode, sel, hover, measure, threat, prompt?.id, ghost, staged, placements, dragging, weapon, graphics, showZones, board])
   const animating = useAnimating()
   useFrame(() => { if (animating) invalidate() })
   return null
@@ -136,6 +138,7 @@ function Scene(): ReactElement {
       <Ground />
       <Rings />
       <MoveOverlay />
+      <MoveDrag />
       <PlacementGhosts />
       <Ruler />
       <LosView />

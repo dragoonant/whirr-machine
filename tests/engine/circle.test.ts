@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest'
 import type { GameEvent } from '../../src/engine/events'
 import { applyDamage, newGrid } from '../../src/engine/damage'
 import { abilitiesOf, atkOf, evalCond, runCodeEffect, setAtk, statOf } from '../../src/engine/code-hooks'
-import { applyEffect } from '../../src/engine/effects'
+import { addCondition, applyEffect } from '../../src/engine/effects'
 import { useFeat, castSpell, anytimeOptions } from '../../src/engine/spells'
-import { declareAttack } from '../../src/engine/phases/activation'
+import { declareAttack, moverInfo } from '../../src/engine/phases/activation'
 import type { GameState, ModelState } from '../../src/engine/types'
 import {
   CORPSE_CAP, activeWarp, admonitionReady, afflictionFloor, circleHooks, circlePlugins, circleSpellCost, deathPoweredArm, layoutFor,
@@ -223,6 +223,35 @@ describe('Tanith spells', () => {
     expect(missed).toBe(true)
   })
 
+  it('FAC-CIR-021c Affliction unit form: a hit on one Black 13th trooper puts -2 DEF on the whole unit as ONE upkeep; a model alone gets it alone (loop seeds)', () => {
+    let hit = false
+    for (let i = 0; i < 80 && !hit; i++) {
+      let s = circleState('affu' + i, { focus: 6 })
+      const mates = ['B:u2.1', 'B:u2.2', 'B:u2.3']
+      s = place(place(place(s, mates[0]!, { x: 0, z: -7 }), mates[1]!, { x: 2, z: -7 }), mates[2]!, { x: -2, z: -7 })
+      const base = statOf(s, B, mates[0]!, 'DEF')
+      let o = choose(asOut(s), TANITH)
+      o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH })
+      o = send(o, { type: 'castSpell', casterId: TANITH, spellId: 'cir.s.affliction', targetId: mates[0]! })
+      o = settle(o)
+      const eff = o.state.effects.find((e) => e.sourceId === 'cir.s.affliction')
+      if (!eff) continue
+      hit = true
+      const unit = Object.values(o.state.models).filter((m) => m.unitId === o.state.models[mates[0]!]!.unitId && m.life === 'active' && !m.offTable).map((m) => m.id)
+      expect(unit.length).toBeGreaterThanOrEqual(3)
+      expect([...eff.targetIds].sort()).toEqual([...unit].sort())
+      for (const id of unit) {
+        expect(statOf(o.state, B, id, 'DEF')).toBe(statOf(s, B, id, 'DEF') - 2)
+        expect(afflictionFloor(o.state, id, 0, true)).toBe(1)
+        expect(o.state.upkeeps[id]?.enemy).toBe(eff.id)
+      }
+      expect(base).toBe(statOf(s, B, mates[0]!, 'DEF'))
+      expect(statOf(o.state, B, 'B:e0', 'DEF')).toBe(statOf(s, B, 'B:e0', 'DEF')) // an unrelated model is untouched
+      expect(o.state.effects.filter((e) => e.sourceId === 'cir.s.affliction').length).toBe(1) // one casting, one upkeep
+    }
+    expect(hit).toBe(true)
+  })
+
   it('FAC-CIR-022 Veil of Mists: a 3 inch cloud its owner side sees through, tied to the spell effect', () => {
     const s = circleState('veil', { focus: 6 })
     const r = cast(s, 'cir.s.veil-of-mists')
@@ -246,7 +275,7 @@ describe('Tanith spells', () => {
     expect(scythingTouchArmPenalty(s, RAV[0]!)).toBe(0) // friendly
   })
 
-  it('FAC-CIR-024 Admonition: a battlegroup warbeast only; lists the ward within 6 inches of an enemy that ended a move', () => {
+  it('FAC-CIR-024 Admonition: a battlegroup warbeast; lists the ward within 6 inches of an enemy that ended a move', () => {
     let s = circleState('adm', { focus: 6 })
     s = place(place(s, TANITH, { x: 0, z: -8 }), BEAST, { x: 0, z: -4 })
     const r = cast(s, 'cir.s.admonition', BEAST)
@@ -256,7 +285,7 @@ describe('Tanith spells', () => {
     expect(admonitionReady(place(s, 'B:e1', { x: 0, z: 9 }), 'B:e1')).toEqual([])
   })
 
-  it('FAC-CIR-024b Admonition is refused on anything outside the battlegroup: the Lord (a solo), a Ravager, an enemy, a wild beast or another warlock beast', () => {
+  it('FAC-CIR-024b Admonition is refused on anything outside the battlegroup: the Lord (a solo), a Ravager, an enemy, a wild beast or another warlock beast; Tanith herself is allowed', () => {
     let s = circleState('adm2', { focus: 6 })
     s = place(place(s, TANITH, { x: 0, z: -8 }), BEAST, { x: 0, z: -4 })
     s = place(place(s, LORD, { x: 2, z: -5 }), RAV[0]!, { x: -2, z: -5 })
@@ -272,7 +301,34 @@ describe('Tanith spells', () => {
     expect('rejection' in tryCast(BEAST, other)).toBe(true)
     // legal casts offered to the player list the warbeast and no other model
     const offered = anytimeOptions(o.state, B, TANITH, o.pending.id).map((x) => x.action).filter((a) => a.type === 'castSpell' && a.spellId === 'cir.s.admonition').map((a) => (a as { targetId?: string }).targetId)
-    expect(offered).toEqual([BEAST])
+    expect([...offered].sort()).toEqual([BEAST, TANITH].sort()) // the warbeast and Tanith herself, no other model
+    expect('rejection' in tryCast(TANITH)).toBe(false)
+  })
+
+  it('FAC-CIR-024c Admonition on Tanith herself: an enemy that ends a move within 6 inches gives her the 3 inch advance, then the spell ends', () => {
+    let s = circleState('adm3', { focus: 6 })
+    s = place(s, TANITH, { x: 0, z: -3 })
+    s = place(s, 'B:e0', { x: 0, z: 9 })
+    for (const [i, id] of ['B:u2.1', 'B:u2.2', 'B:u2.3'].entries()) s = place(s, id, { x: 10 + i * 2, z: 14 })
+    let o = choose(asOut(s), TANITH)
+    o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH })
+    o = send(o, { type: 'castSpell', casterId: TANITH, spellId: 'cir.s.admonition', targetId: TANITH })
+    const eff = o.state.effects.find((e) => e.sourceId === 'cir.s.admonition')!
+    expect(eff.targetIds).toEqual([TANITH])
+    expect(eff.upkeep?.casterId).toBe(TANITH)
+    expect(o.state.models[TANITH]!.fury).toBe(4) // paid 2 fury from her pool of 6
+    // the enemy turn: Deuce advances to within 6 inches of her and she answers with a 3 inch advance
+    let t = { ...o.state, activePlayer: 'B' as const, pending: { ...o.state.pending, kind: 'chooseActivation' as const, player: 'B' as const, id: 'd:902', options: [] }, decisionSeq: 902, activation: null }
+    t = { ...t, models: { ...t.models, [TANITH]: { ...t.models[TANITH]!, activated: false } } }
+    let e = choose(asOut(t), 'B:e0')
+    e = send(e, { type: 'chooseMovement', option: 'advance', modelId: 'B:e0' })
+    e = send(e, { type: 'moveModel', modelId: 'B:e0', path: [{ x: 0, z: 3.5 }] })
+    expect(e.pending.kind).toBe('moveModel')
+    expect(e.pending.player).toBe('A')
+    e = send(e, { type: 'moveModel', modelId: TANITH, path: [{ x: 0, z: -0.5 }] })
+    expect(e.state.models[TANITH]!.pos.z).toBeCloseTo(-0.5)
+    expect(e.state.effects.some((x) => x.sourceId === 'cir.s.admonition')).toBe(false)
+    expect(e.pending.player).toBe('B')
   })
 
   it('FAC-CIR-025 Wraithbane (animus) makes the target\'s attacks Blessed through Wraithbane Weapons', () => {
@@ -646,3 +702,44 @@ describe('Lord of the Feast and Ravagers', () => {
     expect(abilitiesOf(s, B, LORD)).toEqual(expect.arrayContaining(['core.a.stealth', 'core.a.advance-deployment']))
   })
 })
+
+describe('Circle behaviour audit (M10 card data pass)', () => {
+  it('FAC-CIR-028 Warp: Ghostly makes the Pureblood a ghostly mover only while that warp is picked; Veil of Mists gives it to friends inside the cloud, not outside', () => {
+    let s = circleState('ghost')
+    expect(moverInfo(s, B, BEAST).ghostly).toBe(false)
+    s = setWarp(s, BEAST, 'strength').state
+    expect(moverInfo(s, B, BEAST).ghostly).toBe(false)
+    expect(moverInfo(setWarp(s, BEAST, 'ghostly').state, B, BEAST).ghostly).toBe(true)
+    const v = circleState('veilmove')
+    const r = castSpell(choose0Cast(v), B, { type: 'castSpell', decisionId: 'x', player: 'A', casterId: TANITH, spellId: 'cir.s.veil-of-mists' })
+    if ('rejection' in r) throw new Error(JSON.stringify(r.rejection))
+    const c = r.state.clouds[0]!
+    const inside = place(r.state, RAV[0]!, { ...c.pos })
+    expect(moverInfo(inside, B, RAV[0]!).ghostly).toBe(true)
+    expect(moverInfo(place(r.state, RAV[1]!, { x: c.pos.x + 12, z: c.pos.z }), B, RAV[1]!).ghostly).toBe(false)
+    expect(moverInfo(place(r.state, 'B:e0', { ...c.pos }), B, 'B:e0').ghostly).toBe(false) // the enemy gets nothing from it
+  })
+
+  it('FAC-CIR-029 Warp: Spell Ward stops any spell targeting the warded Pureblood (Tanith cannot Admonition it either); Strength and Ghostly do not', () => {
+    let s = circleState('ward', { focus: 6 })
+    s = place(place(s, TANITH, { x: 0, z: -8 }), BEAST, { x: 0, z: -4 })
+    const tryCast = (st: GameState) => {
+      let o = choose(asOut(st), TANITH)
+      o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH })
+      return castSpell(o.state, B, { type: 'castSpell', decisionId: o.pending.id, player: 'A', casterId: TANITH, spellId: 'cir.s.admonition', targetId: BEAST })
+    }
+    expect('rejection' in tryCast(s)).toBe(false)
+    expect('rejection' in tryCast(setWarp(s, BEAST, 'strength').state)).toBe(false)
+    expect('rejection' in tryCast(setWarp(s, BEAST, 'ghostly').state)).toBe(false)
+    expect('rejection' in tryCast(setWarp(s, BEAST, 'spellWard').state)).toBe(true)
+  })
+
+  it('FAC-CIR-030 Shadow Bind (Staff of Fate) is a one-round -3 DEF and no-advance effect', () => {
+    let s = circleState('bind')
+    s = addCondition(s, 'B:e1', 'shadowBind', 'cir.a.shadow-bind').state
+    expect(statOf(s, B, 'B:e1', 'DEF')).toBe(statOf(circleState('bind'), B, 'B:e1', 'DEF') - 3)
+    expect(moverInfo(s, B, 'B:e1').noAdvance).toBe(true)
+  })
+})
+
+function choose0Cast(s: GameState): GameState { let o = choose(asOut(s), TANITH); o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH }); return o.state }

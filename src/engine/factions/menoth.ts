@@ -1,24 +1,27 @@
-// Protectorate of Menoth (Covenant of the Flame, Feora) code hooks: every {code} this faction's data references (docs/spec/factions/menoth.md).
-// Data codes: stokeStripAttack, stokeStripDamage, inciteAttack, stokeRefund, fireStep, hexHammer, blessingOfTheFirstGift, battlePlan.
-// Plugins (per-attack seams, no data code): Impenetrable Shield, Chain Weapon, Incite damage, Stir the Blood, Convection.
-//
-// Core now drives (M9 CORE pass): Set Defense (activation atkModsFor / power slam), Combined Melee Attack (combinedAttack option), Fight to the
-// Last (effect grants Tough), Precision Strike (effect ignoreFriendly), Hex Hammer (castSpell calls it at spell.declare), Convection (offered at
-// enemies by anytimeOptions), Stoke the Pyre free cast (spells.ts calls stokeFreeVictim before paying).
+// Protectorate of Menoth (Covenant of the Flame, Feora) rules: every {code} the data names plus the seams for the abilities the
+// descriptors cannot say (docs/spec/factions/menoth.md, source-tagged card values).
+// Data codes: stokeStripAttack, stokeStripDamage (Prophet of the Covenant), blessingOfTheFirstGift (the feat).
+// Seams core calls (all additive, see docs/spec/00-architecture.md section 14):
+//  - Illumination: spells.ts asks stokeFreeVictim / useIllumination before paying (once per turn, keyed on men.a.illumination).
+//  - The Four Gifts and Sanctified Hull: maintenance.ts calls menothMaintenance; giftBlock / sheafBlocked are asked where a charge, a special
+//    attack, a ranged attack, a spell, a focus spend or a force is declared.
+//  - Marshal: marshalPassIds (LOS and advancing), Heavy Boiler: runBonus, Gladiator: gladiatorBonus.
+//  - Thresher: THRESHER_ID is offered as a star attack by activation.ts; Teleport: menothSpellEffect / teleportSamples.
+//  - Lawgiver's Judgement: lawgiverStrips (resistsDamageType and the maintenance fire roll).
+//  - Attack plugins: Chain Weapon, Armor-Piercing arrow, Conflagration and Incendiary fire, Debilitating Heat, Heroic Inspiration, Holy Martyrs,
+//    Shield Guard, Cleansing Volley.
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
 import {
-  actOf, appliedPassives, atkOf, envOf, hasFlag, isConstruct, isMelee, lookups, noop, prof, rec, resistsDamageType, setAtk, statOf,
-  touching, weaponsOf, type AttackPlugin, type Rec,
+  actOf, appliedPassives, atkOf, envOf, isMelee, lookups, meleeReach, noop, ownFlag, prof, rec, resistsDamageType, setAtk, statOf,
+  weaponsOf, type AttackPlugin, type Rec,
 } from '../code-hooks'
-import { applyDamage, resolveDeath } from '../damage'
-import { rollD3, rollNd6 } from '../dice'
-import { addCondition, applyEffect, immuneToContinuous, removeCondition, removeEffect } from '../effects'
+import { applyDamage, healDamage, resolveDeath } from '../damage'
+import { addCondition, applyEffect, hasCondition, removeCondition } from '../effects'
 import type { GameEvent } from '../events'
-import { gainFocus } from '../focus'
-import { baseRadius, dist, isOnTable, validateAdvancePath } from '../geometry'
+import { baseRadius, dist, isLegalPlacement, isOnTable } from '../geometry'
 import { inCtrl, modelDistance, within } from '../measure'
 import { movedEvent, relocate } from '../movement'
-import type { DataBundle, DamageType, EffectInstance, GameState, Id, ModelId, ModelState } from '../types'
+import type { DataBundle, DamageType, EffectInstance, GameState, Id, ModelId, ModelState, PlayerId, Rejection, Vec2 } from '../types'
 
 const bundleOf = (c: HookContext): DataBundle => envOf(c).bundle
 const out = (state: GameState, events: GameEvent[] = []): HookResult => ({ state, events })
@@ -26,28 +29,12 @@ const keywordsOf = (b: DataBundle, m: ModelState): string[] => (prof(b, m).keywo
 const isMenoth = (b: DataBundle, m: ModelState | undefined): boolean => !!m && keywordsOf(b, m).includes('menoth')
 const onFire = (state: GameState, m: ModelState): boolean => m.conditions.includes('fire')
 const liveOnTable = (m: ModelState | undefined): m is ModelState => !!m && m.life === 'active' && isOnTable(m)
+const profileIdIs = (m: ModelState, id: Id): boolean => m.profileId === id
+const DEFENDER = 'men.defenders-grunt'
 
-/** A fire damage roll outside an attack (Fire Step, the feat): Resistance: Fire removes one die. */
-function fireDamage(state0: GameState, b: DataBundle, id: ModelId, pow: number): { state: GameState; events: GameEvent[] } {
-  let state = state0
-  const look = lookups(state, b)
-  const arm = look.arm(id)
-  const resist = resistsDamageType(state, b, id, ['fire'])
-  const r = rollNd6(state, resist ? 1 : 2, 'damage', { ownerId: id, target: arm, flat: pow })
-  const pts = Math.max(0, r.total - arm)
-  const ap = applyDamage(r.state, id, pts, { source: 'other', layouts: look.layouts?.(id), damageTypes: ['fire'] })
-  state = ap.state
-  const events: GameEvent[] = [r.event, ...ap.events]
-  if (state.models[id]!.life === 'disabled') {
-    const d = resolveDeath(state, id, { tough: look.tough?.(id), layouts: look.layouts?.(id), cause: 'fire' })
-    state = d.state; events.push(...d.events)
-  }
-  return { state, events }
-}
-
-// ---------- Stoke the Pyre ----------
+// ---------- Prophet of the Covenant (men.a.stoke-the-pyre) ----------
 /**
- * Stoke the Pyre, attack roll half: strip the fire off the target to BOOST the melee attack roll (one extra die, like a focus boost).
+ * Prophet of the Covenant, attack roll half: strip the fire off the target to BOOST the melee attack roll (one extra die, like a focus boost).
  * A roll is boosted once, so nothing happens when it already is. Policy (RULING): only when the hit is a long shot (DEF - MAT >= 8),
  * otherwise the fire is kept for the damage roll. Marking the roll boosted also stops the core offering a focus boost on top.
  */
@@ -64,7 +51,7 @@ const stokeStripAttack = (c: HookContext): HookResult => {
   return out(a2 ? setAtk(r.state, { ...a2, x: { ...a2.x, boosted: true } }) : r.state, r.events)
 }
 
-/** Stoke the Pyre, damage roll half: strip the fire off the target to boost the damage roll (not one that is already boosted or cannot be). */
+/** Prophet of the Covenant, damage roll half: strip the fire off the target to boost the damage roll (not one that is already boosted or cannot be). */
 const stokeStripDamage = (c: HookContext): HookResult => {
   const tid = c.targetId
   const tgt = tid ? c.state.models[tid] : undefined
@@ -76,119 +63,184 @@ const stokeStripDamage = (c: HookContext): HookResult => {
   return out(a2?.x.cur ? setAtk(r.state, { ...a2, x: { ...a2.x, cur: { ...a2.x.cur, boost: true } } }) : r.state, r.events)
 }
 
+// ---------- Illumination (men.a.illumination) ----------
+export const ILLUMINATION_KEY = 'men.a.illumination:oncePerTurn'
 /**
- * Stoke the Pyre, free spell half (Feora): after a spell is cast, one enemy Fire in her CTRL is stripped and the spell's focus is
- * refunded (the same net cost as casting for 0; a true 0-focus cast needs a core hook, so Feora must be able to pay first).
+ * Illumination: once per turn, in her own activation, the model that has it may put out the fire on one enemy in her CTRL to cast a spell
+ * without paying its focus. Returns that enemy, or null (no ability, already used this activation, nothing burning in CTRL).
  */
-/** Nothing to do after the cast: castSpell asks stokeFreeVictim first and casts for 0 (a true free cast, no refund). */
-const stokeRefund = (c: HookContext): HookResult => noop(c)
-
-/** Stoke the Pyre, free spell: the enemy on Fire in the caster's CTRL whose fire is stripped to cast a spell for 0 focus, or null. */
 export function stokeFreeVictim(state: GameState, b: DataBundle, casterId: ModelId): ModelId | null {
   const caster = state.models[casterId]
-  if (!caster || !liveOnTable(caster) || !((prof(b, caster).abilities ?? []) as Id[]).includes('men.a.stoke-the-pyre')) return null
+  if (!caster || !liveOnTable(caster) || !((prof(b, caster).abilities ?? []) as Id[]).includes('men.a.illumination')) return null
+  const act = actOf(state)
+  if (!act || act.activeId !== casterId || act.limitsUsed.includes(ILLUMINATION_KEY)) return null
   const ctrl = statOf(state, b, casterId, 'CTRL')
   const victim = Object.values(state.models)
     .filter((m) => m.owner !== caster.owner && liveOnTable(m) && onFire(state, m) && inCtrl(caster, m, ctrl))
     .sort((x, y) => x.id.localeCompare(y.id))[0]
   return victim ? victim.id : null
 }
-
-// ---------- Incite ----------
-/** Incite, attack half (granted to friendly Menoth models by Feora): +2 to the attack roll against an enemy within 10" of the caster. */
-const inciteAttack = (c: HookContext): HookResult => {
-  const a = atkOf(c.state)
-  const me = c.state.models[c.selfId]
-  const tgt = a ? c.state.models[a.targetId] : undefined
-  if (!a || !me || !tgt) return noop(c)
-  const eff = inciteFor(c.state, me.owner)
-  const caster = eff?.casterId ? c.state.models[eff.casterId] : undefined
-  if (!eff || !liveOnTable(caster) || !within(caster, tgt, 10)) return noop(c)
-  const mods = [...a.x.atkMods, { source: 'men.s.incite', label: 'Incite', value: 2, mode: 'add' as const }]
-  return out(setAtk(c.state, { ...a, x: { ...a.x, atkMods: mods } }))
+/** The free cast is paid for: the enemy's fire goes out and Illumination is spent for this activation. */
+export function useIllumination(state: GameState, victimId: ModelId): { state: GameState; events: GameEvent[] } {
+  const r = removeCondition(state, victimId, 'fire', 'effect')
+  const act = actOf(r.state)
+  const s = act && !act.limitsUsed.includes(ILLUMINATION_KEY) ? { ...r.state, activation: { ...act, limitsUsed: [...act.limitsUsed, ILLUMINATION_KEY] } as typeof r.state.activation } : r.state
+  return { state: s, events: r.events }
 }
-const inciteFor = (state: GameState, owner: ModelState['owner']): EffectInstance | undefined =>
-  state.effects.find((e) => e.sourceId === 'men.s.incite' && e.owner === owner)
 
-// ---------- Fire Step ----------
-/** Fire Step may be cast once per activation: castSpell asks this before taking any focus, so a repeat is rejected. */
-export function fireStepSpent(state: GameState, spellId: Id): boolean {
-  return spellId === 'men.s.fire-step' && !!actOf(state)?.spellsCast.includes(spellId)
+// ---------- The Four Gifts of Menoth (men.a.four-gifts) and Sanctified Hull (men.a.sanctified-hull) ----------
+export type GiftId = 'flame' | 'law' | 'sheaf' | 'wall'
+export const GIFTS: readonly GiftId[] = ['flame', 'law', 'sheaf', 'wall']
+const GIFT_SRC = 'men.a.four-gifts'
+const TAKEN_SRC = 'men.a.four-gifts.taken'
+export const GIFT_NAMES: Record<GiftId, string> = { flame: 'Gift of Flame', law: 'Gift of Law', sheaf: 'Gift of the Sheaf', wall: 'Gift of the Wall' }
+type GiftEffect = EffectInstance & { gift?: GiftId; taken?: GiftId[] }
+const isWarrior = (b: DataBundle, m: ModelState): boolean => ['leader', 'trooper', 'solo', 'unit'].includes(m.type) && !keywordsOf(b, m).includes('construct')
+const isCohort = (m: ModelState): boolean => m.type === 'warEngine' || m.type === 'beast'
+
+/** The Leader whose Gifts a player holds: their live Menoth leader on the table (null for any other army). */
+function giftLeader(state: GameState, b: DataBundle, owner: PlayerId): ModelState | null {
+  const l = Object.values(state.models).find((m) => m.owner === owner && m.type === 'leader' && liveOnTable(m))
+  return l && prof(b, l).faction === 'men' && isMenoth(b, l) ? l : null
+}
+
+/** The Gifts already taken this cycle (all four taken: a fresh cycle). */
+function takenOf(state: GameState, owner: PlayerId): GiftId[] {
+  const t = (state.effects as GiftEffect[]).find((e) => e.sourceId === TAKEN_SRC && e.owner === owner)
+  return t?.taken && t.taken.length < GIFTS.length ? t.taken : []
 }
 
 /**
- * Fire Step: enemies within 2" take a POW 13 fire damage roll, then the caster is placed within 2" whether or not anyone was hit
- * (RULING: auto-placed on the spot within 2" farthest from the nearest enemy; it stays put when no spot is better). Once per activation
- * (enforced by fireStepSpent in castSpell).
+ * Which Gift the Leader takes this round (RULING: the engine picks, since Maintenance raises no decisions). Of the Gifts not yet taken this
+ * cycle it takes the one that stops the most of what the enemy army can do: Flame by warriors, Law by casters and their spells, the Wall by
+ * ranged weapons, the Sheaf by warjacks and warbeasts. Ties go in the card's order.
  */
-const fireStep = (c: HookContext): HookResult => {
-  const b = bundleOf(c)
-  let state = c.state
-  const caster = state.models[c.selfId]
-  if (!actOf(state) || !caster) return noop(c)
-  const events: GameEvent[] = []
-  const victims = Object.values(state.models)
-    .filter((m) => m.owner !== caster.owner && liveOnTable(m) && within(caster, m, 2))
-    .sort((x, y) => x.id.localeCompare(y.id))
-  for (const v of victims) {
-    const r = fireDamage(state, b, v.id, 13)
-    state = r.state; events.push(...r.events)
+export function chooseGift(state: GameState, b: DataBundle, owner: PlayerId): GiftId {
+  const score: Record<GiftId, number> = { flame: 0, law: 0, sheaf: 0, wall: 0 }
+  for (const m of Object.values(state.models)) {
+    if (m.owner === owner || !liveOnTable(m)) continue
+    if (isWarrior(b, m)) score.flame += m.type === 'trooper' ? 1 : 2
+    if (m.type === 'leader') score.law += 2 + ((prof(b, m).spells ?? []) as Id[]).length * 0.5
+    if (weaponsOf(b, m).some((w) => !isMelee(w.w))) score.wall += m.type === 'trooper' ? 1 : 1.5
+    if (isCohort(m)) score.sheaf += 3
   }
-  const me = state.models[caster.id]!
-  if (!liveOnTable(me)) return out(state, events)
-  const foes = Object.values(state.models).filter((m) => m.owner !== me.owner && liveOnTable(m))
-  if (!foes.length) return out(state, events)
-  const gap = (p: { x: number; z: number }): number => Math.min(...foes.map((f) => dist(p, f.pos) - baseRadius(f.base)))
-  let best: { x: number; z: number } | null = null
-  let bestGap = gap(me.pos)
-  for (let i = 0; i < 16; i++) {
-    const ang = (i * Math.PI) / 8
-    const p = { x: me.pos.x + Math.cos(ang) * 2, z: me.pos.z + Math.sin(ang) * 2 }
-    if (!validateAdvancePath(state, me.id, [p], 2).ok) continue
-    const g = gap(p)
-    if (g > bestGap + 1e-9) { best = p; bestGap = g }
-  }
-  if (best) {
-    const from = me.pos
-    state = relocate(state, me.id, best)
-    events.push(movedEvent(me.id, 'place', from, best, [best], state.models[me.id]!.elev))
-  }
-  return out(state, events)
+  const taken = takenOf(state, owner)
+  const open = GIFTS.filter((g) => !taken.includes(g))
+  return open.reduce((best, g) => (score[g] > score[best] ? g : best), open[0]!)
 }
 
-// ---------- Hex Hammer ----------
-/**
- * Hex Hammer. Called at cast time it does nothing (the spell effect on Feora is the marker). Called by core with point 'spell.declare'
- * and selfId = an enemy model declaring a spell: if it stands in the CTRL of a Hex Hammer caster, it takes d3 damage first; the
- * caller cancels the spell when that model is no longer active afterwards.
- */
-const hexHammer = (c: HookContext): HookResult => {
-  if (c.point !== 'spell.declare') return noop(c)
-  const b = bundleOf(c)
-  let state = c.state
+/** Maintenance Phase of a Menoth player: the Leader takes a Gift for the round (the previous one has just ended at the start of the turn). */
+export function menothMaintenance(state: GameState, b: DataBundle, player: PlayerId): { state: GameState; events: GameEvent[] } {
+  const leader = giftLeader(state, b, player)
+  if (!leader) return { state, events: [] }
+  const gift = chooseGift(state, b, player)
   const events: GameEvent[] = []
-  const decl = state.models[c.selfId]
-  if (!decl) return noop(c)
-  for (const e of state.effects.filter((x) => x.sourceId === 'men.s.hex-hammer')) {
-    const hex = e.casterId ? state.models[e.casterId] : undefined
-    const d = state.models[decl.id]!
-    if (!liveOnTable(hex) || !liveOnTable(d) || hex.owner === d.owner) continue
-    if (!inCtrl(hex, d, statOf(state, b, hex.id, 'CTRL'))) continue
-    const roll = rollD3(state)
-    state = roll.state; events.push(roll.event)
-    const look = lookups(state, b)
-    const ap = applyDamage(state, d.id, roll.value, { source: 'other', layouts: look.layouts?.(d.id), damageTypes: [] })
-    state = ap.state; events.push(...ap.events)
-    if (state.models[d.id]!.life === 'disabled') {
-      const dd = resolveDeath(state, d.id, { tough: look.tough?.(d.id), layouts: look.layouts?.(d.id), cause: 'hex-hammer' })
-      state = dd.state; events.push(...dd.events)
-    }
+  let s = state
+  const taken = [...takenOf(s, player), gift]
+  const marker = (s.effects as GiftEffect[]).find((e) => e.sourceId === TAKEN_SRC && e.owner === player)
+  if (marker) s = { ...s, effects: s.effects.map((e) => (e === marker ? ({ ...marker, taken } as GiftEffect) : e)) }
+  else {
+    const seq = s.effectSeq + 1
+    const m: GiftEffect = { id: `e:${seq}`, sourceId: TAKEN_SRC, name: 'Four Gifts taken', owner: player, casterId: leader.id, targetIds: [], mods: [], duration: 'game', expires: null, taken }
+    s = { ...s, effectSeq: seq, effects: [...s.effects, m] }
   }
-  return out(state, events)
+  s = { ...s, effects: s.effects.filter((e) => !(e.sourceId === GIFT_SRC && e.owner === player)) } // a Gift left over from last round is gone
+  const made = applyEffect(s, ({ sourceId: GIFT_SRC, name: GIFT_NAMES[gift], owner: player, casterId: leader.id, targetIds: [leader.id], mods: [], duration: 'round', gift } as unknown) as Parameters<typeof applyEffect>[1])
+  events.push(...made.events)
+  return { state: made.state, events }
+}
+
+/** The Gift a player holds this round, if any. */
+export function currentGift(state: GameState, owner: PlayerId): GiftId | null {
+  const e = (state.effects as GiftEffect[]).find((x) => x.sourceId === GIFT_SRC && x.owner === owner)
+  return e?.gift ?? null
+}
+
+/** The Leader's CTRL, plus (Sanctified Hull) everything within 3" of a hull model that stands in that CTRL. */
+function giftZone(state: GameState, b: DataBundle, leader: ModelState, cand: ModelState): boolean {
+  const ctrl = statOf(state, b, leader.id, 'CTRL')
+  if (inCtrl(leader, cand, ctrl)) return true
+  for (const h of Object.values(state.models)) {
+    if (h.id === leader.id || h.owner !== leader.owner || !liveOnTable(h) || !ownFlag(state, b, h.id, 'sanctifiedHull')) continue
+    if (inCtrl(leader, h, ctrl) && within(h, cand, 3)) return true
+  }
+  return false
+}
+
+export type GiftKind = 'charge' | 'special' | 'ranged' | 'spell'
+/**
+ * Why a Gift forbids this declaration, or null. Flame: enemy warriors cannot charge or special-attack a friendly Faction model in the zone;
+ * Law: no enemy spell at one; the Wall: no enemy ranged attack at one. `kinds` lists what the declaration is (a star attack is 'special',
+ * a power attack is 'special', a gun is 'ranged', a spell is 'spell').
+ */
+export function giftBlock(state: GameState, b: DataBundle, attackerId: ModelId, targetId: ModelId, kinds: GiftKind[]): string | null {
+  if (!state.effects.length) return null
+  const a = state.models[attackerId]
+  const t = state.models[targetId]
+  if (!a || !t) return null
+  for (const e of state.effects as GiftEffect[]) {
+    if (e.sourceId !== GIFT_SRC || !e.gift) continue
+    const leader = e.casterId ? state.models[e.casterId] : undefined
+    if (!liveOnTable(leader) || a.owner === leader.owner || t.owner !== leader.owner || !isMenoth(b, t)) continue
+    const hit = (e.gift === 'flame' && isWarrior(b, a) && (kinds.includes('charge') || kinds.includes('special')))
+      || (e.gift === 'law' && kinds.includes('spell')) || (e.gift === 'wall' && kinds.includes('ranged'))
+    if (hit && giftZone(state, b, leader, t)) return `${GIFT_NAMES[e.gift]} protects ${targetId}`
+  }
+  return null
+}
+
+/** The Gift of the Sheaf: an enemy warjack or warbeast in the zone cannot spend focus or be forced. */
+export function sheafBlocked(state: GameState, b: DataBundle, id: ModelId): boolean {
+  if (!state.effects.length) return false
+  const m = state.models[id]
+  if (!m || !isCohort(m)) return false
+  for (const e of state.effects as GiftEffect[]) {
+    if (e.sourceId !== GIFT_SRC || e.gift !== 'sheaf') continue
+    const leader = e.casterId ? state.models[e.casterId] : undefined
+    if (liveOnTable(leader) && m.owner !== leader.owner && giftZone(state, b, leader, m)) return true
+  }
+  return false
+}
+
+// ---------- Marshal [Covenant of the Flame] / [Flameguard Defender] ----------
+/** Friendly models that never block this model's LOS and that it may advance through (empty without a Marshal ability). */
+export function marshalPassIds(state: GameState, b: DataBundle, id: ModelId): ModelId[] {
+  const me = state.models[id]
+  if (!me) return []
+  const covenant = ownFlag(state, b, id, 'marshalCovenant')
+  const defenders = ownFlag(state, b, id, 'marshalDefenders')
+  if (!covenant && !defenders) return []
+  return Object.values(state.models)
+    .filter((m) => m.id !== id && m.owner === me.owner && isOnTable(m) && ((covenant && isMenoth(b, m)) || (defenders && profileIdIs(m, DEFENDER))))
+    .map((m) => m.id)
+}
+
+// ---------- Heavy Boiler, Gladiator ----------
+/** Heavy Boiler: the extra inches a run gets (+2 SPD only when it runs). */
+export const runBonus = (state: GameState, b: DataBundle, id: ModelId): number => (ownFlag(state, b, id, 'heavyBoiler') ? 2 : 0)
+/** Gladiator: +2 on power attack damage rolls and on their collateral damage rolls. */
+export const gladiatorBonus = (state: GameState, b: DataBundle, id: ModelId): number => (ownFlag(state, b, id, 'gladiator') ? 2 : 0)
+
+// ---------- Thresher ----------
+/** Blazing Star's Thresher: a star attack (activation.ts offers it) that swings at every model, friend or foe, in melee range and LOS at once. */
+export const THRESHER_ID = 'men.a.thresher'
+
+// ---------- Lawgiver's Judgement ----------
+/** Enemy models in the CTRL of a Feora holding Lawgiver's Judgement lose Resistance: Fire and cannot gain it. */
+export function lawgiverStrips(state: GameState, b: DataBundle, id: ModelId): boolean {
+  if (!state.effects.length) return false
+  const m = state.models[id]
+  if (!m || !isOnTable(m)) return false
+  for (const e of state.effects) {
+    if (e.sourceId !== 'men.s.lawgivers-judgement') continue
+    const c = e.casterId ? state.models[e.casterId] : undefined
+    if (liveOnTable(c) && c.owner !== m.owner && inCtrl(c, m, statOf(state, b, c.id, 'CTRL'))) return true
+  }
+  return false
 }
 
 // ---------- Feat: Blessing of the First Gift ----------
-/** Every enemy model in the caster's CTRL takes a POW 12 fire damage roll and then catches fire (unless it resists fire). */
+/** Every enemy model, and every model of an enemy unit with a model, in the caster's CTRL catches fire (unless it resists fire). No damage roll. */
 const blessingOfTheFirstGift = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   let state = c.state
@@ -196,82 +248,66 @@ const blessingOfTheFirstGift = (c: HookContext): HookResult => {
   if (!caster) return noop(c)
   const ctrl = statOf(state, b, caster.id, 'CTRL')
   const events: GameEvent[] = []
-  const victims = Object.values(state.models)
-    .filter((m) => m.owner !== caster.owner && liveOnTable(m) && inCtrl(caster, m, ctrl))
-    .sort((x, y) => x.id.localeCompare(y.id))
-  for (const v of victims) {
-    const r = fireDamage(state, b, v.id, 12)
-    state = r.state; events.push(...r.events)
-    const now = state.models[v.id]!
-    if (liveOnTable(now) && !immuneToContinuous(b, now, 'fire')) {
-      const f = addCondition(state, v.id, 'fire', 'men.f.blessing-of-the-first-gift')
-      state = f.state; events.push(...f.events)
-    }
+  const hit = new Set<ModelId>()
+  for (const m of Object.values(state.models)) {
+    if (m.owner === caster.owner || !liveOnTable(m) || !inCtrl(caster, m, ctrl)) continue
+    hit.add(m.id)
+    if (m.unitId) for (const t of state.units[m.unitId]?.troopers ?? []) hit.add(t)
+  }
+  for (const id of [...hit].sort()) {
+    const m = state.models[id]
+    if (!liveOnTable(m) || resistsDamageType(state, b, id, ['fire']) || ((prof(b, m).abilities ?? []) as Id[]).includes('core.a.immunity-fire')) continue
+    const f = addCondition(state, id, 'fire', 'men.f.blessing-of-the-first-gift')
+    state = f.state; events.push(...f.events)
   }
   return out(state, events)
 }
 
-// ---------- Pyrrhus: Battle Plan ----------
-/** The three plans; the first two aim at one friendly Menoth warrior model or unit within 5", Precision Strike covers friends within 10". */
-const PLANS = [
-  { id: 'men.a.fight-to-the-last', name: 'Fight to the Last', grouped: true, duration: 'round' as const, extra: { grants: ['core.a.tough'] } as Record<string, unknown> },
-  { id: 'men.a.stir-the-blood', name: 'Stir the Blood', grouped: true, duration: 'turn' as const, extra: {} as Record<string, unknown> },
-  { id: 'men.a.precision-strike', name: 'Precision Strike', grouped: false, duration: 'turn' as const, extra: { ignoreFriendly: true } as Record<string, unknown> },
-]
-/** RULING: a warrior model is a Menoth model that is not a construct, warjack, beast, battle engine or structure (warcasters and solos count). */
-const isWarrior = (state: GameState, b: DataBundle, m: ModelState): boolean =>
-  !['warEngine', 'beast', 'battleEngine', 'structure'].includes(m.type) && isMenoth(b, m) && !isConstruct(state, b, m.id)
-export interface BattlePlanChoice { optionId: string; label: string }
-
-/** The groups a Fight to the Last / Stir the Blood plan could aim at: friendly Menoth warrior models or units within 5" of the planner. */
-function planGroups(state: GameState, b: DataBundle, me: ModelState): Array<{ key: string; ids: ModelId[] }> {
-  const near = Object.values(state.models)
-    .filter((m) => m.id !== me.id && m.owner === me.owner && liveOnTable(m) && !m.inert && isWarrior(state, b, m) && within(me, m, 5))
-    .sort((x, y) => x.id.localeCompare(y.id))
-  const groups: Array<{ key: string; ids: ModelId[] }> = []
-  for (const m of near) {
-    const key = m.unitId ?? m.id
-    if (groups.some((g) => g.key === key)) continue
-    const ids = m.unitId
-      ? Object.values(state.models).filter((x) => x.unitId === m.unitId && liveOnTable(x) && !x.inert).map((x) => x.id)
-      : [m.id]
-    groups.push({ key, ids })
-  }
-  return groups
-}
-const precisionIds = (state: GameState, me: ModelState): ModelId[] =>
-  Object.values(state.models).filter((m) => m.owner === me.owner && liveOnTable(m) && !m.inert && (m.id === me.id || within(me, m, 10))).map((m) => m.id)
-
-/** Battle Plan choices for the planner: one per plan and group (Precision Strike has one). Empty when nothing could be aimed at. */
-export function battlePlanChoices(state: GameState, b: DataBundle, id: ModelId): BattlePlanChoice[] {
-  const me = state.models[id]
-  if (!me || !liveOnTable(me)) return []
-  const groups = planGroups(state, b, me)
-  const res: BattlePlanChoice[] = []
-  for (const p of PLANS) {
-    if (p.grouped) for (const g of groups) res.push({ optionId: p.id + '|' + g.key, label: p.name + ': ' + g.key })
-    else if (precisionIds(state, me).length > 1) res.push({ optionId: p.id + '|all', label: p.name + ': friends within 10"' })
-  }
-  return res
-}
-
-/** Apply one Battle Plan choice (an optionId from battlePlanChoices); null when it is not available. */
-export function applyBattlePlan(state: GameState, b: DataBundle, id: ModelId, optionId: string): { state: GameState; events: GameEvent[] } | null {
-  const me = state.models[id]
-  if (!me || !battlePlanChoices(state, b, id).some((c) => c.optionId === optionId)) return null
-  const [planId, key] = optionId.split('|') as [string, string]
-  const plan = PLANS.find((x) => x.id === planId)!
-  const targetIds = plan.grouped ? planGroups(state, b, me).find((g) => g.key === key)!.ids : precisionIds(state, me)
-  const made = applyEffect(state, { sourceId: plan.id, name: plan.name, owner: me.owner, casterId: me.id, targetIds, mods: [], duration: plan.duration, ...plan.extra })
-  return { state: made.state, events: made.events }
-}
-
-/** Battle Plan is chosen through an abilityChoice the core raises at the start of the activation (activation.ts raiseStart); nothing to run here. */
-const battlePlan = (c: HookContext): HookResult => noop(c)
-
 export const menothHooks: CodeHookRegistry = {
   conditions: {},
-  effects: { stokeStripAttack, stokeStripDamage, inciteAttack, stokeRefund, fireStep, hexHammer, blessingOfTheFirstGift, battlePlan },
+  effects: { stokeStripAttack, stokeStripDamage, blessingOfTheFirstGift },
+}
+
+// ---------- Teleport ----------
+const TELEPORT_RANGE = 6
+/** Teleport lands the whole base within 6" of where she stood (centre to centre): a legal placement on the table. */
+export function teleportCheck(state: GameState, casterId: ModelId, to: Vec2 | undefined): Rejection | null {
+  const m = state.models[casterId]
+  if (!m || !to) return null
+  if (!Number.isFinite(to.x) || !Number.isFinite(to.z)) return { code: 'E_BAD_PAYLOAD', message: 'bad point' }
+  if (dist(m.pos, to) > TELEPORT_RANGE + 1e-6) return { code: 'E_TOO_FAR', message: `Teleport reaches ${TELEPORT_RANGE}"` }
+  const p = isLegalPlacement(state, casterId, to, m.base)
+  return p.ok ? null : { code: p.code ?? 'E_PLACEMENT', message: p.message ?? 'cannot be placed there' }
+}
+/** Legal landing spots to offer: a ring at the full 6" and one at 3", best (farthest from the enemy) first. */
+export function teleportSamples(state: GameState, casterId: ModelId): Vec2[] {
+  const m = state.models[casterId]
+  if (!m) return []
+  const foes = Object.values(state.models).filter((x) => x.owner !== m.owner && liveOnTable(x))
+  const gap = (p: Vec2): number => (foes.length ? Math.min(...foes.map((f) => dist(p, f.pos) - baseRadius(f.base))) : 0)
+  const pts: Vec2[] = []
+  for (const [r, n] of [[TELEPORT_RANGE, 12], [3, 6]] as const) {
+    for (let i = 0; i < n; i++) {
+      const ang = (i * 2 * Math.PI) / n
+      const p = { x: m.pos.x + Math.cos(ang) * r, z: m.pos.z + Math.sin(ang) * r }
+      if (!teleportCheck(state, casterId, p)) pts.push(p)
+    }
+  }
+  return pts.sort((x, y) => gap(y) - gap(x)).slice(0, 8)
+}
+
+/**
+ * Spells whose effect the descriptors cannot say (an instant SELF spell runs no plain ops). Returns null for any other spell.
+ * Teleport: the point is `a.point`; with none (RULING) she lands on the legal spot farthest from the enemy. Her activation then ends.
+ */
+export function menothSpellEffect(state: GameState, casterId: ModelId, spellId: Id, point?: Vec2): { state: GameState; events: GameEvent[]; endActivation?: boolean } | null {
+  if (spellId !== 'men.s.teleport') return null
+  const m = state.models[casterId]
+  if (!m || !liveOnTable(m)) return { state, events: [] }
+  const to = point ?? teleportSamples(state, casterId)[0]
+  if (!to) return { state, events: [], endActivation: true }
+  const moved = relocate(state, casterId, to)
+  return { state: moved, events: [movedEvent(casterId, 'place', m.pos, to, [to], moved.models[casterId]!.elev)], endActivation: true }
 }
 
 // ---------- attack plugins ----------
@@ -288,22 +324,15 @@ export function shieldBonusArm(state: GameState, b: DataBundle, targetId: ModelI
   return sum
 }
 
-/** Impenetrable Shield: the model is touching a friendly Flameguard model, so non-magical melee and ranged attacks do no damage to it. */
-export function shieldedByFlameguard(state: GameState, b: DataBundle, targetId: ModelId): boolean {
-  const t = state.models[targetId]
-  if (!t || !hasFlag(state, b, targetId, 'impenetrableShield')) return false
-  return Object.values(state.models).some((o) => o.id !== t.id && o.owner === t.owner && liveOnTable(o) && keywordsOf(b, o).includes('flameguard') && touching(t, o))
-}
-
-const stirOn = (state: GameState, id: ModelId): EffectInstance | undefined =>
-  state.effects.find((e) => e.sourceId === 'men.a.stir-the-blood' && e.targetIds.includes(id))
+const BOW = 'men.w.valeria-bow'
+const AP_POW = 8
+const HEAT = 'men.s.debilitating-heat'
+const GUARD_RANGE = 3
+const GUARD_SRC = 'men.a.shield-guard'
+const VOLLEY_ID = 'men.a.cleansing-volley'
+const VOLLEY_KEY = `${VOLLEY_ID}:oncePerTurn`
+const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe'
 const isMeleeKind = (k: string): boolean => k === 'melee' || k === 'power'
-
-const LIVING_BLOCK = new Set(['undead', 'construct'])
-const isLiving = (state: GameState, b: DataBundle, id: ModelId): boolean => {
-  const m = state.models[id]
-  return !!m && m.type !== 'warEngine' && !isConstruct(state, b, id) && !keywordsOf(b, m).some((k) => LIVING_BLOCK.has(k))
-}
 
 export const menothPlugins: AttackPlugin[] = [{
   id: 'men.faction',
@@ -311,42 +340,108 @@ export const menothPlugins: AttackPlugin[] = [{
     const at = state.models[atk.attackerId]
     const tgt = state.models[job.targetId]
     if (!at || !tgt) return 0
-    // Impenetrable Shield: no damage at all from non-magical melee or ranged attacks
-    if (atk.kind !== 'arcane' && !job.types.includes('magical' as DamageType) && shieldedByFlameguard(state, b, tgt.id)) return -999
     let flat = 0
     // Chain Weapon: the Buckler / Shield / Shield Wall ARM is ignored, which is the same as that much extra on the roll
     if (atk.weaponId === 'men.w.blazing-star') flat += shieldBonusArm(state, b, tgt.id)
-    // Incite: +2 on damage rolls against enemies within 10" of its caster
-    const inc = isMenoth(b, at) ? inciteFor(state, at.owner) : undefined
-    const caster = inc?.casterId ? state.models[inc.casterId] : undefined
-    if (inc && liveOnTable(caster) && within(caster, tgt, 10)) flat += 2
-    // Stir the Blood: +2 on the next melee damage roll this turn
-    if (isMeleeKind(atk.kind) && stirOn(state, at.id)) flat += 2
+    // Armor-Piercing arrow: the shot is POW 8 instead of the bow's 12 (its ARM is halved by the armorPiercing code)
+    if (atk.weaponId === BOW && atk.x.group === 'armor-piercing-arrow') flat += AP_POW - ((rec(b, BOW).pow as number | undefined) ?? AP_POW)
+    // Debilitating Heat: friendly Faction melee damage rolls against the weakened model get +2
+    if (isMeleeKind(atk.kind) && isMenoth(b, at) && state.effects.some((e) => e.sourceId === HEAT && e.owner === at.owner && e.targetIds.includes(tgt.id))) flat += 2
     return flat
   },
+  damageDice(state, b, atk, job) {
+    // Heroic Inspiration: a friendly Flameguard Defender fighting in melee an enemy inside Pyrrhus's melee range rolls one more damage die
+    const at = state.models[atk.attackerId]
+    const tgt = state.models[job.targetId]
+    if (!at || !tgt || !isMeleeKind(atk.kind) || !profileIdIs(at, DEFENDER)) return 0
+    const near = Object.values(state.models).some((p) => p.owner === at.owner && liveOnTable(p) && ownFlag(state, b, p.id, 'heroicInspiration')
+      && modelDistance(p, tgt) <= meleeReach(state, b, p.id) + 1e-6)
+    return near ? 1 : 0
+  },
+  damageTypes(state, _b, atk) {
+    // Conflagration and the Incendiary arrow deal fire damage (so Resistance: Fire bites)
+    if (atk.spellId === 'men.s.conflagration' || (atk.weaponId === BOW && atk.x.group === 'incendiary-arrow')) return ['fire' as DamageType]
+    return []
+  },
+  beforeHits(state, b, atk) {
+    // Shield Guard: a Defender within 3" of a friendly model that a ranged (not spray) attack hit directly takes the hit in its place, once per round.
+    // RULING: it steps in for a leader, warjack or solo, never for a Defender trooper (they are the cheap bodies)
+    if (!isRangedKind(atk.kind) || !atk.x.results[atk.targetId]?.hit) return null
+    const tgt = state.models[atk.targetId]
+    const at = state.models[atk.attackerId]
+    if (!tgt || !at || at.owner === tgt.owner || !['leader', 'warEngine', 'solo'].includes(tgt.type)) return null
+    const guard = Object.values(state.models)
+      .filter((g) => g.id !== tgt.id && g.owner === tgt.owner && liveOnTable(g) && ownFlag(state, b, g.id, 'shieldGuard') && !hasCondition(state, g, 'knockedDown')
+        && !hasCondition(state, g, 'stationary') && within(g, tgt, GUARD_RANGE) && !state.effects.some((e) => e.sourceId === GUARD_SRC && e.casterId === g.id))
+      .sort((x, y) => modelDistance(x, tgt) - modelDistance(y, tgt) || x.id.localeCompare(y.id))[0]
+    if (!guard) return null
+    const used = applyEffect(state, { sourceId: GUARD_SRC, name: 'Shield Guard', owner: guard.owner, casterId: guard.id, targetIds: [guard.id], mods: [], duration: 'round' })
+    const res = { ...atk.x.results }
+    res[guard.id] = res[tgt.id]!
+    delete res[tgt.id]
+    const a2: typeof atk = { ...atk, targetId: guard.id, x: { ...atk.x, results: res, rollTargets: atk.x.rollTargets.map((t) => (t === tgt.id ? guard.id : t)) } }
+    return { state: setAtk(used.state, a2), events: used.events }
+  },
+  onHit(state, b, atk, targetId) {
+    const at = state.models[atk.attackerId]
+    const tgt = state.models[targetId]
+    if (!at || !tgt) return { state, events: [] }
+    const act = actOf(state)
+    // Cleansing Volley: a direct ranged hit on a burning enemy earns one more shot, once per turn (used when the attack is resolved)
+    if (isRangedKind(atk.kind) && targetId === atk.targetId && onFire(state, tgt) && ((prof(b, at).abilities ?? []) as Id[]).includes(VOLLEY_ID)
+      && act && act.modelIds.includes(at.id) && !atk.outOfActivation && !act.limitsUsed.includes(VOLLEY_KEY)) {
+      return { state: setAtk(state, { ...atk, x: { ...atk.x, flags: { ...atk.x.flags, cleansing: targetId } } }), events: [] }
+    }
+    // Debilitating Heat: the model hit (and its unit) lose 2 DEF and 2 on their damage rolls for a round
+    if (atk.spellId === HEAT) {
+      const ids = tgt.unitId ? (state.units[tgt.unitId]?.troopers ?? []).filter((t) => liveOnTable(state.models[t])) : [tgt.id]
+      const made = applyEffect(state, ({
+        sourceId: HEAT, name: 'Debilitating Heat', owner: at.owner, casterId: at.id, targetIds: ids.length ? ids : [tgt.id],
+        mods: [{ stat: 'DEF', value: -2, mode: 'add' }], duration: 'round', rollMods: [{ roll: 'damage', value: -2 }],
+      } as unknown) as Parameters<typeof applyEffect>[1])
+      return { state: made.state, events: made.events }
+    }
+    return { state, events: [] }
+  },
+  adjustPoints(state, b, atk, job, points) {
+    // Holy Martyrs: when an enemy attack would disable the model, a friendly Flameguard Defender within 5" is destroyed instead and it heals 1
+    const t = state.models[job.targetId]
+    const at = state.models[atk.attackerId]
+    if (!t || !at || at.owner === t.owner || points <= 0 || !liveOnTable(t) || !ownFlag(state, b, t.id, 'holyMartyrs') || t.damage.track !== 'single') return null
+    if (t.damage.filled + points < Math.max(t.damage.boxes, 1)) return null
+    const d = Object.values(state.models)
+      .filter((m) => m.id !== t.id && m.owner === t.owner && liveOnTable(m) && profileIdIs(m, DEFENDER) && within(t, m, 5))
+      .sort((x, y) => modelDistance(x, t) - modelDistance(y, t) || x.id.localeCompare(y.id))[0]
+    if (!d) return null
+    const look = lookups(state, b)
+    const events: GameEvent[] = []
+    const ap = applyDamage(state, d.id, Math.max(d.damage.track === 'single' ? d.damage.boxes : 1, 1), { source: 'other', layouts: look.layouts?.(d.id) })
+    let s = ap.state
+    events.push(...ap.events)
+    if (s.models[d.id]!.life === 'disabled') {
+      const dd = resolveDeath(s, d.id, { layouts: look.layouts?.(d.id), cause: 'holy-martyrs' })
+      s = dd.state; events.push(...dd.events)
+    }
+    const h = healDamage(s, t.id, 1, look.layouts?.(t.id))
+    return { state: h.state, events: [...events, ...h.events], points: 0 }
+  },
   onResolved(state, b, atk) {
+    // Cleansing Volley, second half: the fire goes out and the shooter has one more initial shot with the weapon it used
+    const flag = atk.x.flags.cleansing as ModelId | undefined
+    const at = state.models[atk.attackerId]
+    const act = actOf(state)
+    if (!flag || !at || !act || !atk.weaponId || act.limitsUsed.includes(VOLLEY_KEY)) return { state, events: [] }
     let s = state
     const events: GameEvent[] = []
-    const at = s.models[atk.attackerId]
-    if (!at) return { state, events }
-    // Stir the Blood is spent by the melee attack that made a damage roll
-    if (isMeleeKind(atk.kind) && atk.x.jobs.some((j) => j.kind === 'direct' && j.targetId)) {
-      const e = stirOn(s, at.id)
-      if (e) {
-        const rest = e.targetIds.filter((t) => t !== at.id)
-        if (rest.length) s = { ...s, effects: s.effects.map((x) => (x.id === e.id ? { ...x, targetIds: rest } : x)) }
-        else { const r = removeEffect(s, e.id, 'replaced'); s = r.state; events.push(...r.events) }
-      }
+    const r = removeCondition(s, flag, 'fire', 'effect')
+    s = r.state; events.push(...r.events)
+    const a2 = actOf(s)!
+    const pm = a2.perModel[at.id]
+    if (pm) {
+      const left = { ...pm.initialAttacksLeft, [atk.weaponId]: (pm.initialAttacksLeft[atk.weaponId] ?? 0) + 1 }
+      s = { ...s, activation: { ...a2, limitsUsed: [...a2.limitsUsed, VOLLEY_KEY], perModel: { ...a2.perModel, [at.id]: { ...pm, initialAttacksLeft: left } } } as typeof s.activation }
     }
-    // Convection: a living enemy destroyed by the spell gives a warjack in the caster's CTRL a focus
-    if (atk.spellId === 'men.s.convection' && atk.x.destroyed.some((id) => isLiving(s, b, id) && s.models[id]!.owner !== at.owner)) {
-      const ctrl = statOf(s, b, at.id, 'CTRL')
-      const jack = Object.values(s.models)
-        .filter((m) => m.owner === at.owner && m.type === 'warEngine' && liveOnTable(m) && !m.inert && modelDistance(at, m) <= ctrl + 1e-6 && m.focus < 3)
-        .sort((x, y) => x.id.localeCompare(y.id))[0]
-      if (jack) { const g = gainFocus(s, jack.id, 1, 'gain', at.id); s = g.state; events.push(...g.events) }
-    }
+    void b
     return { state: s, events }
   },
 }]
-

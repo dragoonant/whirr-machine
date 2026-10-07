@@ -13,9 +13,9 @@
       }
     ],
     "scope": {
-      "who": "warbeasts"
+      "who": "battlegroup"
     },
-    "verify": "Battlegroup only (warbeasts she controls, spells.ts). Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired. Card (S1): COST 2, RNG 6, UP, OFF No; the card allows any model of her battlegroup, Tanith included, but the engine scope warbeasts leaves her out (RULING)."
+    "verify": "Scope battlegroup (spells.ts): Tanith or any warbeast she controls. Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired. Card (S1): COST 2, RNG 6, UP, OFF No."
   },
   {
     "id": "cir.s.affliction",
@@ -39,7 +39,7 @@
     "scope": {
       "who": "enemy"
     },
-    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cirAffliction puts the upkeep effect (-2 DEF, 1-damage floor via afflictionFloor() in the damage roll) on the model hit. Single enemy model only; the unit version is not built. Card (S1): COST 2, RNG 8, UP, OFF Yes, target model or unit."
+    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cirAffliction puts the upkeep effect (-2 DEF, 1-damage floor via afflictionFloor() in the damage roll) on the model hit. Cast on a model of a unit it is the unit form: the one attack roll is made at the model chosen and a hit lands the effect (one upkeep) on every model of that unit; any other model gets it alone. Card (S1): COST 2, RNG 8, UP, OFF Yes, target model or unit."
   },
   {
     "id": "cir.s.rift",

@@ -1,7 +1,7 @@
 // Test hooks (50 §10): `?test=1` exposes window.__game, and URL params give e2e a fast setup.
 import { boardFromUrl } from '../board/boards'
 import { loadBundle } from '../../data/index'
-import type { Action, GameState, Id, PendingDecision, PlayerId, SaveFile } from '../../engine/index'
+import { query, type Action, type GameState, type Id, type ModelId, type PendingDecision, type PlayerId, type SaveFile, type Vec2 } from '../../engine/index'
 import { skipAll, skipBeat } from '../presentation/director'
 import { isPresentationIdle, usePresentedStore } from '../presentation/presentedStore'
 import {
@@ -32,6 +32,8 @@ export interface GameTestApi {
   rejection(): ClientRejection | null
   ui(): ReturnType<typeof useUiStore.getState>
   controllers(): Record<PlayerId, Controller>
+  /** The engine's own move check for a path (read-only), so e2e can tell what the board should accept. */
+  moveCheck(modelId: ModelId, path: Vec2[]): ReturnType<typeof query.moveCheck> | null
 }
 
 export function createTestApi(): GameTestApi {
@@ -53,6 +55,7 @@ export function createTestApi(): GameTestApi {
     rejection: () => useGameStore.getState().lastRejection,
     ui: () => useUiStore.getState(),
     controllers: () => useGameStore.getState().controllers,
+    moveCheck: (id, path) => { const s = useGameStore.getState().state; return s ? query.moveCheck(s, id, path) : null },
   }
 }
 

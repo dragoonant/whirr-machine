@@ -5,6 +5,7 @@ import { engineDescribe, modelName, queryDistance, queryThreat } from '../contra
 import { dataText } from './data'
 import { MOVE_LABEL, boxesLeft, niceName, oddsText, pct } from './format'
 import { costWords, isForcedCost, payWords } from './fury/furyView'
+import { additionalAttackLine, channelPiece, chooseGridPiece, combinedButtons, combinedPickerPiece, isOutOfActivationAttack, outOfActivationPiece, rerollPiece, rollAnywayPiece, type Piece } from './prompts/decisions'
 
 export type Tone = 'primary' | 'neutral' | 'decline'
 export interface OptionView {
@@ -122,7 +123,9 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     options = legal.filter((a) => a.type !== 'pass').map((a, i) => ({ id: `legal${i}`, label: actionLabel(a, state), tone: 'neutral' as Tone, action: a }))
   }
   const byBoost = (b: boolean) => options.find((o) => (o.action.type === 'boostAttack' || o.action.type === 'boostDamage') && o.action.boost === b)
-  const rawOf = (o: OptionView | undefined) => pd.options?.find((x) => x.id === o?.id)
+  let piece: Piece | undefined
+  let combinedOpts: OptionView[] = []
+  const rawOf =(o: OptionView | undefined) => pd.options?.find((x) => x.id === o?.id)
 
   switch (pd.kind) {
     case 'boostAttack': {
@@ -146,17 +149,8 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
       title = `Boost damage? ${who} → ${tgt}${pow ? `: ${pow}` : ''}${bits.length ? ` — ${bits.join('; ')}` : ''}`
       break
     }
-    case 'rollAnyway': {
-      const crit = ctx.odds?.pCrit
-      title = `Automatic hit on ${tgt}. Roll anyway for a critical?${crit !== undefined ? ` Crit chance ${pct(crit)}` : ''}`
-      break
-    }
-    case 'reroll': {
-      const dice = atk?.dieValues?.length ? `Rolled ${atk.dieValues.join(' + ')}` : 'Rolled'
-      const need = atk ? ` vs ${atk.hitTarget}` : ''
-      title = `Re-roll${ctx.data?.code ? ` (${niceName(String(ctx.data.code))})` : ''}? ${dice}${need}${ctx.odds?.pHit !== undefined ? ` — re-roll hits ${pct(ctx.odds.pHit)}` : ''}`
-      break
-    }
+    case 'rollAnyway': piece = rollAnywayPiece(state, pd); break
+    case 'reroll': piece = rerollPiece(state, pd); break
     case 'powerField': {
       const pts = Number(ctx.data?.points ?? 0)
       title = `Power Field: ${pts} damage incoming to ${who} (${ctx.modelId ? boxesLeft(state, ctx.modelId) : 0} boxes left)`
@@ -196,9 +190,9 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'chooseTurnOrder': title = 'You won the roll-off: who goes first?'; break
     case 'chooseEdge': title = 'Choose your table edge'; break
     case 'chooseBoxes': title = `${tgt || who}: choose where the damage lands`; break
-    case 'chooseGrid': title = `${who}: choose a damage grid`; break
-    case 'channel': title = `${who}: channel through an arc node?`; break
-    case 'combinedAttack': title = `${who}: combined attack`; break
+    case 'chooseGrid': piece = chooseGridPiece(state, pd); break
+    case 'channel': piece = channelPiece(state, pd); break
+    case 'combinedAttack': piece = combinedPickerPiece(state, pd); break
     case 'leech':
       title = `Leech fury: ${who}`
       lines.push('Take fury off warbeasts in your control range so they are less likely to frenzy. You can hold up to your ARC.')
@@ -223,10 +217,20 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'maintenanceOrder': title = 'Choose the order effects resolve'; break
     case 'chooseMovement': title = `${who}: choose Normal Movement`; form = 'panel'; break
     case 'chooseCombatAction': title = `${who}: choose a Combat Action`; form = 'panel'; break
-    case 'chooseAttack':
+    case 'chooseAttack': {
+      if (isOutOfActivationAttack(pd)) { piece = outOfActivationPiece(state, pd, options); break }
+      const extra = additionalAttackLine(options)
+      if (extra) lines.push(extra)
+      const combined = combinedButtons(state, options)
+      if (combined.length) {
+        // the activation panel does not draw combined attacks: give them dock buttons beside the panel list
+        lines.push('The other attacks are in the activation panel on the left.')
+        combinedOpts = combined
+      }
       title = effectCode ? `${codeWords(effectCode)}: ${who} may make one attack${pd.canPass ? ' (or pass)' : ''}` : `${who}: choose attacks, or end the activation`
       form = 'panel'
       break
+    }
     case 'deploy': title = 'Deployment: place your models in your zone'; form = 'board'; break
     case 'advanceDeploy': title = 'Advance Deployment: these models may start further forward'; form = 'board'; break
     case 'moveModel': {
@@ -248,12 +252,27 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     default: title = `${who}: ${niceName(pd.kind)}`
   }
   if (BOARD_KINDS.includes(pd.kind)) form = 'board'
-  if (PANEL_KINDS.includes(pd.kind)) options = []
-  const defaultId = YES_NO_KINDS.includes(pd.kind) ? (options.find((o) => o.tone === 'decline')?.id ?? options[0]?.id ?? null)
+  if (piece) {
+    const p = piece
+    title = p.title
+    if (p.lines) lines.push(...p.lines)
+    options = options.map((o) => ({
+      ...o,
+      ...(p.labels?.[o.id] ? { label: p.labels[o.id]! } : {}),
+      ...(p.notes?.[o.id] ? { note: p.notes[o.id]! } : {}),
+      ...(p.tones?.[o.id] ? { tone: p.tones[o.id]! } : {}),
+    }))
+  } else if (PANEL_KINDS.includes(pd.kind)) {
+    options = combinedOpts
+    if (combinedOpts.length) form = 'buttons'
+  }
+  const defaultId = piece && piece.defaultId !== undefined ? piece.defaultId
+    : combinedOpts.length ? null
+    : YES_NO_KINDS.includes(pd.kind) ? (options.find((o) => o.tone === 'decline')?.id ?? options[0]?.id ?? null)
     : form === 'buttons' && options.length === 1 ? options[0]!.id : null
   return {
     kind: pd.kind, testid: `prompt-${pd.kind}`, title, lines, options, defaultId, canPass: pd.canPass,
-    passLabel: pd.kind === 'moveModel' ? 'Skip this move' : pd.kind === 'allocateFocus' ? 'Keep all focus' : pd.kind === 'payUpkeep' ? 'Drop all' : pd.kind === 'triggerWindow' ? 'Skip' : pd.kind === 'advanceDeploy' ? 'Skip' : 'Pass',
+    passLabel: piece?.passLabel ?? (pd.kind === 'moveModel' ? 'Skip this move' : pd.kind === 'allocateFocus' ? 'Keep all focus' : pd.kind === 'payUpkeep' ? 'Drop all' : pd.kind === 'triggerWindow' ? 'Skip' : pd.kind === 'advanceDeploy' ? 'Skip' : 'Pass'),
     form,
   }
 }

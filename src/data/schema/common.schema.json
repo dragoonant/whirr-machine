@@ -55,7 +55,7 @@
     "Scope": {
       "type": "object", "additionalProperties": false, "required": ["who"],
       "properties": {
-        "who": { "enum": ["self", "target", "attacker", "unit", "controller", "warEngines", "warbeasts", "friendly", "enemy", "any", "point"] },
+        "who": { "enum": ["self", "target", "attacker", "unit", "controller", "warEngines", "warbeasts", "battlegroup", "friendly", "enemy", "any", "point"] },
         "range": { "oneOf": [ { "$ref": "#/$defs/Inches" }, { "enum": ["CTRL", "melee"] } ] },
         "filter": { "$ref": "#/$defs/Condition" },
         "count": { "type": "integer", "minimum": 1 }

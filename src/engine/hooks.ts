@@ -71,6 +71,7 @@ export type EffectNode =
 export interface ScopeNode {
   who: 'self' | 'target' | 'attacker' | 'unit' | 'controller' | 'warEngines' | 'friendly' | 'enemy' | 'any' | 'point'
     | 'warbeasts' // M9: beasts of the subject's battlegroup
+    | 'battlegroup' // M10: the subject itself and the beasts of its battlegroup (Admonition)
   range?: number | 'CTRL' | 'melee'
   filter?: ConditionNode
   count?: number

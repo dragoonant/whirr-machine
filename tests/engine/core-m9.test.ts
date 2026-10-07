@@ -253,18 +253,17 @@ describe('CORE-M9 Cryx seams', () => {
     expect(statOf(s, bundle, 'A:e0', 'DEF')).toBe(statOf(startList(CRY, 'core-21'), bundle, 'A:e0', 'DEF') - 4)
   })
 
-  it('CORE-022 optional activation.start abilities are offered: Soul Phase for one soul token', () => {
+  it('CORE-022 Soul Phase is an any-time self ability (not a start-of-activation prompt): offered at the move choice for one soul token', () => {
     let s = startList(CRY, 'core-22')
     const who = Object.values(s.models).find((m) => m.owner === 'A' && abilitiesOf(s, bundle, m.id).includes('cry.a.soul-phase'))!
     expect(who).toBeDefined()
-    s = withModel(s, who.id, { tokens: { soul: 1 } })
+    s = withModel(s, who.id, { tokens: { soul: 1 }, focus: 3 })
     let o = choose(asOut(s), who.unitId ?? who.id)
     expect(isIncorporeal(o.state, bundle, who.id)).toBe(false)
-    while (o.pending.kind === 'abilityChoice') {
-      expect(o.pending.context.data?.code).toBe('startTrigger')
-      const take = String(o.pending.context.data?.entry).includes('soul-phase')
-      o = send(o, { type: 'abilityChoice', optionId: take ? 'use' : 'skip' })
-    }
+    expect(o.pending.kind).toBe('chooseMovement')
+    const sp = o.pending.options!.find((x) => (x.action as { abilityId?: string }).abilityId === 'cry.a.soul-phase')
+    expect(sp).toBeDefined()
+    o = send(o, sp!.action as unknown as Record<string, unknown>)
     expect(isIncorporeal(o.state, bundle, who.id)).toBe(true) // incorporeal for the turn
     expect(o.state.models[who.id]!.tokens?.soul ?? 0).toBe(0)
   })
@@ -316,23 +315,7 @@ describe('CORE-M9 Menoth seams', () => {
     expect(moverInfo(s, bundle, 'A:e0').passIds).toContain('A:e2')
   })
 
-  it('CORE-031 Hex Hammer bites at spell declaration: an enemy casting in the caster\'s CTRL takes damage first', () => {
-    let s = startList(MEN, 'core-31')
-    s = park(s, ['A:L', 'B:L'])
-    s = place(s, 'A:L', { x: 0, z: -4 }); s = place(s, 'B:L', { x: 0, z: 2 })
-    s = applyEffect(s, { sourceId: 'men.s.hex-hammer', name: 'Hex Hammer', owner: 'A', casterId: 'A:L', targetIds: ['A:L'], mods: [], duration: 'round' }).state
-    s = { ...s, activePlayer: 'B', pending: { ...s.pending, kind: 'chooseActivation', player: 'B', id: 'd:901', options: [] }, decisionSeq: 901 }
-    const caster = bundle.byId['cyg.caine'] as unknown as { spells: string[] }
-    let o = choose(asOut(s), 'B:L')
-    o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'B:L' })
-    const cast = o.pending.options!.find((x) => x.action.type === 'castSpell')!
-    expect(cast).toBeDefined()
-    const before = (o.state.models['B:L']!.damage as { filled: number }).filled
-    o = send(o, cast.action as unknown as Record<string, unknown>)
-    const after = o.state.models['B:L']
-    expect((after!.damage as { filled: number }).filled).toBeGreaterThan(before)
-    void caster
-  })
+  // CORE-031 (Hex Hammer at spell.declare) is gone with the spell: Feora's card has no Hex Hammer, and menoth.ts no longer carries the hook.
 
   it('CORE-032 Conflagration, Feora offensive bolt, is offered against enemies in range and line of sight', () => {
     let s = startList(MEN, 'core-32')
@@ -398,12 +381,11 @@ describe('CORE-M9 shared mechanisms', () => {
     expect(c.pending?.kind).toBe('placeTroopers')
     expect(c.pending?.context.data?.code).toBe('ambush')
     const r = must(answerControlDecision(c.state, bundle, c.pending!.options![0]!.action))
-    // the five 40 mm Highwaymen cannot sit within the 3" unit spread of one another inside a 3" edge strip, so they stay
-    // waiting (RULING in needs-rules-check.md); the lone ambusher arrives
+    // the five 40 mm Highwaymen zig-zag inside the 3" strip with every pair within the unit spread: all of them arrive
     const placed = new Set(((c.pending!.options![0]!.action as { placements: { modelId: string }[] }).placements).map((p) => p.modelId))
-    expect(placed.size).toBeGreaterThan(0)
-    for (const id of waiting) expect(Boolean(r.state.models[id]!.offTable)).toBe(!placed.has(id))
-    expect(r.state.players.A.ambushIds.length).toBe(waiting.length - placed.size)
+    expect(placed.size).toBe(waiting.length)
+    for (const id of waiting) expect(r.state.models[id]!.offTable).toBeFalsy()
+    expect(r.state.players.A.ambushIds.length).toBe(0)
     expect(r.state.effects.some((e) => e.name === 'Ambush entry' && e.forbid?.includes('moveOrAct'))).toBe(true)
   })
 
