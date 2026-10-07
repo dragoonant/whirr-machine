@@ -11,9 +11,24 @@ export function humanSeat(): PlayerId | undefined {
   return humans.length === 1 ? humans[0] : undefined
 }
 
+/** Faction id to the music track of its battle theme. Cygnar and Khador have none and keep the shared battle loops. */
+export const FACTION_THEMES: Readonly<Record<string, string>> = {
+  trl: 'music-faction-trollbloods', cir: 'music-faction-circle', cry: 'music-faction-cryx', men: 'music-faction-menoth',
+}
+
+/** Point the music bus at the human player's faction theme (null when there is no single human or no theme). */
+export function syncBattleTheme(state: GameState | null = useGameStore.getState().state): void {
+  try {
+    const seat = humanSeat()
+    const faction = seat && state ? state.players?.[seat]?.faction : undefined
+    audio.music.setTheme((faction && FACTION_THEMES[faction]) || null)
+  } catch { /* sound must never break the game */ }
+}
+
 export function playBeatAudio(events: readonly GameEvent[], state: GameState | null): void {
   try {
     initAudio()
+    syncBattleTheme(state)
     if (audio.music.getScene() === 'none') audio.setMusicScene('battle')
     playEventSounds(audio, events, { perspective: humanSeat(), state })
   } catch { /* sound must never break the game */ }

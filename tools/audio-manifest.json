@@ -458,6 +458,288 @@
       "text": "Defeat. The field is lost."
     },
     {
+      "id": "bst-troll-step",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "A huge troll stomping one heavy footstep on hard ground: a loud booming thud with a crunch of gravel and a gruff snort, close and punchy, no music, no spoken words",
+      "durationSeconds": 1,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "bst-troll-grunt",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "A huge brutish troll giving a deep gravelly grunt and snort of aggression, low and chesty, one short vocalisation, no music, no spoken words",
+      "durationSeconds": 1.3,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "bst-warpwolf-step",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "Heavy pawed footfalls of a giant wolf bounding over rocky ground: quick thudding paws, claws scraping stone and a snuffling breath, no music, no spoken words",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "bst-warpwolf-howl",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "A giant monstrous wolf howling: a deep rising howl that cracks into a snarling growl, wild and menacing, no music, no spoken words",
+      "durationSeconds": 2.2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "bst-wold-grind",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "A living stone giant taking one step: grinding of boulders, a deep rumbling scrape of rock on rock and a heavy ground-shaking thud, no music, no spoken words",
+      "durationSeconds": 1.5,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "jack-bone-clatter",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "A skeletal bone-and-iron war machine stepping forward: loose bones and chains rattling, a dry clatter of metal plates and a creaking joint, no music, no spoken words",
+      "durationSeconds": 1.3,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "jack-crusader-step",
+      "kind": "sfx",
+      "group": "beast",
+      "prompt": "One heavy footfall of a massive armoured construct: a ringing iron clank on stone with a short hiss of vented pressure and a faint low chant-like hum, no music, no spoken words",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.6
+    },
+    {
+      "id": "melee-claws",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A beast raking its claws across armour: a fast tearing scrape of hard talons on metal plate with a sharp screech, no music, no spoken words",
+      "durationSeconds": 0.7,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-bite",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A huge beast jaws snapping shut on armour: a crunching bite of teeth on metal, a heavy snap and a low growl, no music, no spoken words",
+      "durationSeconds": 0.8,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-chain",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A spinning chain blade of whirring teeth biting into armour: a rasping buzz-saw grind with sparks and a rattle of chain links, no music, no spoken words",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "melee-hammer",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A massive iron war hammer smashing into a steel breastplate: a loud violent metallic clang with a crunch and a ringing tail, close and punchy, no music, no spoken words",
+      "durationSeconds": 0.9,
+      "promptInfluence": 0.7
+    },
+    {
+      "id": "melee-holy-flame",
+      "kind": "sfx",
+      "group": "melee",
+      "prompt": "A blazing blade igniting as it strikes: a bright hot whoosh of flame and a metallic ring as the burning weapon hits armour, no music, no spoken words",
+      "durationSeconds": 1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-soul-shot",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A necrotic spirit shot: a hollow ghostly whoosh, a dry rasping wail of trapped souls and a cold thudding impact, no music, no spoken words",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-flame-jet",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A jet of fire roaring from a flame projector: a pressurised ignition whump then a long fierce roaring blast of flame, no music, no spoken words",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "gun-holy-fire",
+      "kind": "sfx",
+      "group": "gun",
+      "prompt": "A blessed column of fire: a bright hot roar of flame with a rising airy shimmer and a crackling burn, almost solemn, no music, no spoken words",
+      "durationSeconds": 1.6,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "spell-arc-node",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "Arcane energy arcing between two points: a rising electric hum, a crackling snap as a bright bolt leaps across and a buzzing fade, no music, no spoken words",
+      "durationSeconds": 1.3,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "spell-choir-hum",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "A low reverent hum of an unseen choir with a shimmering warm resonance, a swelling sustained chord of voices without words that fades, no music, no spoken words",
+      "durationSeconds": 2.2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "spell-thorn",
+      "kind": "sfx",
+      "group": "spell",
+      "prompt": "Thick thorny roots bursting from the ground: a splintering crack of wood, a rustling lash and a dull thud, no music, no spoken words",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "fury-leach",
+      "kind": "sfx",
+      "group": "fury",
+      "prompt": "Fierce embers being drawn through the air: a hissing draw of glowing heat, crackling sparks streaming inward and a low smouldering inhale, no music, no spoken words",
+      "durationSeconds": 1.4,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "fury-force",
+      "kind": "sfx",
+      "group": "fury",
+      "prompt": "A beast straining against its own wild rage: a low strained snarl, a shuddering breath and a short surge of heat, no music, no spoken words",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "fury-frenzy",
+      "kind": "sfx",
+      "group": "fury",
+      "prompt": "A giant beast erupting into a feral frenzy: a savage furious roar that breaks into raging snarls and snapping jaws, no music, no spoken words",
+      "durationSeconds": 1.7,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "fury-transfer",
+      "kind": "sfx",
+      "group": "fury",
+      "prompt": "A magical transfer of pain: a quick rising whoosh of energy followed by a heavy muffled thud like a blow absorbed by a huge body, no music, no spoken words",
+      "durationSeconds": 1.1,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-trl",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A big sturdy warrior falling after a hit: a deep gruff groan, a heavy thud and a clatter of gear on rock, no words, no music, no spoken words",
+      "durationSeconds": 2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-cir",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A wild tribal warrior falling after a hit: a short sharp gasp, a rustle of leather and bone charms, a body dropping into leaves, no words, no music, no spoken words",
+      "durationSeconds": 2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-cry",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "An undead soldier collapsing: a dry rattling wheeze, bones and rusted metal clattering apart and a faint ghostly sigh, no words, no music, no spoken words",
+      "durationSeconds": 2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-men",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A zealous soldier in heavy armour falling: a strangled cry cut short, armour plates crashing on stone and a faint hiss of embers, no words, no music, no spoken words",
+      "durationSeconds": 2,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "death-beast",
+      "kind": "sfx",
+      "group": "death",
+      "prompt": "A huge beast dying: a deep anguished bellow that trails into a wheeze, a massive body collapsing with the ground shaking, no music, no spoken words",
+      "durationSeconds": 2.6,
+      "promptInfluence": 0.65
+    },
+    {
+      "id": "vo-faction-trl",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Trollbloods."
+    },
+    {
+      "id": "vo-faction-cir",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Circle Orboros."
+    },
+    {
+      "id": "vo-faction-cry",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Cryx."
+    },
+    {
+      "id": "vo-faction-men",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Protectorate of Menoth."
+    },
+    {
+      "id": "vo-leader-gunnbjorn",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Captain Gunnbjorn."
+    },
+    {
+      "id": "vo-leader-tanith",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Tanith."
+    },
+    {
+      "id": "vo-leader-nekane",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Nekane."
+    },
+    {
+      "id": "vo-leader-feora",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Feora."
+    },
+    {
+      "id": "vo-frenzy",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Frenzy!"
+    },
+    {
+      "id": "vo-fury-transferred",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Fury transferred!"
+    },
+    {
+      "id": "vo-warlock-down",
+      "kind": "voice",
+      "group": "voice",
+      "text": "Warlock down!"
+    },
+    {
       "id": "music-title-a",
       "kind": "music",
       "group": "music",
@@ -532,6 +814,38 @@
       "group": "music",
       "prompt": "Short defeat stinger, industrial-orchestral steampunk, heavy brass, low strings, anvil and taiko percussion, a rhythmic mechanical machine pulse, no vocals, no choir, mournful low brass and strings falling away, a final dull anvil toll, ends cleanly",
       "durationSeconds": 12
+    },
+    {
+      "id": "music-faction-trollbloods",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, tribal war drums, deep horns, heavy stomping rhythm, Celtic-tinged pipes and low whistle, earthy and brutish, no vocals, no choir, instrumental, medium-low intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 60,
+      "loop": true
+    },
+    {
+      "id": "music-faction-circle",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, primal druidic strings, low droning pads, wooden percussion and bone knocks, wolf-howl-like brass swells, wild and ancient, no vocals, no choir, instrumental, medium-low intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 60,
+      "loop": true
+    },
+    {
+      "id": "music-faction-cryx",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, dark industrial, detuned pipe organ, clanking bones and chains, sinister low synth pulses, cold and menacing, no vocals, no choir, instrumental, medium-low intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 60,
+      "loop": true
+    },
+    {
+      "id": "music-faction-menoth",
+      "kind": "music",
+      "group": "music",
+      "prompt": "Battle loop, sacred martial, massive brass and timpani, monastic organ, relentless march rhythm, zealous and solemn, no vocals, no choir, instrumental, medium-low intensity, steady driving rhythm with space for sound effects on top, steady dynamics, loops seamlessly",
+      "durationSeconds": 60,
+      "loop": true
     }
   ]
 }

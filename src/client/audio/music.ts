@@ -23,10 +23,20 @@ export class MusicDirector {
   private titleIndex = 0
   private wanted: MusicScene = 'none'
   private dead = new Set<string>()
+  private theme: string | null = null
 
   constructor(private host: () => MusicHost | null) {}
 
   getScene(): MusicScene { return this.wanted }
+
+  /** Faction battle theme (a looping music track id) played in the battle scene instead of the shared loops. Null, an unknown id or a dead file falls back to the loops. */
+  setTheme(id: string | null): void {
+    const next = id && AUDIO_ASSETS.some((a) => a.kind === 'music' && a.id === id) ? id : null
+    if (next === this.theme) return
+    this.theme = next
+    if (this.scene === 'battle' && this.wanted === 'battle') this.apply()
+  }
+  getTheme(): string | null { return this.theme }
 
   /** Ask for a scene. Remembered until the audio context is unlocked. Repeating the current scene is a no-op. */
   setScene(scene: MusicScene): void {
@@ -45,6 +55,7 @@ export class MusicDirector {
     this.scene = scene
     if (scene === 'none') { this.fadeOut(this.current, CROSSFADE_S); this.current = null; return }
     if (scene === 'title') this.start(this.candidates(ids('music-title'), this.titleIndex++), true, 'title')
+    else if (scene === 'battle' && this.theme && !this.dead.has(this.theme)) this.start([this.theme], true, 'battle')
     else if (scene === 'battle') this.start(this.candidates([...BATTLE_ORDER], this.battleIndex++), false, 'battle')
     else this.start(this.candidates(ids(scene === 'victory' ? 'music-victory' : 'music-defeat'), 0), false, scene)
   }
@@ -82,6 +93,7 @@ export class MusicDirector {
         this.current = null
         const rest = cands.slice(1)
         if (rest.length) this.start(rest, loop, scene)
+        else if (scene === 'battle') this.apply() // theme file missing: fall back to the shared battle loops
       }
     }
     el.addEventListener('error', fail, { once: true })

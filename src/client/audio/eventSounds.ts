@@ -3,6 +3,7 @@
 // Narrator lines are perspective-aware: "your turn" / "the enemy moves", victory / defeat for the human seat.
 import type { GameEvent, GameState, ModelState, PlayerId } from '../../engine/index'
 import { weaponFlavour } from '../weaponFlavour'
+import { AUDIO_BY_ID } from './manifest'
 import type { AudioManager, PlayOptions } from './manager'
 
 export interface EventSound { id: string; opts?: PlayOptions }
@@ -16,6 +17,36 @@ export interface SoundContext {
 
 const model = (ctx: SoundContext, id: string | undefined): ModelState | undefined => (id ? ctx.state?.models?.[id] : undefined)
 const heavy = (m: ModelState | undefined): boolean => m?.type === 'warEngine' || m?.type === 'battleEngine'
+const isBeast = (m: ModelState | undefined): boolean => m?.type === 'beast'
+const isWarlock = (m: ModelState | undefined): boolean => m?.type === 'leader' && m.fury !== undefined
+
+/** New factions with their own deaths and narrator lines (M9). Cygnar and Khador keep the original lines. */
+const NEW_FACTIONS = ['trl', 'cir', 'cry', 'men'] as const
+const DEATH_BY_FACTION: Record<string, string> = { trl: 'death-trl', cir: 'death-cir', cry: 'death-cry', men: 'death-men' }
+
+/** Narrator line naming a new faction ("Cryx."), for the army picker and the first turn. Null for the original two. */
+export function factionLine(factionId: string | undefined): string | null {
+  return factionId && (NEW_FACTIONS as readonly string[]).includes(factionId) ? `vo-faction-${factionId}` : null
+}
+
+/** Narrator line naming a new leader from its profile id ("trl.gunnbjorn"), for selection and the first activation. Null if none exists. */
+export function leaderLine(profileId: string | undefined): string | null {
+  const slug = profileId?.split('.')[1]
+  const id = slug ? `vo-leader-${slug}` : ''
+  return id && AUDIO_BY_ID[id] ? id : null
+}
+
+/** Footstep for a warbeast by faction and kind: troll thud, warpwolf paws, wold stone grind. */
+function beastStep(profileId: string): string {
+  if (profileId.startsWith('trl.')) return 'bst-troll-step'
+  if (profileId.startsWith('cir.')) return /wolf|pureblood/.test(profileId) ? 'bst-warpwolf-step' : 'bst-wold-grind'
+  return 'bst-troll-step'
+}
+
+/** Engine step by faction: Cryx bone-jacks clatter, Menoth crusaders clank, the rest are steam engines. */
+function engineStep(f: string): string {
+  return f === 'cry' ? 'jack-bone-clatter' : f === 'men' ? 'jack-crusader-step' : 'we-step'
+}
 
 function factionOf(ctx: SoundContext, m: ModelState | undefined): string {
   return (m && ctx.state?.players?.[m.owner]?.faction) || ''
@@ -25,7 +56,9 @@ function factionOf(ctx: SoundContext, m: ModelState | undefined): string {
 export function spellSound(spellId: string | undefined): string {
   const s = (spellId ?? '').toLowerCase()
   if (/frost|freez|ice|cold|chill|rime/.test(s)) return 'spell-frost'
-  if (/lightning|arc-?node|storm|shock|electr|thunder|arcing/.test(s)) return 'spell-lightning'
+  if (/arc-?node/.test(s)) return 'spell-arc-node'
+  if (/^men\.s\./.test(s) || /choir|hymn|litany/.test(s)) return 'spell-choir-hum'
+  if (/lightning|storm|shock|electr|thunder|arcing/.test(s)) return 'spell-lightning'
   return 'spell-arcane-bolt'
 }
 
@@ -53,16 +86,33 @@ export function soundsForEvent(e: GameEvent, ctx: SoundContext = {}): EventSound
   switch (e.type) {
     case 'RoundStarted':
       return [{ id: 'turn-bell' }, { id: 'vo-round-start', opts: VOICE }]
-    case 'TurnStarted':
+    case 'TurnStarted': {
+      // Round 1: a new faction is named instead of the generic turn line (one narrator line per beat plays)
+      const fl = ctx.state && ctx.state.round <= 1 ? factionLine(ctx.state.players?.[e.player]?.faction) : null
+      if (fl) return [{ id: fl, opts: VOICE }]
       if (!ctx.perspective) return []
       return [{ id: e.player === ctx.perspective ? 'vo-your-turn' : 'vo-enemy-turn', opts: VOICE }]
+    }
     case 'PhaseChanged':
       return e.phase === 'control' ? [{ id: 'vo-control-phase', opts: VOICE }] : []
-    case 'ActivationStarted':
-      return heavy(model(ctx, e.modelIds[0])) ? [{ id: 'we-steam-vent', opts: { volume: 0.7 } }] : []
+    case 'ActivationStarted': {
+      const m = model(ctx, e.modelIds[0])
+      if (isBeast(m)) {
+        // a growl on activation: trolls grunt, warpwolves howl, wolds stay silent
+        const id = m!.profileId.startsWith('trl.') ? 'bst-troll-grunt' : /wolf|pureblood/.test(m!.profileId) ? 'bst-warpwolf-howl' : ''
+        return id ? [{ id, opts: { volume: 0.7 } }] : []
+      }
+      if (m?.type === 'leader' && (ctx.state?.round ?? 9) <= 1) {
+        const l = leaderLine(m.profileId)
+        if (l) return [{ id: l, opts: VOICE }]
+      }
+      return heavy(m) ? [{ id: 'we-steam-vent', opts: { volume: 0.7 } }] : []
+    }
     case 'ModelMoved': {
       if (e.kind === 'deploy' || e.kind === 'place' || e.kind === 'push' || e.distance < 0.5) return []
-      return heavy(model(ctx, e.modelId)) ? [{ id: 'we-step' }] : [{ id: 'move-troops', opts: { volume: 0.8 } }]
+      const m = model(ctx, e.modelId)
+      if (isBeast(m)) return [{ id: beastStep(m!.profileId) }]
+      return heavy(m) ? [{ id: engineStep(factionOf(ctx, m)) }] : [{ id: 'move-troops', opts: { volume: 0.8 } }]
     }
     case 'DiceRolled': {
       if (e.purpose === 'tough') return [{ id: 'tough-save' }]
@@ -91,9 +141,11 @@ export function soundsForEvent(e: GameEvent, ctx: SoundContext = {}): EventSound
       const m = model(ctx, e.modelId)
       if (heavy(m)) return [{ id: e.to === 'disabled' ? 'sys-crippled' : 'we-wreck' }]
       if (e.to === 'disabled') return []
+      if (isBeast(m)) return [{ id: 'death-beast' }]
+      if (isWarlock(m)) return [{ id: 'death-caster' }, { id: 'vo-warlock-down', opts: VOICE }]
       if (m?.type === 'leader') return [{ id: 'death-caster' }]
       const f = factionOf(ctx, m)
-      return [{ id: f.startsWith('kha') ? 'death-kha' : 'death-cyg' }]
+      return [{ id: DEATH_BY_FACTION[f] ?? (f.startsWith('kha') ? 'death-kha' : 'death-cyg') }]
     }
     case 'SpellCast':
       return [{ id: spellSound(e.spellId) }]
@@ -103,6 +155,15 @@ export function soundsForEvent(e: GameEvent, ctx: SoundContext = {}): EventSound
       return [{ id: 'cloud-hiss' }]
     case 'ConditionAdded':
       return e.condition === 'fire' ? [{ id: 'fire-crackle' }] : e.condition === 'corrosion' ? [{ id: 'corrosion-sizzle' }] : []
+    // fury (M9): leech draw, forcing strain, frenzy roar, damage transfer
+    case 'FuryLeeched':
+      return e.sources.length > 0 || e.selfPoints > 0 ? [{ id: 'fury-leach' }] : []
+    case 'BeastForced':
+      return e.gained > 0 ? [{ id: 'fury-force', opts: { volume: 0.8 } }] : []
+    case 'Frenzied':
+      return [{ id: 'fury-frenzy' }, { id: 'vo-frenzy', opts: VOICE }]
+    case 'DamageTransferred':
+      return e.absorbed > 0 ? [{ id: 'fury-transfer' }, { id: 'vo-fury-transferred', opts: VOICE }] : []
     case 'ScenarioScored':
       return e.delta > 0 ? [{ id: 'vo-scenario-scored', opts: VOICE }] : []
     case 'GameEnded': {

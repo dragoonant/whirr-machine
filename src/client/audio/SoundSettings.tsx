@@ -2,6 +2,7 @@
 // (once the first click unlocks audio); leaving it (the game starts) hands over to the battle music.
 import { useEffect } from 'react'
 import { audio, initAudio } from './audio'
+import { syncBattleTheme } from './beatAudio'
 import { useAudioSettings } from './useAudioSettings'
 
 const BUSES = [['master', 'Master'], ['sfx', 'Effects'], ['voice', 'Narrator'], ['music', 'Music']] as const
@@ -11,7 +12,7 @@ export function SoundSettings() {
   useEffect(() => {
     initAudio()
     audio.setMusicScene('title')
-    return () => { audio.setMusicScene('battle') }
+    return () => { syncBattleTheme(); audio.setMusicScene('battle') }
   }, [])
   return (
     <section className="start-card start-sound" data-testid="sound-settings">
