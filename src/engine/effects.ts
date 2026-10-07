@@ -47,6 +47,13 @@ export interface EffectExtras {
   afterDamageAdvance?: number
   /** M10 (R1.12): the effect's owner may make the affected model reroll one of its own attack or damage rolls, once; the effect then ends (Marionette style) */
   rerollRight?: { roll: 'attack' | 'damage' | 'any' }
+  /** M13 (91 A.2): the grants of this effect are live only while the model passes the near-element test (scenario-rules nearScenarioElement); checked whenever they are read */
+  whileNear?: boolean
+  /** M13 Dig In: the effect ends for a model that leaves its spot in `anchors` (moved, pushed, placed) or becomes engaged (cards.ts endDigIns, called after each activation action) */
+  endsOn?: ('move' | 'engaged')[]
+  anchors?: Record<ModelId, { x: number; z: number }>
+  /** M13 Blessings of the Gods: weapon qualities the targets' weapons have while the effect lasts (read when an attack is declared); `magical` rides on the existing magicalWeapons plugin */
+  weaponGrants?: ('blessed' | 'magical')[]
 }
 /** Apply an effect. A same-named effect on the same targets never stacks: keep one instance with the later expiry (R9.10). */
 export function applyEffect(

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { GameState, PlayerId } from '../../engine/index'
-import { endWord, game, useBoardName, playerName, useGameResult, usePresentedState, usePresentedVp } from '../contract'
+import { endWord, game, modelName, useBoardName, playerName, useGameResult, usePresentedState, usePresentedVp } from '../contract'
+import { clockCauseLine } from '../clock'
 import { boardFor, boardFromUrl } from '../board/boards'
 import { getSettings } from '../store/settingsStore'
 import { useGameStore } from '../store/gameStore'
 import './hud.css'
+import { scoreSourceWords } from './cards/eventLines'
 import { getMatchStats, installMatchStats } from './matchStats'
 
 installMatchStats()
@@ -37,7 +39,7 @@ export function vpByRound(state: GameState): RoundVp[] {
     if (l.vp === 0) continue
     const r = rows.get(l.round) ?? { round: l.round, A: 0, B: 0, notes: [] }
     r[l.player] += l.vp
-    r.notes.push(`${playerName(state, l.player)} +${l.vp}: ${l.source.replace(/^controls\s+\S+/, 'held an objective')}`)
+    r.notes.push(`${playerName(state, l.player)} +${l.vp}: ${scoreSourceWords(state, l.source)}`)
     rows.set(l.round, r)
   }
   return [...rows.values()].sort((a, b) => a.round - b.round)
@@ -46,7 +48,7 @@ export function vpByRound(state: GameState): RoundVp[] {
 /** Start the same match again with a fresh seed (same lists, scenario, controllers and bot strength). */
 export function playAgain(state: GameState): string | null {
   const g = useGameStore.getState()
-  const rej = game.newGame({ scenario: state.setup.scenario, lists: { ...state.setup.lists }, controllers: { ...g.controllers }, bot: { tier: g.bot.tier }, board: boardFromUrl() ?? (boardFor(getSettings().battlefield)?.id ?? 'random') })
+  const rej = game.newGame({ scenario: state.setup.scenario, lists: { ...state.setup.lists }, controllers: { ...g.controllers }, bot: { tier: g.bot.tier }, board: boardFromUrl() ?? (boardFor(getSettings().battlefield)?.id ?? 'random'), ...(state.setup.cards ? { cards: state.setup.cards } : {}) })
   return rej ? rej.text : null
 }
 
@@ -65,12 +67,15 @@ export function GameOver({ onExit }: { onExit?: () => void }) {
   const sides: PlayerId[] = ['A', 'B']
   const rounds = vpByRound(state)
   const stats = getMatchStats()
+  const leaderOf = (p: PlayerId): string => { const l = Object.values(state.models).find((m) => m.owner === p && m.type === 'leader'); return l ? modelName(state, l.id) : playerName(state, p) }
+  const clockLine = clockCauseLine(state, (p) => playerName(state, p), leaderOf)
   return (
     <div className="hud-over" data-testid="gameover" role="dialog" aria-modal="true" aria-label="Game over">
       <div className="hud-card over-card">
         <h2 className="over-title" data-testid="gameover-result">{resultHeadline(state, result)}</h2>
         <p className="over-reason" data-testid="gameover-reason">{result.winner ? `Won by ${endWord(result.reason)}.` : `Ended on ${endWord(result.reason)}.`}</p>
         <p className="over-cause hud-dim" data-testid="gameover-cause">{causeText(result)}</p>
+        {clockLine && <p className="over-cause" data-testid="gameover-clock">{clockLine}</p>}
         <p className="over-cause hud-dim" data-testid="gameover-board">Battlefield: {boardName}</p>
         <div className="over-vp">
           {sides.map((p) => (

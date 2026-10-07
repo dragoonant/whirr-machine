@@ -3,7 +3,7 @@
 import { loadBundle } from '../data/index'
 import type { DataBundle, GameState, ModelId, ModelState, PlayerId, TerrainInstance, UnitId, Vec2 } from '../engine/index'
 import { query } from '../engine/index'
-import { circleOverlapsShape, terrainPieces } from '../engine/terrain'
+import { circleOverlapsShape, terrainPieces, terrainTraits } from '../engine/terrain'
 
 export const MM_PER_INCH = 25.4
 export const baseRadius = (mm: number): number => mm / MM_PER_INCH / 2
@@ -104,7 +104,23 @@ export function valueOf(s: GameState, m: ModelState): number {
 }
 
 // ---------- scenario elements ----------
-export interface Element { id: string; pos: Vec2; within: number; models: number; contestWithin: number; shape: Vec2[] | null; vp: number }
+/**
+ * One scenario element as the AI sees it. M13: read from the live state, not only the record: the attacker frame rotates positions,
+ * Wolves and Payload move objectives, a flag stands for the terrain piece it picked (or the 30 mm flag-obstruction), and a claimed or
+ * delivered element is gone. Caches are not holdable and are left out (see scenario.ts `cachesOf`).
+ */
+export interface Element {
+  id: string; pos: Vec2; within: number; models: number; contestWithin: number; shape: Vec2[] | null; vp: number
+  kind?: string
+  /** the colour's player (first = Attacker); null = neutral */
+  owner?: PlayerId | null
+  /** VP a turn this element is worth to each player under the scenario's rules (SR scoring rules); absent = `vp` for both */
+  vpFor?: Record<PlayerId, number>
+  /** a piece a base stands inside: holding and contesting need the base to overlap it */
+  area?: boolean
+  /** countdown tokens (High Stakes) or heel tokens (Wolves) */
+  tokens?: number
+}
 type WorldPoly = Vec2[]
 function polyOf(t: TerrainInstance): WorldPoly | null {
   const f = t.footprint as { rect?: { w: number; d: number }; polygon?: Vec2[]; circle?: { r: number } }
@@ -112,22 +128,49 @@ function polyOf(t: TerrainInstance): WorldPoly | null {
   const rot = (p: Vec2): Vec2 => ({ x: t.pos.x + p.x * c + p.z * sn, z: t.pos.z - p.x * sn + p.z * c })
   if (f.rect) { const hw = f.rect.w / 2, hd = f.rect.d / 2; return [{ x: -hw, z: -hd }, { x: hw, z: -hd }, { x: hw, z: hd }, { x: -hw, z: hd }].map(rot) }
   if (f.polygon) return f.polygon.map(rot)
+  if (f.circle) return Array.from({ length: 20 }, (_, i) => ({ x: t.pos.x + Math.cos((i / 20) * Math.PI * 2) * f.circle!.r, z: t.pos.z + Math.sin((i / 20) * Math.PI * 2) * f.circle!.r }))
   return null
 }
-const elemCache = new Map<string, Element[]>()
+interface ScoringRuleRec { kind: string; select?: { kinds?: string[]; owner?: string }; vp?: number; atLeast?: number }
+/** What one element is worth per turn to `p` under the scenario's scoring rules: control rules count in full, bonuses by their share. */
+function vpUnder(rules: ScoringRuleRec[], kind: string, owner: PlayerId | null, p: PlayerId): number {
+  let v = 0
+  for (const r of rules) {
+    const kinds = r.select?.kinds
+    if (!kinds || !kinds.includes(kind)) continue
+    const o = r.select?.owner ?? 'any'
+    const ok = o === 'any' || (o === 'own' && owner === p) || (o === 'opponent' && owner !== null && owner !== p) || (o === 'neutral' && owner === null)
+    if (!ok) continue
+    if (r.kind === 'control') v += r.vp ?? 0
+    else if (r.kind === 'countBonus') v += (r.vp ?? 0) / Math.max(1, r.atLeast ?? 1)
+    else if (r.kind === 'zeroTokenBonus') v += (r.vp ?? 0) * 0.3
+  }
+  return v
+}
+const elemCache = new WeakMap<object, { terrain: TerrainInstance[]; first: PlayerId | null; els: Element[] }>()
 export function elementsOf(s: GameState): Element[] {
-  const key = `${s.dataVersion}|${s.setup.scenario}|${s.terrain.length}`
-  const hit = elemCache.get(key)
-  if (hit) return hit
-  const def = rec(s.setup.scenario) as { elements?: { id: string; pos?: Vec2; terrain?: string; hold?: { within?: number; models?: number }; contest?: { within?: number }; vp?: { control?: number } }[] } | undefined
-  const out: Element[] = (def?.elements ?? []).map((e) => {
-    const t = e.terrain ? s.terrain.find((x) => x.id === e.terrain || x.pieceId === e.terrain) : undefined
-    return {
-      id: e.id, pos: e.pos ?? t?.pos ?? { x: 0, z: 0 }, within: e.hold?.within ?? 2, models: e.hold?.models ?? 1,
-      contestWithin: e.contest?.within ?? 2, shape: t ? polyOf(t) : null, vp: e.vp?.control ?? 1,
-    }
-  })
-  elemCache.set(key, out)
+  const hit = elemCache.get(s.scenario)
+  if (hit && hit.terrain === s.terrain && hit.first === (s.firstPlayer ?? null)) return hit.els
+  const def = rec(s.setup.scenario) as { scoring?: { rules?: ScoringRuleRec[] }; elements?: { id: string; kind?: string; owner?: string; pos?: Vec2; terrain?: string; hold?: { within?: number; models?: number; mode?: string }; contest?: { within?: number }; vp?: { control?: number } }[] } | undefined
+  const rules = def?.scoring?.rules ?? []
+  const first = s.firstPlayer ?? null
+  const out: Element[] = []
+  for (const e of def?.elements ?? []) {
+    const rt = s.scenario.elementState?.[e.id]
+    if (rt?.removed || e.kind === 'cache') continue
+    const owner: PlayerId | null = e.owner === 'A' || e.owner === 'B' ? e.owner : e.owner === 'first' ? first : e.owner === 'second' && first ? other(first) : null
+    const pieceId = e.kind === 'flag' ? (rt?.terrainId ?? undefined) : e.terrain
+    const t = pieceId ? s.terrain.find((x) => x.id === pieceId || x.pieceId === pieceId) : undefined
+    const shape = t ? polyOf(t) : null
+    const area = !!t && !!shape && e.hold?.mode === 'area' && terrainTraits(t).move === 'none'
+    const vpFor = rules.length && e.kind ? { A: vpUnder(rules, e.kind, owner, 'A'), B: vpUnder(rules, e.kind, owner, 'B') } : undefined
+    out.push({
+      id: e.id, pos: rt?.pos ?? e.pos ?? t?.pos ?? { x: 0, z: 0 }, within: area ? 0.05 : (e.hold?.within ?? 2), models: e.hold?.models ?? 1,
+      contestWithin: area ? 0.05 : (e.contest?.within ?? 2), shape, vp: vpFor ? Math.max(vpFor.A, vpFor.B) : (e.vp?.control ?? 1),
+      ...(e.kind ? { kind: e.kind } : {}), owner, ...(vpFor ? { vpFor } : {}), ...(area ? { area } : {}), ...(rt?.tokens !== undefined ? { tokens: rt.tokens } : {}),
+    })
+  }
+  elemCache.set(s.scenario, { terrain: s.terrain, first, els: out })
   return out
 }
 function segDist(a: Vec2, b: Vec2, p: Vec2): number {

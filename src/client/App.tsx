@@ -1,6 +1,7 @@
 // Routes start screen <-> game. Hooks: ?test=1 (window.__game), ?scenario=&lists=&seed= (skip start), ?gallery (figures).
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { bootClient, game, setupFromUrl, useHasGame } from './contract'
+import { restoreClock } from './clock'
 import { CoachLine } from './ui/help/CoachLine'
 import { HelpButton, HelpOverlay } from './ui/help/HelpGuide'
 import { StartScreen } from './ui/start/StartScreen'
@@ -40,7 +41,11 @@ function GameApp() {
   const ongoing = useGameStore((g) => !!g.state && g.state.phase !== 'ended')
   const continueLabel = ongoing ? 'Continue game' : game.hasSave() ? 'Continue saved game' : null
   const resume = (): string | null => {
-    if (!ongoing) { const rej = game.load(); if (rej) return rej.text }
+    if (!ongoing) {
+      const rej = game.load()
+      if (rej) return rej.text
+      restoreClock() // the saved clock, paused until the first decision shows; a save with no clock plays untimed
+    }
     setScreen('game')
     return null
   }

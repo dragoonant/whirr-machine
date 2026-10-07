@@ -8,6 +8,8 @@
     "id": { "$ref": "common.schema.json#/$defs/Id" },
     "name": { "$ref": "common.schema.json#/$defs/Name" },
     "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "source": { "type": "string", "maxLength": 120, "description": "M13: where the layout came from (for example SR p5)." },
+    "frame": { "enum": ["attacker"], "description": "M13 (91 SR5): element positions are in the attacker frame (Attacker at the bottom of the map, +z toward the Defender, +x to the Attacker's right); the engine rotates them to the real table edges after the edge choice. Omitted = the table frame (+z toward player B)." },
     "levels": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["recon", "skirmish", "pitched", "grandMelee"] } },
     "table": {
       "type": "object", "additionalProperties": false, "required": ["w", "d"],
@@ -28,10 +30,26 @@
       "properties": {
         "fromRound": { "type": "integer", "minimum": 1 },
         "fromPlayer": { "enum": ["first", "second"] },
-        "winMargin": { "type": "integer", "minimum": 1 },
+        "winMargin": { "type": "integer", "minimum": 0, "description": "Lead needed for a scenario victory; 0 = no lead-by-N win (Payload)." },
         "winOnOpponentTurnOnly": { "type": "boolean", "default": true },
-        "leaderPresence": { "type": "integer", "default": 10, "description": "Tiebreak scenario-presence value of a Leader." }
+        "leaderPresence": { "type": "integer", "default": 10, "description": "Tiebreak scenario-presence value of a Leader." },
+        "rules": {
+          "type": "array", "items": { "$ref": "#/$defs/ScoringRule" },
+          "description": "M13 (91 B.3): scoring rules evaluated at every scoring point for each player, in order. When present, each element's vp.control is ignored."
+        }
       }
+    },
+    "setup": {
+      "type": "object", "additionalProperties": false,
+      "description": "M13 (91 SR10): before deployment each player picks a terrain piece within flagRadius of a flag; the pick order follows flagPickOrder.",
+      "properties": {
+        "flagRadius": { "$ref": "common.schema.json#/$defs/Inches", "default": 5 },
+        "flagPickOrder": { "enum": ["attackerFirst"], "default": "attackerFirst" }
+      }
+    },
+    "special": {
+      "type": "array", "items": { "$ref": "#/$defs/SpecialRule" },
+      "description": "M13 (91 B.3): scenario-specific rules the engine implements by kind."
     },
     "killBox": {
       "type": "object", "additionalProperties": false, "required": ["fromRound", "depth", "vp"],
@@ -57,18 +75,21 @@
       "items": { "type": "object", "additionalProperties": false, "required": ["id", "kind", "pos", "hold", "vp"],
         "properties": {
           "id": { "$ref": "common.schema.json#/$defs/Id" },
-          "kind": { "enum": ["objective50", "objective40", "flag", "scenarioTerrain", "zone"] },
+          "kind": { "enum": ["objective50", "objective40", "flag", "scenarioTerrain", "zone", "cache"], "description": "cache (M13, 91 SR11): a 30 mm cache; only the opponent's can be scored." },
           "pos": { "$ref": "common.schema.json#/$defs/Vec2" },
           "zone": { "$ref": "common.schema.json#/$defs/Id" },
           "terrain": { "$ref": "common.schema.json#/$defs/Id", "description": "scenarioTerrain: the layout piece id." },
-          "owner": { "enum": ["A", "B", "first", "second"], "description": "Friendly-only elements." },
+          "owner": { "enum": ["A", "B", "first", "second"], "description": "The element's colour: first = Attacker (red), second = Defender (blue); omitted = neutral. It never limits who can secure an objective; it matters only where a rule says own or opponent's." },
           "hold": {
             "type": "object", "additionalProperties": false, "required": ["within"],
             "properties": {
               "within": { "$ref": "common.schema.json#/$defs/Inches" },
               "models": { "type": "integer", "minimum": 1, "default": 1 },
               "eligible": { "type": "array", "uniqueItems": true,
-                "items": { "enum": ["leader", "warEngine", "battleEngine", "solo", "unitAll", "any"] } }
+                "items": { "enum": ["leader", "warEngine", "battleEngine", "solo", "unitAll", "any"] } },
+              "single": { "type": "array", "uniqueItems": true, "items": { "enum": ["leader", "warEngine", "battleEngine", "solo", "trooper", "unit", "beast"] },
+                "description": "M13 (91 SR9): one model of these kinds is enough even when models is greater than 1." },
+              "mode": { "enum": ["within", "area"], "description": "M13: area = inside the piece's area for area scenario terrain; within = within the distance of the piece or element." }
             }
           },
           "contest": {
@@ -91,5 +112,54 @@
         } }
     },
     "terrainLayout": { "$ref": "common.schema.json#/$defs/Id" }
+  },
+  "$defs": {
+    "ElementSelect": {
+      "type": "object", "additionalProperties": false, "required": ["kinds"],
+      "properties": {
+        "kinds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["objective50", "objective40", "flag", "scenarioTerrain", "cache"] },
+          "description": "flag stands for the scenario terrain chosen by that flag." },
+        "owner": { "enum": ["any", "own", "opponent", "neutral"], "default": "any", "description": "own and opponent are relative to the scoring player's colour." }
+      }
+    },
+    "ScoringRule": {
+      "description": "91 B.3 scoring vocabulary.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "select", "vp"],
+          "properties": { "kind": { "const": "control" }, "select": { "$ref": "#/$defs/ElementSelect" }, "vp": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "select", "atLeast", "vp"],
+          "properties": { "kind": { "const": "countBonus" }, "select": { "$ref": "#/$defs/ElementSelect" }, "atLeast": { "type": "integer", "minimum": 1 }, "vp": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "select", "vp"],
+          "properties": { "kind": { "const": "zeroTokenBonus" }, "select": { "$ref": "#/$defs/ElementSelect" }, "vp": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "vp"],
+          "properties": { "kind": { "const": "cache" }, "vp": { "type": "integer", "minimum": 0 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "vp"],
+          "properties": { "kind": { "const": "tokenRace" }, "vp": { "type": "integer", "minimum": 0 }, "third": { "type": "integer", "minimum": 1, "default": 3 } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "vp"],
+          "properties": { "kind": { "const": "delivered" }, "vp": { "type": "integer", "minimum": 0 } } }
+      ]
+    },
+    "SpecialRule": {
+      "description": "91 B.3 specials.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "within", "bases", "of"],
+          "properties": { "kind": { "const": "earthworks" }, "within": { "$ref": "common.schema.json#/$defs/Inches" },
+            "bases": { "type": "array", "minItems": 1, "items": { "$ref": "common.schema.json#/$defs/BaseMm" } }, "warriorOnly": { "type": "boolean", "default": true },
+            "of": { "type": "array", "minItems": 1, "items": { "enum": ["objective50", "objective40"] } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "fromRound", "step"],
+          "properties": { "kind": { "const": "killBoxGrowth" }, "fromRound": { "type": "integer", "minimum": 1 }, "fromPlayer": { "enum": ["first", "second"], "default": "first" }, "step": { "$ref": "common.schema.json#/$defs/Inches" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "on", "toward", "move"],
+          "properties": { "kind": { "const": "heelTokens" }, "on": { "enum": ["objective40"] }, "toward": { "enum": ["objective50"] }, "move": { "$ref": "common.schema.json#/$defs/Inches" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "tokens", "on", "d3", "blast"],
+          "properties": { "kind": { "const": "fuse" }, "tokens": { "type": "integer", "minimum": 1 },
+            "on": { "type": "array", "minItems": 1, "items": { "enum": ["flag", "objective50"] } },
+            "d3": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string", "pattern": "^(flag:(first|second)|objective50)$" }, "description": "What a d3 roll of 1, 2, 3 burns when nobody secures the 50." },
+            "blast": { "type": "object", "additionalProperties": false, "required": ["pow", "within"],
+              "properties": { "pow": { "type": "integer", "minimum": 1 }, "damageType": { "$ref": "common.schema.json#/$defs/DamageType" }, "within": { "$ref": "common.schema.json#/$defs/Inches" } } } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "move", "perOther", "toward", "haul"],
+          "properties": { "kind": { "const": "payload" }, "move": { "$ref": "common.schema.json#/$defs/Inches" }, "perOther": { "$ref": "common.schema.json#/$defs/Inches" },
+            "toward": { "enum": ["opponentFlagTerrain"] }, "haul": { "$ref": "common.schema.json#/$defs/Inches" } } }
+      ]
+    }
   }
 }

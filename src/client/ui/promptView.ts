@@ -5,6 +5,8 @@ import { engineDescribe, modelName, queryDistance, queryThreat } from '../contra
 import { dataText } from './data'
 import { MOVE_LABEL, boxesLeft, niceName, oddsText, pct } from './format'
 import { costWords, isForcedCost, payWords } from './fury/furyView'
+import { elementLabel, humanSide } from './cards/scenarioView'
+import { haulPiece, isHaul, isScenarioCode, scenarioPiece } from './cards/scenarioPrompts'
 import { additionalAttackLine, channelPiece, chooseGridPiece, combinedButtons, combinedPickerPiece, isOutOfActivationAttack, outOfActivationPiece, rerollPiece, rollAnywayPiece, type Piece } from './prompts/decisions'
 
 export type Tone = 'primary' | 'neutral' | 'decline'
@@ -21,6 +23,8 @@ export interface OptionView {
   action: Action
   /** Model to highlight on the board while the button is hovered. */
   hoverId?: ModelId
+  /** Terrain piece to light up on the board while the button is hovered (a flag's terrain pick). */
+  terrainId?: Id
 }
 /** Which widget renders the prompt body. */
 export type PromptForm = 'buttons' | 'panel' | 'board' | 'upkeep' | 'shake' | 'allocate' | 'leech' | 'transfer' | 'vent'
@@ -67,6 +71,7 @@ export function actionLabel(a: Action, state: GameState | null): string {
 /** Swap raw model and unit ids inside engine-written labels for display names. */
 export const humanize = (state: GameState, text: string): string =>
   text.replace(/\b[AB]:[\w.]*\w/g, (id) => (state.models[id] || state.units[id] ? modelName(state, id) : id))
+    .replace(/\bel-[\w-]*\w/g, (id) => elementLabel(state, id, humanSide())) // scenario elements: caches, flags, objectives
 
 function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxModel?: ModelId, slam = false): OptionView {
   const a = o.action
@@ -172,6 +177,8 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     }
     case 'abilityChoice': {
       const code = String(ctx.data?.code ?? '')
+      const sp = isScenarioCode(code) ? scenarioPiece(state, pd) : null
+      if (sp) { piece = sp; break }
       if (code === 'powerfulAttack') {
         const o = ctx.odds
         title = `Powerful Attack: ${who} → ${tgt}${o?.pHit !== undefined && o.pHitBoosted !== undefined ? ` — ${pct(o.pHit)} → ${pct(o.pHitBoosted)}` : ''}`
@@ -235,6 +242,7 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'advanceDeploy': title = 'Advance Deployment: these models may start further forward'; form = 'board'; break
     case 'moveModel': {
       const trig = ctx.data?.trigger as { abilityId?: string; dist?: number; mode?: string } | undefined
+      if (isHaul(pd)) { piece = haulPiece(state, pd); form = 'buttons'; break }
       if (ctx.data?.mode === 'trample') {
         title = `Trample: ${who} moves in a straight line through the enemy`
       } else if (trig?.abilityId) {
@@ -251,7 +259,7 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'placeTroopers': title = `${who}: place the troopers around the unit`; form = 'board'; break
     default: title = `${who}: ${niceName(pd.kind)}`
   }
-  if (BOARD_KINDS.includes(pd.kind)) form = 'board'
+  if (BOARD_KINDS.includes(pd.kind) && !isHaul(pd)) form = 'board'
   if (piece) {
     const p = piece
     title = p.title
@@ -266,6 +274,9 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     options = combinedOpts
     if (combinedOpts.length) form = 'buttons'
   }
+  if (pd.kind === 'abilityChoice' && ctx.data?.code === 'flagTerrain') options = options.map((o) => ({ ...o, terrainId: o.id.split('|')[1] ?? o.id }))
+  // a command card can be played at this point of an activation: say where the Cards button is
+  if (PANEL_KINDS.includes(pd.kind) && (pd.options ?? []).some((o) => o.action.type === 'playCard')) lines.push('A command card can be played now: open Cards in the top bar.')
   const defaultId = piece && piece.defaultId !== undefined ? piece.defaultId
     : combinedOpts.length ? null
     : YES_NO_KINDS.includes(pd.kind) ? (options.find((o) => o.tone === 'decline')?.id ?? options[0]?.id ?? null)

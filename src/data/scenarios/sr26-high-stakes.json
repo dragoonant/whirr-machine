@@ -1,0 +1,250 @@
+{
+  "id": "scn-sr26-high-stakes",
+  "name": "High Stakes",
+  "text": "The flag terrain and the central objective each carry a five-token fuse. Before scoring, whoever holds the centre burns d3 tokens off one of them; if nobody does, a d3 roll picks one to lose a token. A spent fuse blasts everything in or beside it, friend and foe. Objectives and terrain score a point each, plus one more for the centre and the terrain while their fuse is spent.",
+  "source": "SR p9",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective40"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "flag"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "zeroTokenBonus",
+        "select": {
+          "kinds": [
+            "objective50",
+            "flag"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "setup": {
+    "flagRadius": 5,
+    "flagPickOrder": "attackerFirst"
+  },
+  "special": [
+    {
+      "kind": "fuse",
+      "tokens": 5,
+      "on": [
+        "flag",
+        "objective50"
+      ],
+      "d3": [
+        "flag:second",
+        "flag:first",
+        "objective50"
+      ],
+      "blast": {
+        "pow": 14,
+        "damageType": "magical",
+        "within": 3
+      }
+    }
+  ],
+  "elements": [
+    {
+      "id": "el-flag-blue",
+      "kind": "flag",
+      "owner": "second",
+      "pos": {
+        "x": -15.41,
+        "z": 0.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50",
+      "kind": "objective50",
+      "pos": {
+        "x": 0.02,
+        "z": 1.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-blue",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": 9.21,
+        "z": 6.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": -9.21,
+        "z": -5.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-red",
+      "kind": "flag",
+      "owner": "first",
+      "pos": {
+        "x": 15.41,
+        "z": -3.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-2-48"
+}

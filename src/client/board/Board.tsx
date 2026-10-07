@@ -16,7 +16,7 @@ import { Clouds } from '../vfx/Clouds'
 import { Pops } from '../vfx/Pops'
 import { CameraRig } from './Camera'
 import { GEO, lineMaterial } from '../figures/kit'
-import { SIDE_COLOURS, THEME, cameraPose, killBoxViews, proxyAttrs, tableOf } from './layout'
+import { THEME, cameraPose, proxyAttrs, tableOf } from './layout'
 import { Surface } from './Surface'
 import { loadBoardsJson, useBoard } from './boardStore'
 import { TerrainTooltip } from './TerrainTooltip'
@@ -24,7 +24,8 @@ import { FpsMeter, FpsProbe, fpsEnabled } from './FpsMeter'
 import { markShadowsDirty, takeShadowsDirty, useAmbientFrames } from './frameRate'
 import * as THREE from 'three'
 import { Terrain } from './Terrain'
-import { ScenarioElements, Zones } from './Zones'
+import { Zones } from './Zones'
+import { ElementProxies, KillBoxLines, ScenarioElements } from './scenarioElements'
 import type { PlayerId } from '../../engine/index'
 
 /** Requests a frame whenever anything the board shows changes (frameloop="demand"). */
@@ -100,38 +101,6 @@ function Figures(): ReactElement {
   return <>{ids.map((id) => <Figure key={id} id={id} upkeepSides={upkeep[id] ?? EMPTY} target={targets.has(id)} />)}</>
 }
 const EMPTY: PlayerId[] = []
-
-/**
- * Kill Box line (SK12): a thin strip at the inner border of the strip along each player's own edge (12 inches deep on
- * Skirmish). Faint until the scenario's first Kill Box turn, brighter after, and the strip tints while that player's Leader
- * stands inside it. Recon scenarios have no Kill Box and draw nothing.
- */
-export function KillBoxLines(): ReactElement | null {
-  const state = usePresentedState()
-  const views = useMemo(() => killBoxViews(state), [state?.players.A.edge, state?.players.B.edge, state?.scenario.id, state?.scenario.killBox.A, state?.scenario.killBox.B, state?.round, state?.activePlayer, state?.firstPlayer]) // eslint-disable-line react-hooks/exhaustive-deps
-  if (!views.length) return null
-  return (
-    <group>
-      {views.map((v) => {
-        const [a, b] = v.line
-        const cx = (a.x + b.x) / 2, cz = (a.z + b.z) / 2
-        const alongX = Math.abs(b.x - a.x) > Math.abs(b.z - a.z)
-        const len = Math.hypot(b.x - a.x, b.z - a.z)
-        const colour = SIDE_COLOURS[v.player].zone
-        return (
-          <group key={v.player}>
-            <mesh geometry={GEO.plane} material={lineMaterial(`kb:${colour}`, colour, v.active ? 0.7 : 0.25)} rotation={[-Math.PI / 2, 0, 0]}
-              position={[cx, 0.05, cz]} scale={alongX ? [len, 0.14, 1] : [0.14, len, 1]} />
-            {v.occupied && (
-              <mesh geometry={GEO.plane} material={lineMaterial('kb:occupied', '#e2735b', 0.16)} rotation={[-Math.PI / 2, 0, 0]}
-                position={[(v.rect.x0 + v.rect.x1) / 2, 0.025, (v.rect.z0 + v.rect.z1) / 2]} scale={[v.rect.x1 - v.rect.x0, v.rect.z1 - v.rect.z0, 1]} />
-            )}
-          </group>
-        )
-      })}
-    </group>
-  )
-}
 
 /** Lighting from the board: key colour and intensity, a sky/ground ambient pair and a fog that matches the background. */
 function Lights({ shadows, span }: { shadows: boolean; span: number }): ReactElement {
@@ -222,6 +191,7 @@ export function Battlefield(): ReactElement {
         <Scene />
       </Canvas>
       <ModelProxies />
+      <ElementProxies />
       <TerrainTooltip />
       {fpsEnabled() && <FpsMeter />}
     </div>

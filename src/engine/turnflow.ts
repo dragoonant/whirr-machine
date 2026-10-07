@@ -9,7 +9,10 @@ import { answerControl, controlLegalActions, runControl } from './phases/control
 import { runMaintenance, startOfTurn } from './phases/maintenance'
 import { answerAvengingForce, isAvengingDecision, runAvengingForce, settleAfterAttack } from './phases/avenging'
 import { handleActivationAction } from './phases/activation'
-import { endOfTurnScoring, scenarioDef } from './scenario'
+import { answerMaintenanceCard, isMaintenanceCardDecision } from './cards'
+import { clockOutAtTurnEnd, isClockedOut } from './clock'
+import { scenarioDef } from './scenario'
+import { answerScoringStep, isScoringDecision, scenarioTurnStart, scoreTurnEndStep, type ScoringOut } from './scenario-rules'
 import type { DataBundle, DecisionOption, GameState, ModelId, PlayerId, UnitId } from './types'
 
 // ---------- activation list ----------
@@ -49,8 +52,10 @@ export function raiseChooseActivation(state: GameState, events: GameEvent[] = []
 /** Begin the turn of state.activePlayer: start effects, Maintenance, Control, then the first decision. */
 export function beginTurn(state: GameState, bundle: DataBundle, lead: GameEvent[] = []): FlowOut {
   const events: GameEvent[] = [...lead, { type: 'TurnStarted', round: state.round, turn: state.turn, player: state.activePlayer }]
-  const st = startOfTurn({ ...state, window: 'turn.start' }); events.push(...st.events)
+  const sr = scenarioTurnStart(state, bundle); events.push(...sr.events) // M13: the Kill Box grows (Wolves at Our Heels)
+  const st = startOfTurn({ ...sr.state, window: 'turn.start' }); events.push(...st.events)
   const m = runMaintenance(st.state, bundle); events.push(...m.events)
+  if (m.pending) return { state: m.state, events, pending: m.pending } // M13: the Maintenance card prompt (Put the Fires Out)
   if (m.ended) return gameOver(m.state, events)
   // out-of-activation Maintenance effects (Avenging Force), then Control
   return runAvengingForce(m.state, bundle, events, (s, ev) => enterControl(s, bundle, ev))
@@ -68,6 +73,14 @@ export function enterControl(state: GameState, bundle: DataBundle, lead: GameEve
 export const isMaintenanceDecision = (state: GameState): boolean => state.phase === 'maintenance' && state.pending.kind !== 'gameOver'
 export function answerMaintenanceDecision(state: GameState, bundle: DataBundle, a: Action): FlowResult {
   const next = (s: GameState, ev: GameEvent[]) => enterControl(s, bundle, ev)
+  if (isMaintenanceCardDecision(state)) { // M13 (91 A.5): the card prompt answered (a play or a pass): carry on with the rest of Maintenance
+    const c = answerMaintenanceCard(state, bundle, a as Parameters<typeof answerMaintenanceCard>[2])
+    if ('rejection' in c) return c
+    const m = runMaintenance(c.state, bundle, { cardsDone: true })
+    const events = [...c.events, ...m.events]
+    if (m.ended) return gameOver(m.state, events)
+    return runAvengingForce(m.state, bundle, events, next)
+  }
   if (isAvengingDecision(state)) return answerAvengingForce(state, bundle, a, next)
   const r = handleActivationAction(state, bundle, a)
   if (!r) return reject('E_WRONG_DECISION', `${a.type} does not answer a ${state.pending.kind} decision`)
@@ -84,10 +97,16 @@ export function startGameplay(state: GameState, bundle: DataBundle, lead: GameEv
 
 // ---------- control answers ----------
 export function isControlDecision(state: GameState): boolean {
+  if (isScoringDecision(state)) return true // M13: the end-of-turn scoring decisions (fuse, heel tokens, Payload) are answered through the same flow door
   return state.phase === 'control' && (['allocateFocus', 'payUpkeep', 'shake', 'leech', 'adjustFury'].includes(state.pending.kind) || (state.pending.kind === 'placeTroopers' && state.pending.context.data?.code === 'ambush') || (state.pending.kind === 'moveModel' && state.pending.context.data?.code === 'apparition'))
 }
 /** Apply an allocate / upkeep / shake answer and carry on to the next decision or the Activation Phase. */
 export function answerControlDecision(state: GameState, bundle: DataBundle, action: Action): FlowResult {
+  if (isScoringDecision(state)) {
+    const sr = answerScoringStep(state, bundle, action)
+    if ('rejection' in sr) return sr
+    return afterScoring(sr, bundle, state, [])
+  }
   const r = answerControl(state, bundle, action)
   if ('rejection' in r) return r
   if (r.pending) return { state: r.state, events: r.events, pending: r.pending }
@@ -107,13 +126,30 @@ export function validateEndTurn(state: GameState, a: EndTurnAction): { code: 'E_
 export function endTurn(state: GameState, bundle: DataBundle, a: EndTurnAction): FlowResult {
   const bad = validateEndTurn(state, a)
   if (bad) return reject(bad.code, bad.message)
-  const def = scenarioDef(bundle, state.scenario.id)
   const events: GameEvent[] = []
   let s = state
   const ex = expireEffects(s, 'turnEnd'); s = ex.state; events.push(...ex.events)
-  const sc = endOfTurnScoring(s, bundle); s = sc.state; events.push(...sc.events)
-  events.push({ type: 'TurnEnded', round: state.round, turn: state.turn, player: state.activePlayer })
-  if (sc.ended) return gameOver(s, events)
+  return afterScoring(scoreTurnEndStep(s, bundle), bundle, state, events)
+}
+
+/** Carry on from the scoring step machine: raise its next decision (the turn stays open), or close the turn. */
+function afterScoring(sc: ScoringOut, bundle: DataBundle, turn: GameState, lead: GameEvent[]): FlowResult {
+  const events = [...lead, ...sc.events]
+  if (sc.pending && !sc.ended) return { state: sc.state, events, pending: sc.pending }
+  return finishTurn(sc.state, bundle, turn, events, sc.ended)
+}
+
+/** After scoring: TurnEnded, the game-over and clock-out checks (91 C.2), then the next turn or round. */
+function finishTurn(state: GameState, bundle: DataBundle, turn: GameState, events: GameEvent[], ended: boolean): FlowResult {
+  const def = scenarioDef(bundle, state.scenario.id)
+  let s = state
+  events.push({ type: 'TurnEnded', round: turn.round, turn: turn.turn, player: turn.activePlayer })
+  if (ended) return gameOver(s, events)
+  // M13 (91 C.2): a player whose clock ran out on this turn is judged now, after normal scoring and the lead-by-3 check
+  if (isClockedOut(s)) {
+    const c = clockOutAtTurnEnd(s, bundle)
+    if (c) return 'rejection' in c ? c : { ...c, events: [...events, ...c.events] }
+  }
 
   const first = s.firstPlayer ?? 'A'
   if (s.activePlayer === first) {

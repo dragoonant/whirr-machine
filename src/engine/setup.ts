@@ -15,6 +15,8 @@ import { initialScenarioState, scenarioAnchorProblems, scenarioDef, type Scenari
 import { startGameplay } from './turnflow'
 import { handleActivationAction, raisePrey } from './phases/activation'
 import { ambushGroups } from './ambush'
+import { initialCards, validateCardHands } from './cards'
+import { answerFlagPick, applyAttackerFrame, flagPickStep, initScenarioRuntime, isFlagPick } from './scenario-rules'
 import type {
   DamageState, DataBundle, DecisionOption, EdgeId, GameSetup, GameState, ModelId, ModelState, ModelType, PlayerId, PlayerState,
   Rejection, TerrainInstance, UnitState, Vec2,
@@ -152,6 +154,12 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
     if (levels[0] !== levels[1]) return reject('E_BAD_SETUP', `the lists are different game sizes (${levels[0]} and ${levels[1]})`)
     const scLevels = sc.levels as string[] | undefined
     if (scLevels && !scLevels.includes(levels[0]!)) return reject('E_BAD_SETUP', `scenario '${setup.scenario}' is not played at ${levels[0]} (only ${scLevels.join(', ')})`)
+    // M13 (91 A.4): command-card hands. Omitted, a missing player or [] means no cards, so a game without them never reaches cards.ts
+    const hasCards = (p: PlayerId): boolean => (setup.cards?.[p]?.length ?? 0) > 0
+    if (hasCards('A') || hasCards('B')) {
+      const bad = validateCardHands(setup, bundle)
+      if (bad) return { rejection: bad }
+    }
     const armies = { A: buildArmy('A', setup.lists.A, bundle), B: buildArmy('B', setup.lists.B, bundle) }
     const layoutId = setup.layout ?? (sc.terrainLayout as string)
     const anchorProblems = scenarioAnchorProblems(bundle, setup.scenario, layoutId)
@@ -160,7 +168,8 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
     const players = Object.fromEntries((['A', 'B'] as PlayerId[]).map((p) => {
       const list = bundle.byId[setup.lists[p]] as Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
       const ps: PlayerState = { id: p, faction: list.faction, listId: list.id, leaderId: armies[p].leaderId, edge: null, deployed: false, ambushIds: [] }
-      return [p, ps]
+      const cards = hasCards(p) ? initialCards(setup, p) : undefined
+      return [p, cards ? { ...ps, cards } : ps]
     })) as Record<PlayerId, PlayerState>
     const models = Object.fromEntries([...armies.A.models, ...armies.B.models].map((m) => [m.id, m]))
     const units = Object.fromEntries([...armies.A.units, ...armies.B.units].map((u) => [u.id, u]))
@@ -170,12 +179,13 @@ export function createInitialState(setup: GameSetup, seed: string, bundle: DataB
       clouds: [], effects: [], upkeeps: {}, attack: null, activation: null, scenario: initialScenarioState(def),
       pending: placeholderPending(), decisionSeq: 0, log: [],
     }
+    s = initScenarioRuntime(s, bundle) // M13: countdown tokens of a fuse scenario (absent for every other scenario)
     const events: GameEvent[] = [{ type: 'GameCreated', seed, dataVersion: bundle.version }]
 
     if (FIXED_SETUP_SCENARIOS.includes(setup.scenario)) {
       s = { ...s, firstPlayer: 'A', activePlayer: 'A', players: { A: { ...s.players.A, edge: 'north' }, B: { ...s.players.B, edge: 'south' } } }
       events.push({ type: 'TurnOrderChosen', chooser: 'A', firstPlayer: 'A' }, { type: 'EdgeChosen', player: 'A', edge: 'north' }, { type: 'EdgeChosen', player: 'B', edge: 'south' })
-      return enterDeployment(s, bundle, events)
+      return enterDeployment(applyAttackerFrame(s, bundle), bundle, events)
     }
 
     // R11.4: both roll a d6, ties reroll; the high roller picks first or second
@@ -303,7 +313,11 @@ function raiseDeploy(state: GameState, bundle: DataBundle, step: { player: Playe
 }
 
 /** Move to the next deployment step, or to round 1 when every model is down. */
-function enterDeployment(state: GameState, bundle: DataBundle, lead: GameEvent[]): FlowOut {
+function enterDeployment(state0: GameState, bundle: DataBundle, lead0: GameEvent[]): FlowOut {
+  // M13 (SR3, SR10): the flags pick their terrain before anyone deploys, Attacker first
+  const fp = flagPickStep(state0, bundle)
+  if (fp.pending) return { state: fp.state, events: [...lead0, ...fp.events], pending: fp.pending }
+  const state = fp.state, lead = [...lead0, ...fp.events]
   const step = nextDeployStep(state, bundle)
   if (step) { const o = raiseDeploy(state, bundle, step); return { ...o, events: [...lead, ...o.events] } }
   // Granted: Prey (Black 13th): each such unit picks an enemy model after deployment, before round 1
@@ -360,6 +374,7 @@ export function validateSetupAction(state: GameState, bundle: DataBundle, a: Act
       return ['north', 'south', 'east', 'west'].includes(a.edge) ? null : { code: 'E_BAD_PAYLOAD', message: 'unknown edge' }
     case 'deploy': case 'advanceDeploy': return validateDeployment(state, bundle, a)
     case 'abilityChoice': {
+      if (isFlagPick(state)) return state.pending.options?.some((o) => o.id === a.optionId) ? null : { code: 'E_NOT_AN_OPTION', message: `${a.optionId} is not one of the offered pieces` }
       if (!isPreyChoice(state)) return { code: 'E_WRONG_DECISION', message: 'no setup choice is open' }
       const r = handleActivationAction(state, bundle, a)
       return r && 'rejection' in r ? r.rejection : null
@@ -369,13 +384,18 @@ export function validateSetupAction(state: GameState, bundle: DataBundle, a: Act
 }
 
 const isPreyChoice = (state: GameState): boolean => state.phase === 'deploy' && state.pending.kind === 'abilityChoice' && state.pending.context.data?.code === 'prey'
-export const isSetupDecision = (state: GameState): boolean => ['chooseTurnOrder', 'chooseEdge', 'deploy', 'advanceDeploy'].includes(state.pending.kind) || isPreyChoice(state)
+export const isSetupDecision = (state: GameState): boolean => ['chooseTurnOrder', 'chooseEdge', 'deploy', 'advanceDeploy'].includes(state.pending.kind) || isPreyChoice(state) || isFlagPick(state)
 
 export function answerSetup(state: GameState, bundle: DataBundle, a: Action): FlowResult {
   const bad = validateSetupAction(state, bundle, a)
   if (bad) return { rejection: bad }
   if (a.type === 'chooseTurnOrder') return applyTurnOrder(state, a)
   if (a.type === 'chooseEdge') return applyEdge(state, bundle, a)
+  if (a.type === 'abilityChoice' && isFlagPick(state)) {
+    const r = answerFlagPick(state, bundle, a)
+    if ('rejection' in r) return r
+    return enterDeployment(r.state, bundle, r.events)
+  }
   if (a.type === 'abilityChoice') {
     const r = handleActivationAction(state, bundle, a)
     if (!r) return reject('E_WRONG_DECISION', 'no setup choice is open')
@@ -419,7 +439,7 @@ function applyEdge(state: GameState, bundle: DataBundle, a: ChooseEdgeAction): F
   const first = otherPlayer(second)
   const players = { ...state.players, [second]: { ...state.players[second], edge: a.edge }, [first]: { ...state.players[first], edge: OPPOSITE[a.edge] } } as Record<PlayerId, PlayerState>
   const events: GameEvent[] = [{ type: 'EdgeChosen', player: second, edge: a.edge }, { type: 'EdgeChosen', player: first, edge: OPPOSITE[a.edge] }]
-  return enterDeployment({ ...state, players }, bundle, events)
+  return enterDeployment(applyAttackerFrame({ ...state, players }, bundle), bundle, events) // M13 (SR5): the attacker-frame elements turn to the real edges
 }
 
 export function setupLegalActions(state: GameState): Action[] {

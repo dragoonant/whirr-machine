@@ -1,0 +1,252 @@
+{
+  "id": "scn-sr26-payload",
+  "name": "Payload",
+  "text": "Haul your own big objective across the table. Objectives and terrain score a point each. After scoring, a side holding its big objective may move it toward the enemy terrain, three inches plus one per other objective held. Park it in or against that terrain for three points, and it leaves play. After moving it on your turn, a Cohort model may rush five inches toward it. No early lead win.",
+  "source": "SR p11",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 0,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "flag"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "delivered",
+        "vp": 3
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "setup": {
+    "flagRadius": 5,
+    "flagPickOrder": "attackerFirst"
+  },
+  "special": [
+    {
+      "kind": "payload",
+      "move": 3,
+      "perOther": 1,
+      "toward": "opponentFlagTerrain",
+      "haul": 5
+    }
+  ],
+  "elements": [
+    {
+      "id": "el-50-blue",
+      "kind": "objective50",
+      "owner": "second",
+      "pos": {
+        "x": -14.02,
+        "z": 7.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-blue",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": -3.21,
+        "z": 3.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-blue",
+      "kind": "flag",
+      "owner": "second",
+      "pos": {
+        "x": 7.41,
+        "z": 4.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-red",
+      "kind": "flag",
+      "owner": "first",
+      "pos": {
+        "x": -7.41,
+        "z": -4.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": 3.21,
+        "z": -3.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-red",
+      "kind": "objective50",
+      "owner": "first",
+      "pos": {
+        "x": 14.02,
+        "z": -7.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-1-48"
+}

@@ -5,7 +5,7 @@ import { isLayout48Id, layout48Source, scaleLayout48 } from './layout48'
 import { RAW } from './raw'
 
 export type RecordType =
-  | 'ability' | 'weapon' | 'spell' | 'feat' | 'faction' | 'model' | 'list' | 'scenario' | 'terrain' | 'terrain-layout' | 'board' | 'systems'
+  | 'ability' | 'weapon' | 'spell' | 'feat' | 'faction' | 'model' | 'list' | 'scenario' | 'terrain' | 'terrain-layout' | 'board' | 'systems' | 'card'
 
 export interface TypedRecord extends DataRecord { recordType: RecordType }
 

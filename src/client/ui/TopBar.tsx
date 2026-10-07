@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameState, PlayerId } from '../../engine/index'
 import {
-  dataName, game, playerName, queryControl, useBanner, useBoardName, usePresentationIdle, usePresentedState, usePresentedVp, usePrompt, usePromptLegal, useSettings,
+  dataName, game, playerName, queryControl, useBanner, useBoardName, useControllers, usePresentationIdle, usePresentedState, usePresentedVp, usePrompt, usePromptLegal, useSettings,
 } from '../contract'
+import { ClockBar } from '../clock'
+import { CardsButton } from './cards/HandTray'
+import { elementInfos } from './cards/scenarioView'
+
 import './hud.css'
+import './cards/cards.css'
 import { PHASE_WORD, windowWord } from './format'
 import { isLegal } from './promptView'
 import { PaintButton } from './PaintPanel'
@@ -66,6 +71,32 @@ function EndButtons() {
   )
 }
 
+/** The chips for the scenario elements: who holds each one (engine verdict), with tokens and the Kill Box depth where the scenario has them. */
+function ElementChips({ state, control }: { state: GameState; control: Control | null }) {
+  const controllers = useControllers()
+  const human: PlayerId = controllers.A === 'bot' && controllers.B === 'human' ? 'B' : 'A'
+  const infos = useMemo(() => elementInfos(state, human), [state, human])
+  const els = control?.elements ?? {}
+  const rows = infos.filter((i) => !i.removed && els[i.id])
+  if (rows.length === 0 && control?.killBoxDepth === undefined) return null
+  return (
+    <div className="top-elements hud-card" data-testid="hud-control" title={dataName(state.scenario.id)}>
+      {rows.map((i) => {
+        const c = els[i.id]!
+        return (
+          <span key={i.id} className={`chip ctl ${c.contested ? 'ctl-contested' : c.controller ? `ctl-${c.controller}` : ''}`} data-testid={`hud-control-${i.id}`} data-controller={c.controller ?? ''} data-contested={c.contested ? 'true' : 'false'} data-tokens={i.tokens ?? ''}
+            title={`${i.label}: ${controlLabel(state, c)}. ${c.reason}`}>
+            <span className="ctl-dot" aria-hidden="true" />
+            {i.short}
+            {i.tokens !== null && <span className="ctl-tokens" data-testid={`hud-tokens-${i.id}`}>{i.tokens}</span>}
+          </span>
+        )
+      })}
+      {control?.killBoxDepth !== undefined && control.killBoxActive && <span className="chip" data-testid="hud-killbox-depth" title="How deep the Kill Box is this turn, for both players">{`Kill Box ${control.killBoxDepth}"`}</span>}
+    </div>
+  )
+}
+
 export function TopBar() {
   const state = usePresentedState()
   const vp = usePresentedVp()
@@ -74,7 +105,6 @@ export function TopBar() {
   const boardName = useBoardName()
   if (!state) return null
   const ended = state.phase === 'ended'
-  const els = Object.entries(control?.elements ?? {})
   const sides: PlayerId[] = ['A', 'B']
   return (
     <>
@@ -104,21 +134,15 @@ export function TopBar() {
             )
           })}
         </div>
-        {els.length > 0 && (
-          <div className="top-control" data-testid="hud-control" title={dataName(state.scenario.id)}>
-            {els.map(([id, c], i) => (
-              <span key={id} className={`chip ctl ${c.contested ? 'ctl-contested' : c.controller ? `ctl-${c.controller}` : ''}`} data-testid={`hud-control-${id}`} data-controller={c.controller ?? ''} data-contested={c.contested ? 'true' : 'false'} title={c.reason}>
-                {`Objective ${i + 1}: ${controlLabel(state, c)}`}
-              </span>
-            ))}
-          </div>
-        )}
+        <ClockBar />
         <div className="top-tools">
           <EndButtons />
+          <CardsButton />
           <PaintButton />
           <SettingsButton />
         </div>
       </header>
+      <ElementChips state={state} control={control} />
     </>
   )
 }

@@ -31,6 +31,8 @@ export interface NewGameOptions {
   layout?: Id
   /** Battlefield: a board id ('board.bog') or short name, or 'random' / omitted to pick from the seed (70 section E). */
   board?: Id | 'random'
+  /** M13 (91 A.4): command-card hands by player; omitted or a missing player = no cards. */
+  cards?: Partial<Record<PlayerId, Id[]>>
 }
 
 export interface BotConfig { tier: BotTier; seed: string }
@@ -175,7 +177,7 @@ function startFrom(state: GameState, events: readonly GameEvent[], controllers: 
 // ---------- public actions ----------
 /** Start a new game. Returns the rejection when the engine refuses the setup (the old game stays). */
 export function newGame(opts: NewGameOptions): ClientRejection | null {
-  const setup: GameSetup = { scenario: opts.scenario, lists: { ...opts.lists }, ...(opts.layout ? { layout: opts.layout } : {}), ...(opts.names ? { names: opts.names } : {}) }
+  const setup: GameSetup = { scenario: opts.scenario, lists: { ...opts.lists }, ...(opts.layout ? { layout: opts.layout } : {}), ...(opts.names ? { names: opts.names } : {}), ...(opts.cards ? { cards: opts.cards } : {}) }
   const seed = opts.seed ?? randomSeed()
   const pick = pickBattlefield({ seed, scenario: opts.scenario, board: opts.board })
   const build = (layout?: Id) => {

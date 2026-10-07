@@ -14,6 +14,7 @@ import { distToShape, worldShape, type WorldShape } from '../terrain'
 import { blastSet } from '../phases/activation'
 import type { DataBundle, EffectInstance, GameState, ModelId, ModelState, StatMod, TerrainInstance, Vec2 } from '../types'
 import { statOf } from '../code-hooks'
+import { scenarioCover } from '../scenario-rules'
 import type { GameEvent } from '../events'
 
 const bundleOf = (c: HookContext): DataBundle => (c as HookContext & { bundle: DataBundle }).bundle
@@ -245,6 +246,7 @@ const grantCover = (c: HookContext): HookResult => {
 export function hasGrantedCover(state: GameState, b: DataBundle, id: ModelId): boolean {
   const m = state.models[id]
   if (!alive(m)) return false
+  if (scenarioCover(state, b, id).cover) return true // M13: Earthworks (Trench Warfare) grants cover through the same door
   return state.effects.some((e) => {
     if (!(e as EffectInstance & EffectExtras).grantedCover || !e.casterId) return false
     const caster = state.models[e.casterId]

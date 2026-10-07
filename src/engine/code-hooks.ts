@@ -4,6 +4,8 @@ import type { GameEvent } from './events'
 import type { CodeHookRegistry, ConditionNode, EffectNode, HookContext, HookResult } from './hooks'
 import { computeStat } from './dice'
 import { effectsOn, hasCondition, type EffectExtras } from './effects'
+import { effectDormant, hasCardGrant } from './card-effects'
+import { scenarioCover } from './scenario-rules'
 import { baseRadius, dist, isOnTable } from './geometry'
 import { modelDistance, within } from './measure'
 import { insideCoverOf, terrainResistance } from './terrain'
@@ -262,7 +264,10 @@ export function abilitiesOf(state: GameState, b: DataBundle, id: ModelId): Id[] 
   if (!me) return []
   const out = new Set<Id>(abilityList(b, me))
   // abilities an effect granted for a while (Soul Phase, Blood Shadow, Fight to the Last): the effect carries `grants`
-  for (const e of effectsOn(state, id)) for (const g of ((e as EffectInstance & { grants?: Id[] }).grants ?? [])) out.add(g)
+  for (const e of effectsOn(state, id)) {
+    if (effectDormant(state, b, e, id)) continue // M13 cards: Sturdy, Dig In and Set Defense work only near a scenario element
+    for (const g of ((e as EffectInstance & { grants?: Id[] }).grants ?? [])) out.add(g)
+  }
   // a faction record that only carries the marker flag (cir.a.cavalry, men.a.arc-node) gets the shared core ability the rule runs through
   for (const a of [...out]) for (const n of (rec(b, a).effect ?? []) as Rec[]) {
     const g = n.code === 'coreFlag' ? FLAG_CORE_ABILITY[n.params?.flag as string] : undefined
@@ -313,7 +318,7 @@ export function losOptsFor(state: GameState, b: DataBundle, viewerId: ModelId, e
   // Marshal [X] (menoth): friendly models of that kind never block the viewer's LOS
   const marshal = v && !seeThroughFriends ? new Set(marshalPassIds(state, b, viewerId)) : null
   return {
-    skipModel: (m) => isIncorporeal(state, b, m.id) || (seeThroughFriends && !!v && m.owner === v.owner) || (!!marshal && marshal.has(m.id)),
+    skipModel: (m) => isIncorporeal(state, b, m.id) || hasCardGrant(state, b, m.id, 'core.a.dig-in') || (seeThroughFriends && !!v && m.owner === v.owner) || (!!marshal && marshal.has(m.id)),
     ignoreForest: hasIgnore(state, b, viewerId, 'forest'), ...extra,
   }
 }
@@ -390,6 +395,8 @@ export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, 
   }
   // Warping Winds (Wind Weaver, Sky Shaker): Faction models of the carrier's side within 3" resist blast, live as the models move
   if (types.includes('blast') && warpingWindsBlastResist(state, b, id)) return true
+  if (types.includes('blast') && scenarioCover(state, b, id).resistBlast) return true // M13: Earthworks (Trench Warfare)
+  if (types.includes('blast') && hasCardGrant(state, b, id, 'core.a.dig-in')) return true // M13 Duck and Cover: Dig In grants Resistance: Blast
   // resistance an effect carries (Fortification: Resistance: Blast) in its `resist` list; the fixed-target Warping Winds snapshots give way to the live check above
   for (const e of effectsOn(state, id)) {
     if (WARPING_WINDS_SNAPSHOTS.has(e.name)) continue
@@ -415,6 +422,7 @@ export function lookups(state: GameState, b: DataBundle): HitLookups {
     tough: (id) => hasFlag(state, b, id, 'tough') && !effectsOn(state, id).some((e) => e.forbid?.includes('tough')),
     noKnockdown: (id) => cannotKnockDown(state, b, id),
     immovable: (id) => isIncorporeal(state, b, id),
+    sturdy: (id) => hasCardGrant(state, b, id, 'core.a.sturdy'),
     noMundaneDamage: (id) => isIncorporeal(state, b, id),
   }
 }

@@ -1,0 +1,55 @@
+/* Command cards tray and the scenario chips in the top bar (WP5, 91 A and B). Scoped under .hud like hud.css. */
+.cards-wrap { position: relative; display: flex; align-items: center; }
+.cards-btn { flex-direction: row; align-items: center; gap: 6px; padding: 3px 9px; }
+.cards-btn .btn-note { font-size: 10px; opacity: 0.85; }
+.cards-ready { animation: cards-pulse 2s ease-in-out infinite; }
+@keyframes cards-pulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 8px 1px color-mix(in srgb, var(--accent) 60%, transparent); } }
+.cards-tray {
+  position: absolute; top: calc(100% + 10px); right: 0; width: min(780px, calc(100vw - 40px)); max-height: calc(100vh - 110px); overflow-y: auto; z-index: 30;
+}
+.cards-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cards-head .hud-h { margin: 0; }
+.cards-seg { display: inline-flex; gap: 4px; margin-left: auto; }
+.cards-seg button { cursor: pointer; background: #272b33; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; }
+.cards-seg button.on { background: var(--accent); color: #14161a; border-color: var(--accent); }
+.cards-rule { margin: 4px 0 2px; font-size: 11px; }
+.hand-title { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.hand-tiles { list-style: none; margin: 6px 0 2px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 8px; }
+.card-tile { display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; background: #181b20; border: 1px solid var(--line); border-top: 3px solid var(--accent2); border-radius: 6px; min-width: 0; }
+.card-tile.is-playable { border-top-color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+.card-tile.is-played { opacity: 0.5; }
+.card-name { margin: 0; font-size: 13px; line-height: 1.2; display: flex; justify-content: space-between; gap: 6px; }
+.card-cost { font-size: 10px; color: var(--accent2); font-weight: 600; }
+.card-text { margin: 0; font-size: 11px; line-height: 1.35; color: var(--dim); }
+.card-opts { display: flex; flex-direction: column; gap: 4px; margin-top: auto; }
+.card-opt { width: 100%; min-height: 26px; }
+.card-opt .btn-note { font-size: 10px; }
+.card-state { margin: 0; font-size: 10px; color: var(--dim); }
+.card-when { font-style: italic; }
+
+/* scenario chips in the top bar: the elements of a Steamroller scenario */
+.top-control { max-width: 100%; }
+.ctl { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.ctl-dot { width: 8px; height: 8px; border-radius: 50%; background: #5d6068; flex: none; }
+.ctl-A .ctl-dot { background: var(--sideA); } .ctl-B .ctl-dot { background: var(--sideB); } .ctl-contested .ctl-dot { background: var(--accent); }
+.ctl-gone { opacity: 0.45; text-decoration: line-through; }
+.ctl-tokens { font-weight: 700; color: var(--accent); }
+.top-extra { display: flex; gap: 6px; align-items: center; }
+
+/* the scenario elements strip: a slim card under the top bar, centred between the rails, so a scenario with eight elements never wraps the bar */
+.top-elements { position: absolute; top: 58px; left: 50%; transform: translateX(-50%); z-index: 11; display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - var(--rail-l) - var(--rail-r) - 48px); padding: 3px 8px; border-radius: 14px; pointer-events: none; }
+.top-elements .chip { pointer-events: auto; }
+
+/* the top bar stays on one line at 1100px and wider, even with the clock chips and the Cards button */
+@media (min-width: 1100px) {
+  .hud-top { flex-wrap: nowrap; gap: 8px; }
+  .hud-top .top-phase { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+  .hud-top .top-turn { flex: none; gap: 8px; }
+  .hud-top .top-vp { flex: none; gap: 8px; }
+  .hud-top .vp { padding: 1px 5px; }
+  .hud-top .vp-name { max-width: 84px; }
+  .hud-top .clock-bar { gap: 5px; }
+}
+.top-elements { gap: 4px; padding: 2px 7px; }
+.top-elements .chip { font-size: 10.5px; padding: 1px 6px; }
+.top-elements .ctl { gap: 3px; }

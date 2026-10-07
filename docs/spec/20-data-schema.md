@@ -11,6 +11,7 @@ words** (≤400 chars); names of units, weapons and abilities may match the card
 |---|---|---|
 | `src/data/core/abilities.json` | `ability[]` | shared rules as abilities (Dual Attack, Tough, Stealth, Gunfighter, Pathfinder, Arc Node, …) |
 | `src/data/core/qualities.json` | `ability[]` (kind `weaponQuality`) | weapon qualities (Blessed, Buckler, Shield, Magical, Pistol, Throw, Continuous Fire/Corrosion, …) |
+| `src/data/core/cards.json` | `card[]` | M13 (91 A): command cards, the five universal ones and army cards; ids `core.card.*` and `<f>.card.*` |
 | `src/data/core/systems.json` | `{[letter]: System}` | default system letters: L, R, H → `crippleLocation`; M → `crippleMovement`; C → `crippleCortex`; A → `crippleArcNode` |
 | `src/data/factions/<id>/faction.json` | `faction` | name, `appVersion`, palette, `sourceHues`, faction rules |
 | `src/data/factions/<id>/raw.ts` | | the faction's `RawGroup`: static imports of its own JSON files (and its lists), by record kind; `src/data/raw.ts` spreads every group, so a faction builder edits only this file |
@@ -27,7 +28,7 @@ words** (≤400 chars); names of units, weapons and abilities may match the card
 | `src/data/index.ts` | | builds `DataBundle {byId, version}`; throws on duplicate id or dangling ref; `version` = content hash |
 
 Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<model>`, `<f>.w.<weapon>`,
-`<f>.a.<ability>`, `<f>.s.<spell>`, `<f>.f.<feat>`, `<f>.l.<list>`; core: `core.a.*`, `core.q.*`; `scn.*`,
+`<f>.a.<ability>`, `<f>.s.<spell>`, `<f>.f.<feat>`, `<f>.l.<list>`, `<f>.card.<card>`; core: `core.a.*`, `core.q.*`, `core.card.*`; `scn.*`,
 `terrain.*`, `layout.*`.
 
 ## 2. validate-data checks beyond JSON Schema
@@ -139,26 +140,30 @@ the same in fury). `rng "SP<n>"` is a spray spell (Venom).
 - **Faction** `{id, name, short?, appVersion, source?, keywords?, abilities?, palette:{primary, secondary, metal?, base?, ui?},
   sourceHues:[h1,h2], marking?}`. `appVersion` records the card/app version the numbers came from (balance updates
   Jan 2026 and mid-2026).
+- **Card** (M13, `card.schema.json`) `{id, name, text, cost, fa?, armies[], timing: activationAny|activationStart|maintenanceStart, subject: modelOrUnit|model|warriorModelOrUnit, options:[{id, label, text, code}], source?, verify?}`. `armies` empty = universal; `code` names the engine effect in `src/engine/cards.ts`. Names are the real ones, every text is ours.
 - **List** `{id, name, faction, level: recon|skirmish|pitched|grandMelee, points?, leader, entries:[{ref?, profile, size?,
-  loadout?: {slot: option}, attachments?, advanceDeploy?, controller?}], source?}`. `controller` (beasts only) is the `ref` of the
+  loadout?: {slot: option}, attachments?, advanceDeploy?, controller?}], army?, source?}`. `army` (M13) = the army or sub-faction id the list belongs to (for example `kha.old-umbrey`); it decides which army command cards the list may take, and a list without it takes universal cards only. `controller` (beasts only) is the `ref` of the
   warlock entry whose battlegroup the beast joins; omitted = the Leader's battlegroup.
 
 ## 7. Scenarios (`scenario.schema.json`), inches, origin = table centre, +z toward player B
 
 | Field | Meaning |
 |---|---|
+| `source`, `frame` | M13: where the layout came from (`SR p5`); `frame: "attacker"` = positions are in the Steamroller attacker frame (Attacker at the bottom, +z toward the Defender), rotated to the real edges after the edge choice (91 SR5) |
 | `table` | `{w, d}`: 36×36 (Recon) or 48×48 |
 | `deployment` | `{first, second, advance=3, unitSpread=3}`: depth from own edge (QS 36": 6 / 11; core default 48": 7 / 10, p117) |
 | `rounds` | 7 |
-| `scoring` | `{fromRound, fromPlayer, winMargin: 3, winOnOpponentTurnOnly: true, leaderPresence: 10}`; S1 (QS) `1/first`, SR scenarios `2/second` (11 V1.2) |
+| `scoring` | `{fromRound, fromPlayer, winMargin: 3, winOnOpponentTurnOnly: true, leaderPresence: 10, rules?}`; S1 (QS) `1/first`, SR scenarios `2/second` (11 V1.2); `winMargin: 0` = no lead-by-3 win (Payload). `rules[]` (M13, 91 B.3) = `control {select, vp}`, `countBonus {select, atLeast, vp}`, `zeroTokenBonus {select, vp}`, `cache {vp}`, `tokenRace {vp, third}`, `delivered {vp}` with `select: {kinds[], owner: any\|own\|opponent\|neutral}`; when present each element's `vp.control` is ignored |
+| `setup` | M13: `{flagRadius: 5, flagPickOrder: "attackerFirst"}`: before deployment each player picks a terrain piece within `flagRadius` of a flag (91 SR10) |
+| `special[]` | M13 (91 B.3): `earthworks {within, bases[], warriorOnly, of[]}`, `killBoxGrowth {fromRound, fromPlayer, step}`, `heelTokens {on, toward, move}`, `fuse {tokens, on[], d3[], blast}`, `payload {move, perOther, toward, haul}` |
 | `killBox` | `{fromRound: 2, fromPlayer: 'first', depth: 12, vp: 2}` |
 | `zones[]` | `{id, pos, rot?, shape}` |
-| `elements[]` | `{id, kind: objective50\|objective40\|flag\|scenarioTerrain\|zone, pos, zone?, terrain?, owner?, hold:{within, models, eligible[]}, contest:{within, excludes[]}, vp:{control?, dominate?, destroy?}}` |
+| `elements[]` | `{id, kind: objective50\|objective40\|flag\|scenarioTerrain\|zone\|cache, pos, zone?, terrain?, owner?, hold:{within, models, eligible[], single?, mode?}, contest:{within, excludes[]}, vp:{control?, dominate?, destroy?}}`. `owner` = the element's colour (`first` Attacker red, `second` Defender blue; omitted = neutral); it limits nobody, it matters only where a rule says own or opponent's. `hold.single` (M13) = kinds for which one model is enough though `models` > 1; `hold.mode: area` = inside the piece's area (91 SR9). `cache` = a 30 mm cache that only the opponent can score (SR11) |
 | `terrainLayout` | layout id |
 
 Defaults by kind (engine fills when omitted): `objective50` hold within 3 by leader/warEngine/battleEngine;
 `objective40` hold within 3 by leader or a unit with all remaining models in 3 (`unitAll`); `flag` and
-`scenarioTerrain` held by ≥2 models; contest within 3 excluding leaders, inert, wild, disabled. `query.control`
+`scenarioTerrain` held by ≥2 models (M13, 91 SR9: in a scenario whose `scoring.fromPlayer` is `second`, one Leader or one solo is enough, otherwise two or more models of any kind, measured inside the area with `mode: area`; S1 keeps its explicit QS rule); contest within 3 excluding leaders, inert, wild, disabled. `query.control`
 (00 §8) is the only implementation.
 
 ## 8. Terrain (`terrain.schema.json`, `terrain-layout.schema.json`)

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { audio, useAudioSettings } from '../audio'
 import { settings, useSettings } from '../contract'
+import { describeClock, turnClockOff, useClockStore } from '../clock'
 import './hud.css'
 import { setTipsEnabled, useTipsEnabled } from './help/CoachLine'
 import { SPEED_CHOICES } from './start/startOptions'
@@ -22,6 +23,18 @@ function Volumes() {
       <label className="set-row set-check">
         <input type="checkbox" checked={s.muted} data-testid="set-mute" onChange={(e) => audio.setMuted(e.target.checked)} /> Mute all sound
       </label>
+    </div>
+  )
+}
+
+/** The game clock, read-only, with the one action: switch it off for the rest of this game (91 C.2). */
+function ClockGroup() {
+  const config = useClockStore((s) => s.config)
+  return (
+    <div className="set-group" data-testid="set-clock">
+      <div className="set-label">Clock</div>
+      <p className="hud-dim set-clock-line" data-testid="set-clock-line">{describeClock(config)}</p>
+      {config && <button type="button" className="hud-btn hud-btn-sm" data-testid="set-clock-off" title="It cannot be switched back on in this game" onClick={turnClockOff}>Turn the clock off</button>}
     </div>
   )
 }
@@ -63,6 +76,7 @@ export function SettingsPanel() {
       <label className="set-row set-check">
         <input type="checkbox" data-testid="set-confirm-end" checked={st.confirmEndTurn} onChange={(e) => settings.set({ confirmEndTurn: e.target.checked })} /> Ask before ending a turn
       </label>
+      <ClockGroup />
       <Volumes />
     </div>
   )

@@ -7,9 +7,12 @@ import { maintenanceFocus } from '../focus'
 import { afterDeaths } from '../scenario'
 import { isIncorporeal } from '../code-hooks'
 import { lawgiverStrips, menothMaintenance } from '../factions/menoth'
-import type { DataBundle, GameState } from '../types'
+import { maintenanceCardPrompt } from '../cards'
+import { isFlowRejection } from '../pending'
+import type { DataBundle, GameState, PendingDecision } from '../types'
 
-export interface PhaseOut { state: GameState; events: GameEvent[]; ended: boolean }
+/** `pending` is set when the phase stopped at the Maintenance card prompt (Put the Fires Out, M13 91 A.5); turnflow resumes it with `runMaintenance(state, b, { cardsDone: true })`. */
+export interface PhaseOut { state: GameState; events: GameEvent[]; ended: boolean; pending?: PendingDecision }
 
 const CONTINUOUS: ('fire' | 'corrosion')[] = ['fire', 'corrosion']
 
@@ -32,10 +35,15 @@ export function startOfTurn(state: GameState): { state: GameState; events: GameE
 }
 
 /** R4.1-R4.3: clear war-engine focus, trim casters, roll each continuous effect on the active player's models. */
-export function runMaintenance(state: GameState, bundle: DataBundle): PhaseOut {
+export function runMaintenance(state: GameState, bundle: DataBundle, opts: { cardsDone?: boolean } = {}): PhaseOut {
   let s: GameState = { ...state, phase: 'maintenance', window: 'maintenance.start' }
-  const events: GameEvent[] = [{ type: 'PhaseChanged', phase: 'maintenance', window: 'maintenance.start' }]
+  const events: GameEvent[] = opts.cardsDone ? [] : [{ type: 'PhaseChanged', phase: 'maintenance', window: 'maintenance.start' }]
   const player = s.activePlayer
+  // M13 (91 A.5): Put the Fires Out is played at the start of the phase, before anything rolls
+  if (!opts.cardsDone) {
+    const prompt = maintenanceCardPrompt(s, bundle)
+    if (prompt && !isFlowRejection(prompt)) return { state: prompt.state, events: [...events, ...prompt.events], ended: false, pending: prompt.pending }
+  }
 
   const f = maintenanceFocus(s, bundle, player); s = f.state; events.push(...f.events)
   const gifts = menothMaintenance(s, bundle, player); s = gifts.state; events.push(...gifts.events) // the Four Gifts of Menoth: the Leader takes one for the round

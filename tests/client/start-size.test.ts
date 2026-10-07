@@ -12,7 +12,7 @@ import { setupFromUrl, sizeFromSetup } from '../../src/client/store/testHooks'
 import { HELP_TABS } from '../../src/client/ui/help/helpContent'
 import { StartScreen } from '../../src/client/ui/start/StartScreen'
 import {
-  buildNewGame, defaultScenarioId, GAME_SIZES, parseGameSize, scenarioChoices, sideChoices, sizeFromUrl,
+  buildNewGame, defaultScenarioId, GAME_SIZES, parseGameSize, scenarioChoices, sideChoices, SR_D8_ORDER, sizeFromUrl,
 } from '../../src/client/ui/start/startOptions'
 
 const FACTIONS = ['cir', 'cry', 'cyg', 'kha', 'men', 'trl']
@@ -42,7 +42,8 @@ describe('start screen game size (C1)', () => {
     const recon = scenarioChoices().map((s) => s.id)
     expect(recon).toContain('scn-qs-demo')
     expect(recon).not.toContain(S3)
-    expect(scenarioChoices('skirmish').map((s) => s.id)).toEqual([S3])
+    // Copperline Crossing, then the seven Steamroller 2026 scenarios in the order of the SR d8 table (91 B.4)
+    expect(scenarioChoices('skirmish').map((s) => s.id)).toEqual([S3, ...SR_D8_ORDER])
     expect(defaultScenarioId('skirmish')).toBe(S3)
     expect(defaultScenarioId('recon')).toBe(scenarioChoices()[0]!.id)
   })

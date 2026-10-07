@@ -7,11 +7,13 @@ import { deriveSeed, legalActions, nextFloat, query, validate } from '../engine/
 import { findLine, type AssassinLine } from './assassin'
 import { newCtx, planSequence, profileOf, type Ctx } from './damage'
 import { deployAction } from './deploy'
+import { pickPlay } from './cards'
 import { allocate, reserveNeeded } from './focus'
 import { forcePenalty, furyWrapUp, leechAction, spendCost, transferAction, ventAction } from './fury'
 import { actKey, activationPriority, anytimeSpecial, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, specialActionValue, specialAttackValue, type ActPlan, type Env } from './plan'
 import { damageDist, expected } from './prob'
 import { pickSensible } from './random'
+import { pickScenario } from './scenario'
 import { TIERS, type AiTierId, type TierParams } from './tiers'
 import { legalMoveCandidates } from './moves'
 import {
@@ -727,6 +729,9 @@ function startTrigger(env: Env, legal: Action[]): Action {
 
 // ---------- entry ----------
 function route(env: Env, pd: PendingDecision, legal: Action[], brain: Brain): Action {
+  // M13 (WP6): command cards, flag terrain picks, cache claims and the choices inside scenario scoring (cards.ts, scenario.ts)
+  const pre = pickScenario(env, pd, legal) ?? pickPlay(env, pd, legal)
+  if (pre) return pre
   switch (pd.kind) {
     case 'gameOver': return legal[0]!
     case 'chooseTurnOrder': return legal.find((a) => a.type === 'chooseTurnOrder' && a.order === 'first') ?? legal[0]!

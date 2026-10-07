@@ -7,8 +7,11 @@ import { TitleArt } from './TitleArt'
 import { openHelp } from '../help/HelpGuide'
 import { usePaint, usePaintStore, PAINT_PRESETS } from '../../figures/paintStore'
 import {
-  BOT_TIERS, battlefieldChoices, buildNewGame, DEFAULT_GAME_SIZE, defaultScenarioId, GAME_SIZES, type BotTierChoice, type GameSize, parseGameSize,
-  scenarioChoices, sideChoices, sizeFromUrl, SPEED_CHOICES,
+  beginClock, clockConfigFromStart, CUSTOM_MINUTES, describeClock, loadClockChoices, PER_TURN_SECONDS, saveClockChoices, type ClockMode, type ClockStartChoices,
+} from '../../clock'
+import {
+  BOT_TIERS, battlefieldChoices, buildNewGame, cardPool, cardsDefault, DEFAULT_GAME_SIZE, defaultHand, defaultScenarioId, GAME_SIZES, HAND_LIMIT,
+  type BotTierChoice, type GameSize, parseGameSize, scenarioOptions, sideChoices, sizeFromUrl, SPEED_CHOICES,
 } from './startOptions'
 import './start.css'
 
@@ -29,7 +32,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const size: GameSize = picked ?? urlSize ?? parseGameSize(storedSize) ?? DEFAULT_GAME_SIZE
   const sizeInfo = GAME_SIZES.find((g) => g.id === size) ?? GAME_SIZES[0]!
   const sides = useMemo(() => sideChoices(size), [size])
-  const scenarios = useMemo(() => scenarioChoices(size), [size])
+  const scenarios = useMemo(() => scenarioOptions(size), [size])
   const { speed, battlefield } = useSettings()
   const boards = useMemo(battlefieldChoices, [])
   const board = boardFor(battlefield)?.id ?? 'random'
@@ -39,11 +42,21 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const [error, setError] = useState<string | null>(null)
   const [opponent, setOpponent] = useState<string>('random')
   const [tier, setTier] = useState<BotTierChoice>(BOT_TIERS[0].id)
+  // command cards (91 A.4): null = follow the default for the size and scenario
+  const [cardsPick, setCardsPick] = useState<boolean | null>(null)
+  const [handPick, setHandPick] = useState<Record<string, string[]>>({})
+  // the game clock (91 C.2): remembered between visits under its own key
+  const [clock, setClockState] = useState<ClockStartChoices>(() => loadClockChoices())
+  const setClock = (patch: Partial<ClockStartChoices>) => setClockState((c) => { const next = { ...c, ...patch }; saveClockChoices(next); return next })
   const side = sides.find((s) => s.factionId === factionPick) ?? sides[0]
   const listId = side?.listId ?? ''
   const scenario = scenarios.find((s) => s.id === scenarioPick[size])?.id ?? defaultScenarioId(size, scenarios)
   const scn = scenarios.find((s) => s.id === scenario)
   const faction = side?.factionId ?? ''
+  const cardsOn = scenario === 'scn-qs-demo' ? false : (cardsPick ?? cardsDefault(size, scenario))
+  const pool = useMemo(() => (listId ? cardPool(listId) : []), [listId])
+  const hand = handPick[listId] ?? defaultHand(listId)
+  const clockConfig = clockConfigFromStart({ ...clock, size })
   const chooseSize = (v: string) => {
     const next = parseGameSize(v)
     if (!next) return
@@ -58,9 +71,12 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
     // ?seed= gives a repeatable game (tests, bug reports)
     const seed = new URLSearchParams(location.search).get('seed') ?? undefined
     const urlBoard = boardFromUrl() // ?board= beats the selector
-    const opts = buildNewGame({ listId, opponentListId: sides.find((s) => s.factionId === opponent)?.listId ?? 'random', scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
+    const opts = buildNewGame({ listId, opponentListId: sides.find((s) => s.factionId === opponent)?.listId ?? 'random', scenario, tier, board: urlBoard ?? board, cards: cardsOn, ...(cardsOn && pool.length > HAND_LIMIT ? { hand } : {}), ...(seed ? { seed } : {}) }, sides)
     if (!opts) { setError('Pick a side first.'); return }
-    setError(onStart(opts))
+    const err = onStart(opts)
+    setError(err)
+    // the clock starts with the game it was chosen for (null = off)
+    if (!err) beginClock(clockConfig)
   }
 
   return (
@@ -110,6 +126,57 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
               </select>
             </div>
           )}
+        <div className="start-rules" data-testid="start-rules">
+          <div className="start-rule" data-testid="start-cards">
+            <span className="start-rule-name">Command cards</span>
+            <div className="start-choices small">
+              {([true, false] as const).map((on) => (
+                <button key={String(on)} type="button" data-testid={`start-cards-${on ? 'on' : 'off'}`} className={cardsOn === on ? 'on' : ''} aria-pressed={cardsOn === on}
+                  disabled={scenario === 'scn-qs-demo' && on} onClick={() => setCardsPick(on)}>{on ? 'On' : 'Off'}</button>
+              ))}
+            </div>
+            <span className="start-note" data-testid="start-cards-note">
+              {scenario === 'scn-qs-demo' ? 'Off for the demo' : cardsOn ? '5 cards, 2 plays a turn' : 'No cards'}
+            </span>
+          </div>
+          {cardsOn && pool.length > HAND_LIMIT && (
+            <div className="start-hand" data-testid="start-hand">
+              <span className="start-rule-name">Your five</span>
+              {pool.map((c) => (
+                <label key={c.id} title={c.text}>
+                  <input type="checkbox" data-testid={`start-hand-${c.id}`} checked={hand.includes(c.id)}
+                    disabled={!hand.includes(c.id) && hand.length >= HAND_LIMIT}
+                    onChange={(e) => setHandPick((m) => ({ ...m, [listId]: e.target.checked ? [...hand, c.id] : hand.filter((x) => x !== c.id) }))} /> {c.name}
+                </label>
+              ))}
+            </div>
+          )}
+          <div className="start-rule" data-testid="start-clock">
+            <span className="start-rule-name">Clock</span>
+            <div className="start-choices small">
+              {([['off', 'Off'], ['steamroller', 'Steamroller'], ['custom', 'Custom']] as [ClockMode, string][]).map(([m, label]) => (
+                <button key={m} type="button" data-testid={`start-clock-${m}`} className={clock.mode === m ? 'on' : ''} aria-pressed={clock.mode === m} onClick={() => setClock({ mode: m })}>{label}</button>
+              ))}
+            </div>
+            {clock.mode === 'custom' && (
+              <>
+                <label className="start-inline">Minutes
+                  <select data-testid="start-clock-minutes" value={clock.minutes ?? 30} onChange={(e) => setClock({ minutes: Number(e.target.value) })}>
+                    {Array.from({ length: (CUSTOM_MINUTES.max - CUSTOM_MINUTES.min) / CUSTOM_MINUTES.step + 1 }, (_, i) => CUSTOM_MINUTES.min + i * CUSTOM_MINUTES.step).map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </label>
+                <label className="start-inline">+ s a turn
+                  <select data-testid="start-clock-turn" value={clock.perTurnSeconds ?? 0} onChange={(e) => setClock({ perTurnSeconds: Number(e.target.value) })}>
+                    {PER_TURN_SECONDS.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+                <label className="start-inline start-check"><input type="checkbox" data-testid="start-clock-pause" checked={clock.allowPause !== false} onChange={(e) => setClock({ allowPause: e.target.checked })} /> Pause</label>
+              </>
+            )}
+            {clock.mode !== 'off' && <label className="start-inline start-check"><input type="checkbox" data-testid="start-clock-timebot" checked={!!clock.timeBot} onChange={(e) => setClock({ timeBot: e.target.checked })} /> Time the bot</label>}
+            {clock.mode === 'steamroller' && <span className="start-note" data-testid="start-clock-note">{describeClock(clockConfig)}</span>}
+          </div>
+        </div>
         </section>
 
         <section className="start-card">
@@ -128,7 +195,12 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
           <p className="start-note" data-testid="start-opponent-note">{BOT_TIERS.find((b) => b.id === tier)?.note}</p>
           <label>Scenario
             <select data-testid="start-scenario" value={scenario} onChange={(e) => setScenarioPick((m) => ({ ...m, [size]: e.target.value }))}>
-              {scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {scenarios.some((s) => s.group === 'other') && scenarios.some((s) => s.group === 'steamroller') ? (
+                <>
+                  <optgroup label="Training and Skirmish">{scenarios.filter((s) => s.group === 'other').map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</optgroup>
+                  <optgroup label="Steamroller 2026">{scenarios.filter((s) => s.group === 'steamroller').map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</optgroup>
+                </>
+              ) : scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
           {scn?.text && <p className="start-note">{scn.text}</p>}

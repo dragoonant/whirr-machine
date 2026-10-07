@@ -1,0 +1,241 @@
+{
+  "id": "scn-sr26-fault-line",
+  "name": "Fault Line",
+  "text": "Six objectives run along the fault: two big ones in the middle and four small ones on the flanks. Each objective you hold scores a point, with one bonus point for holding two of your own and another for holding all three of your own. A three-point lead after your opponent's turn wins on the spot.",
+  "source": "SR p10",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "countBonus",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "own"
+        },
+        "atLeast": 2,
+        "vp": 1
+      },
+      {
+        "kind": "countBonus",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "own"
+        },
+        "atLeast": 3,
+        "vp": 1
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "elements": [
+    {
+      "id": "el-40-blue-a",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": 15.21,
+        "z": 8.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-blue",
+      "kind": "objective50",
+      "owner": "second",
+      "pos": {
+        "x": 0.02,
+        "z": 3.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-blue-b",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": -15.21,
+        "z": -1.79
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red-a",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": 15.21,
+        "z": 1.79
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-red",
+      "kind": "objective50",
+      "owner": "first",
+      "pos": {
+        "x": -0.02,
+        "z": -3.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red-b",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": -15.21,
+        "z": -8.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-1-48"
+}

@@ -311,6 +311,8 @@ export interface HitLookups {
   noKnockdown?: (id: ModelId) => boolean
   /** Incorporeal: cannot be pushed, slammed or thrown */
   immovable?: (id: ModelId) => boolean
+  /** M13 Sturdy (Bite and Hold): pushes cannot move the model; slams and throws still do */
+  sturdy?: (id: ModelId) => boolean
   /** Incorporeal: takes no damage from non-magical sources (collateral, falls, power attacks) */
   noMundaneDamage?: (id: ModelId) => boolean
 }
@@ -358,7 +360,7 @@ function checkFall(state: GameState, prev: ModelState, id: ModelId, look: HitLoo
 /** Push X (R5.15): directly away from `from`, stops on contact. No rough penalty, no disengage. */
 export function push(state: GameState, id: ModelId, from: Vec2, x: number, look: HitLookups, opts: { flying?: boolean } = {}): InvoluntaryResult {
   const m = state.models[id]!
-  if (look.immovable?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
+  if (look.immovable?.(id) || look.sturdy?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
   const sw = sweepFrom(state, m, m.pos, norm(sub(m.pos, from)), x, { passThrough: 'none', obstacles: 'stop', ignoreObstructions: opts.flying })
   const s = relocate(state, id, sw.end)
   const events: GameEvent[] = [movedEvent(id, 'push', m.pos, sw.end, [sw.end], s.models[id]!.elev, stopId(sw))]

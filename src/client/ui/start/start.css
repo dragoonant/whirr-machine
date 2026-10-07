@@ -97,3 +97,18 @@ html, body, #root { margin: 0; height: 100%; background: var(--bg); color: var(-
   .start-foot { display: none; }
   .start-card.start-size { padding-top: 5px; padding-bottom: 5px; }
 }
+
+/* rules row: command cards and the game clock (91 A.4, C.2), one compact full-width card */
+.start-rules { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #343943; }
+.start-rule { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.start-rule-name { min-width: 92px; font-size: 13px; color: #a9a699; }
+.start-rule .start-choices { flex: none; flex-wrap: nowrap; }
+.start-rule .start-choices button { flex: none; }
+.start-rule .start-note { margin: 0; }
+.start-card .start-inline { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; }
+.start-card .start-inline select { display: inline-block; width: auto; margin: 0; padding: 3px 6px; }
+.start-card .start-check input { margin: 0; }
+.start-hand { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.start-card .start-hand label { margin: 0; font-size: 12px; display: inline-flex; gap: 4px; align-items: center; }
+.start-choices button:disabled { opacity: 0.4; cursor: default; }
+

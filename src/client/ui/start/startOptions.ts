@@ -30,9 +30,9 @@ export function sizeFromUrl(search = typeof location !== 'undefined' ? location.
 
 export interface ArmyCard { profileId: Id; name: string; role: string; count: number }
 export interface SideChoice { listId: Id; factionId: Id; factionName: string; listName: string; points: number; level: GameSize; models: ArmyCard[] }
-export interface ScenarioChoice { id: Id; name: string; text: string }
+export interface ScenarioChoice { id: Id; name: string; text: string; /** 'steamroller' = the Steamroller 2026 set (91 B); everything else is 'other'. */ group: 'steamroller' | 'other' }
 
-type Rec = { id: string; level?: string; recordType?: string; name?: string; faction?: string; resource?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
+type Rec = { armies?: string[]; army?: string; timing?: string; cost?: number; id: string; level?: string; recordType?: string; name?: string; faction?: string; resource?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
 
 const ROLE_WORDS: Record<string, string> = {
   leader: 'Warcaster', warEngine: 'War-engine', beast: 'Warbeast', solo: 'Solo', unit: 'Unit', trooper: 'Trooper', battleEngine: 'Battle engine',
@@ -63,15 +63,77 @@ export function sideChoices(size: GameSize = DEFAULT_GAME_SIZE): SideChoice[] {
 
 /** Scenarios played at a game size (default recon). A scenario with no `levels` counts as recon only. */
 export function scenarioChoices(size: GameSize = DEFAULT_GAME_SIZE): ScenarioChoice[] {
-  return records()
+  const rows = records()
     .filter((r) => r.recordType === 'scenario' && (r.levels ? r.levels.includes(size) : size === 'recon'))
-    .map((r) => ({ id: r.id, name: r.name ?? r.id, text: r.text ?? '' }))
+    .map((r): ScenarioChoice => ({ id: r.id, name: r.name ?? r.id, text: r.text ?? '', group: isSteamrollerScenario(r.id) ? 'steamroller' : 'other' }))
+  // the Steamroller set keeps the order of the SR d8 table (SR p14); everything else keeps the data order, ahead of it
+  const rank = (c: ScenarioChoice): number => (c.group === 'steamroller' ? 100 + SR_D8_ORDER.indexOf(c.id) : 0)
+  return rows.map((c, i) => ({ c, i })).sort((a, b) => rank(a.c) - rank(b.c) || a.i - b.i).map((x) => x.c)
 }
 
 /** The scenario a game size starts on: recon keeps the first one listed, skirmish prefers Copperline Crossing. */
 export function defaultScenarioId(size: GameSize, choices: ScenarioChoice[] = scenarioChoices(size)): Id {
   const pick = size === 'recon' ? choices[0] : (choices.find((c) => c.id === DEFAULT_SCENARIO[size]) ?? choices[0])
   return pick?.id ?? ''
+}
+
+// ---------- Steamroller 2026 scenarios (91 B) ----------
+/** The seven SR scenarios in the order of the SR d8 table: 1 Trench Warfare .. 7 Payload, and an 8 rolls again (SR p14). */
+export const SR_D8_ORDER: readonly Id[] = [
+  'scn-sr26-trench-warfare', 'scn-sr26-two-fronts', 'scn-sr26-wolves', 'scn-sr26-pressure-point', 'scn-sr26-high-stakes', 'scn-sr26-fault-line', 'scn-sr26-payload',
+]
+export const isSteamrollerScenario = (id: Id): boolean => id.startsWith('scn-sr26-')
+/** The start screen's pseudo scenario: roll a d8 when the game starts. It is never a scenario id the engine sees. */
+export const RANDOM_SR_ID = 'random-sr'
+export const RANDOM_SR_TEXT = 'Rolls a d8 when the game starts: 1 to 7 pick a Steamroller scenario in order, an 8 rolls again.'
+
+/** The scenario list the select shows: the real scenarios, then Random (d8) at the end of the Steamroller group. Random is offered only when every SR scenario is playable at the size. */
+export function scenarioOptions(size: GameSize = DEFAULT_GAME_SIZE): ScenarioChoice[] {
+  const real = scenarioChoices(size)
+  const sr = real.filter((c) => c.group === 'steamroller')
+  return sr.length === SR_D8_ORDER.length ? [...real, { id: RANDOM_SR_ID, name: 'Random (d8)', text: RANDOM_SR_TEXT, group: 'steamroller' }] : real
+}
+
+/** A real scenario id for a pick: Random (d8) rolls the SR table from the seed (an 8 rolls again), so a seeded game is repeatable. */
+export function resolveScenario(pick: Id, seed: string): Id {
+  if (pick !== RANDOM_SR_ID) return pick
+  for (let k = 0; k < 64; k++) {
+    const roll = (hashSeed(`${seed}:d8:${k}`) % 8) + 1
+    if (roll <= SR_D8_ORDER.length) return SR_D8_ORDER[roll - 1]!
+  }
+  return SR_D8_ORDER[0]!
+}
+
+// ---------- command cards (91 A) ----------
+export interface CardInfo { id: Id; name: string; text: string; cost: number; /** Armies the card is open to; empty = every army. */ armies: Id[] }
+/** Most cards a hand holds (CC1). */
+export const HAND_LIMIT = 5
+
+const cardRecords = (): CardInfo[] =>
+  records().filter((r) => r.recordType === 'card').map((r) => ({ id: r.id, name: r.name ?? r.id, text: r.text ?? '', cost: r.cost ?? 0, armies: r.armies ?? [] }))
+/** The army a list belongs to (list.army), or undefined: such a list takes the universal cards only. */
+export const armyOf = (listId: Id): Id | undefined => byId(listId)?.army
+
+/** Every card a list may take: the universal ones, then the cards open to its army. */
+export function cardPool(listId: Id): CardInfo[] {
+  const army = armyOf(listId)
+  return cardRecords().filter((c) => c.armies.length === 0 || (!!army && c.armies.includes(army)))
+}
+/** The hand taken when the player does not pick: the universal cards (there are five). */
+export function defaultHand(listId: Id): Id[] {
+  return cardPool(listId).filter((c) => c.armies.length === 0).slice(0, HAND_LIMIT).map((c) => c.id)
+}
+/** A hand for a list: the picked cards when they are all open to the list (at most five, no repeats), else the default hand. */
+export function handFor(listId: Id, pick?: readonly Id[] | null): Id[] {
+  if (!pick || pick.length === 0) return defaultHand(listId)
+  const pool = new Set(cardPool(listId).map((c) => c.id))
+  const hand = [...new Set(pick)].filter((id) => pool.has(id)).slice(0, HAND_LIMIT)
+  return hand.length > 0 ? hand : defaultHand(listId)
+}
+/** Whether command cards start On: always Off on the Quick Start demo, On for Skirmish and for the Steamroller scenarios, Off for other recon games. */
+export function cardsDefault(size: GameSize, scenario: Id): boolean {
+  if (scenario === 'scn-qs-demo') return false
+  return size === 'skirmish' || scenario === RANDOM_SR_ID || isSteamrollerScenario(scenario)
 }
 
 /** Opponent strengths (40-ai §8). The first entry is the start screen's default. */
@@ -83,7 +145,7 @@ export const BOT_TIERS = [
 export type BotTierChoice = (typeof BOT_TIERS)[number]['id']
 export const DEFAULT_BOT_TIER: BotTierChoice = 'normal'
 
-export interface StartChoices { listId: Id; /** Opponent's army: a list id, or 'random' / omitted for a random pick (any faction, mirrors allowed). */ opponentListId?: Id | 'random'; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice; board?: Id | 'random' }
+export interface StartChoices { listId: Id; /** Opponent's army: a list id, or 'random' / omitted for a random pick (any faction, mirrors allowed). */ opponentListId?: Id | 'random'; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice; board?: Id | 'random'; /** Command cards On: both sides take a hand. */ cards?: boolean; /** The human's own hand when the list's army has more than the universal cards. */ hand?: Id[] }
 
 /** Battlefield choices for the start screen: Random first, then each board's display name. */
 export const battlefieldChoices = (): { id: Id | 'random'; name: string }[] => [{ id: 'random', name: 'Random' }, ...BOARDS.map((b) => ({ id: b.id, name: b.name }))]
@@ -110,13 +172,15 @@ export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewG
   // the seed is made here (not in the engine call) so the battlefield pick and the game share it: ?seed=X gives the same table
   const seed = choices.seed ?? makeSeed()
   const theirs = pickOpponent(sides, choices.opponentListId, seed) ?? mine
+  const hands = choices.cards ? { cards: { A: handFor(mine.listId, choices.hand), B: handFor(theirs.listId) } } : {}
   return {
-    scenario: choices.scenario,
+    scenario: resolveScenario(choices.scenario, seed),
     lists: { A: mine.listId, B: theirs.listId },
     controllers: { A: 'human', B: 'bot' },
     bot: { tier: choices.tier ?? DEFAULT_BOT_TIER },
     seed,
     board: choices.board ?? 'random',
+    ...hands,
   }
 }
 

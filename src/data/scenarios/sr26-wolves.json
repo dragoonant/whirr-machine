@@ -1,0 +1,258 @@
+{
+  "id": "scn-sr26-wolves",
+  "name": "Wolves at Our Heels",
+  "text": "From the Attacker's third turn the Kill Box grows by two inches every round. Objectives and flag terrain score a point each. Holding your own small objective lets you add a token to it, and then your opponent may drag it three inches toward the big objective of its colour. The first side to put a third token on its own small objective while the other has not scores three points, once per game.",
+  "source": "SR p7",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "flag"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "tokenRace",
+        "vp": 3,
+        "third": 3
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "setup": {
+    "flagRadius": 5,
+    "flagPickOrder": "attackerFirst"
+  },
+  "special": [
+    {
+      "kind": "killBoxGrowth",
+      "fromRound": 3,
+      "fromPlayer": "first",
+      "step": 2
+    },
+    {
+      "kind": "heelTokens",
+      "on": "objective40",
+      "toward": "objective50",
+      "move": 3
+    }
+  ],
+  "elements": [
+    {
+      "id": "el-flag-blue",
+      "kind": "flag",
+      "owner": "second",
+      "pos": {
+        "x": -11.41,
+        "z": 3.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-blue",
+      "kind": "objective50",
+      "owner": "second",
+      "pos": {
+        "x": 4.02,
+        "z": 3.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-blue",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": 15.21,
+        "z": 8.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-red",
+      "kind": "objective50",
+      "owner": "first",
+      "pos": {
+        "x": -4.02,
+        "z": 0.98
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": -15.21,
+        "z": -3.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-red",
+      "kind": "flag",
+      "owner": "first",
+      "pos": {
+        "x": 11.41,
+        "z": -3.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-2-48"
+}

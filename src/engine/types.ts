@@ -54,7 +54,13 @@ export interface GameSetup {
   layout?: Id // layout.*; defaults to the scenario's terrainLayout
   lists: Record<PlayerId, Id> // list ids
   names?: Partial<Record<PlayerId, string>>
+  /** M13 (91 A.4): command-card hands by player. Omitted, a missing player or [] = no cards for that player. */
+  cards?: Partial<Record<PlayerId, Id[]>>
 }
+/** M13 (91 A.1): one card played this game. `option` = the card option id, `targetIds` = the subject model or unit. */
+export interface CardPlay { cardId: Id; option: string; targetIds: Id[]; round: number; turn: number }
+/** M13: a player's command cards. `hand` = every card they took (played ones stay listed); `played` = the plays so far, in order. */
+export interface CardHandState { hand: Id[]; played: CardPlay[] }
 export interface PlayerState {
   id: PlayerId
   faction: Id
@@ -63,6 +69,7 @@ export interface PlayerState {
   edge: EdgeId | null // set by chooseEdge
   deployed: boolean
   ambushIds: ModelId[] // off-table until they enter (R11.6)
+  cards?: CardHandState // M13 (91 A): present iff the player took cards
 }
 
 // ---------- models and units (00 §3.1) ----------
@@ -152,6 +159,19 @@ export interface Cloud {
 // ---------- scenario ----------
 export interface ElementControl { controller: PlayerId | null; contested: boolean; holders: ModelId[]; contesters: ModelId[]; reason: string }
 export interface ScoreEntry { round: number; turn: number; player: PlayerId; vp: number; source: string }
+/**
+ * M13 (91 B.2): what changed about one scenario element since setup. Absent fields = as the scenario data says.
+ * `pos` = moved or rotated position (SR5 attacker frame, Wolves, Payload); `tokens` = countdown or heel tokens;
+ * `removed` = claimed cache, delivered 50 or similar; `terrainId` = the terrain piece a flag chose (null = the flag-obstruction);
+ * `stickyHold` = Bite and Hold: this player keeps the element until the end of that turn.
+ */
+export interface ElementRuntime {
+  pos?: Vec2
+  tokens?: number
+  removed?: boolean
+  terrainId?: Id | null
+  stickyHold?: { player: PlayerId; round: number; turn: number }
+}
 export interface ScenarioState {
   id: Id
   table: { w: number; d: number }
@@ -159,7 +179,13 @@ export interface ScenarioState {
   elements: Record<Id, ElementControl>
   killBox: Record<PlayerId, boolean> // leader currently in own kill box
   log: ScoreEntry[]
-  result?: { winner: PlayerId | null; reason: GameEndReason }
+  result?: { winner: PlayerId | null; reason: GameEndReason; timeout?: PlayerId } // timeout: the player whose clock ran out (M13, 91 C.2)
+  // ---- M13 (91 B.2): every field below is absent in games that do not use it ----
+  elementState?: Record<Id, ElementRuntime>
+  killBoxDepth?: number // current Kill Box depth when a special changes it (Wolves at Our Heels)
+  onceDone?: string[] // once-per-game scenario rules already settled (the Wolves token race)
+  clockOut?: PlayerId // a player whose clock ran out on the opponent's turn (91 C.2)
+  cachesClaimed?: { player: PlayerId; elementId: Id; turn: number }[] // caches claimed, banked at that turn's scoring (91 B.3 `cache`)
 }
 export type GameEndReason = 'assassination' | 'scenario' | 'roundLimit' | 'tiebreakPresence' | 'draw' | 'concession'
 

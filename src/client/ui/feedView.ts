@@ -3,6 +3,7 @@
 import { query, type DiceRolled, type GameEvent, type GameState, type Id } from '../../engine/index'
 import { dataName, narrate, modelName } from '../contract'
 import { pct, signed } from './format'
+import { scenarioEventLine, scoreSourceWords } from './cards/eventLines'
 import { furyFeedLine } from './fury/feedLines'
 
 export type FeedTone = 'info' | 'attack' | 'hit' | 'miss' | 'damage' | 'death' | 'score' | 'flow' | 'spell'
@@ -96,7 +97,7 @@ export function buildFeed(state: GameState | null, feed: readonly Entry[], expec
       }
       case 'ScenarioScored': case 'KillBoxScored': case 'GameEnded': {
         const t = narrate(state, ev)
-        if (t) out.push({ seq, tone: 'score', text: t, detail: ev.type === 'ScenarioScored' ? ev.sources.map((s) => `${s.reason.replace(/^controls\s+\S+/, 'held an objective')}: ${s.vp} VP`) : [] })
+        if (t) out.push({ seq, tone: 'score', text: t, detail: ev.type === 'ScenarioScored' ? ev.sources.map((s) => `${scoreSourceWords(state, s.reason)}: ${s.vp} VP`) : [] })
         break
       }
       case 'TurnEnded': {
@@ -122,6 +123,8 @@ export function buildFeed(state: GameState | null, feed: readonly Entry[], expec
       case 'UpkeepPaid': out.push({ seq, tone: 'spell', text: `Upkeep kept for ${name(ev.casterId)}`, detail: [] }); break
       default: {
         if (SKIP.has(ev.type)) break
+        const sc = scenarioEventLine(state, ev)
+        if (sc) { out.push({ seq, ...sc, detail: [] }); break }
         const fz = furyFeedLine(state, ev)
         if (fz) { out.push({ seq, ...fz }); break }
         const t = narrate(state, ev)

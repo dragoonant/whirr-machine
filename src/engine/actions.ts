@@ -42,6 +42,7 @@ export interface ChooseCombatActionAction extends Base<'chooseCombatAction'> {
   abilityId?: Id // specialAttack / specialAction
   powerAttack?: PowerAttackKind
   targetId?: ModelId // specialAction with a target (Repair, Enliven, Ancillary Attack); additive, 00 section 14 (M9 core pass)
+  elementId?: Id // M13: the cache a model claims (choice 'specialAction', abilityId 'scn.claimCache'); 91 B.1 SR11
 }
 export interface ChooseAttackAction extends Base<'chooseAttack'> {
   modelId: ModelId
@@ -87,6 +88,17 @@ export interface AdjustFuryAction extends Base<'adjustFury'> { modelId: ModelId;
 export interface ReaveAction extends Base<'reave'> { reaverId: ModelId | null }
 export interface TakeControlAction extends Base<'takeControl'> { casterId: ModelId; targetId: ModelId }
 
+// ---------- command cards and the game clock (M13, 91 A and C) ----------
+/** Play a command card at a decision that lists it (91 A.5): any activation decision, the first one of an activation, or the Maintenance prompt. */
+export interface PlayCardAction extends Base<'playCard'> {
+  cardId: Id
+  option: string // the card option id (card.options[].id)
+  targetId: ModelId | UnitId // the subject model or unit
+  data?: { elementId?: Id; gain?: 'focus' | 'fury' | 'soul' | 'corpse'; trooperId?: ModelId }
+}
+/** The client's clock ran out for `timedOut` (91 C.2). Accepted at any open decision but gameOver; never in legalActions; `player` may be either side. */
+export interface ClockExpiredAction extends Base<'clockExpired'> { timedOut: PlayerId }
+
 export type Action =
   | PassAction | AckAction | AbilityChoiceAction | TriggerWindowAction
   | ChooseTurnOrderAction | ChooseEdgeAction | DeployAction | AdvanceDeployAction
@@ -97,6 +109,7 @@ export type Action =
   | BoostAttackAction | RollAnywayAction | RerollAction | BoostDamageAction | ChooseGridAction | PowerFieldAction
   | ChooseBoxesAction
   | LeechAction | TransferDamageAction | AdjustFuryAction | ReaveAction | TakeControlAction
+  | PlayCardAction | ClockExpiredAction
 
 export type ActionType = Action['type']
 export type ActionOf<T extends ActionType> = Extract<Action, { type: T }>

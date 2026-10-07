@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://whirr-machine.dev/schemas/card.schema.json",
+  "title": "Command card (M13, 91 A). Names are the real ones; every text is our own words.",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "name", "text", "cost", "armies", "timing", "subject", "options"],
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/Id" },
+    "name": { "$ref": "common.schema.json#/$defs/Name" },
+    "text": { "$ref": "common.schema.json#/$defs/Text" },
+    "cost": { "type": "integer", "minimum": 0, "description": "Army points, paid from the list total (CC7). The five universal cards cost 0." },
+    "fa": { "type": "integer", "minimum": 1, "description": "Field allowance, for cards that have one." },
+    "armies": {
+      "$ref": "common.schema.json#/$defs/IdList",
+      "description": "Army ids that may take the card (a list's `army`). Empty = universal: every faction and army."
+    },
+    "timing": {
+      "enum": ["activationAny", "activationStart", "maintenanceStart"],
+      "description": "activationAny: any time during the activation of one of your models or units; activationStart: at the start of that activation; maintenanceStart: at the start of your Maintenance Phase (91 A.5)."
+    },
+    "subject": {
+      "enum": ["modelOrUnit", "model", "warriorModelOrUnit"],
+      "description": "What the card is played on: the activating model or unit, a single model, or the activating warrior model or unit."
+    },
+    "options": {
+      "type": "array", "minItems": 1,
+      "description": "The choices when the card is played (most cards print two). `code` names the engine effect in src/engine/cards.ts.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "label", "text", "code"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "label": { "$ref": "common.schema.json#/$defs/Name" },
+          "text": { "$ref": "common.schema.json#/$defs/Text" },
+          "code": { "type": "string", "minLength": 1, "maxLength": 60 }
+        }
+      }
+    },
+    "source": { "type": "string", "maxLength": 120 },
+    "verify": { "type": "string" }
+  }
+}

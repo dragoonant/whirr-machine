@@ -11,6 +11,7 @@
     "level": { "enum": ["recon", "skirmish", "pitched", "grandMelee"] },
     "points": { "type": "integer", "minimum": 0, "description": "Declared total; validate-data recomputes and compares." },
     "leader": { "$ref": "common.schema.json#/$defs/Id" },
+    "army": { "$ref": "common.schema.json#/$defs/Id", "description": "M13 (91 A.4): the army or sub-faction the list belongs to (for example kha.old-umbrey); decides which army command cards it may take. Omitted = universal cards only." },
     "entries": {
       "type": "array", "minItems": 1,
       "items": {

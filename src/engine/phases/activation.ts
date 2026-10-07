@@ -30,7 +30,7 @@ import {
 } from '../movement'
 import { raise, raiseTransfer, reject, type FlowOut, type FlowResult } from '../pending'
 import { resolvePowerAttack, resolveTrampleAttacks } from '../power-attacks'
-import { afterDeaths } from '../scenario'
+import { afterDeaths, scenarioDef } from '../scenario'
 import { canPayCost, costBlock, payCost, type AbilityCost } from '../costs'
 import { activeWarp, admonitionReady, afflictionFloor, unyieldingArm, wraithbaneOn } from '../factions/circle'
 import { polarityFieldBlocks } from '../factions/cygnar'
@@ -50,6 +50,9 @@ import type {
   ModelId, ModelState, MovementOption, PendingDecision, PlayerId, Rejection, UnitId, Vec2,
 } from '../types'
 import { noteDamaged as khadorNoteDamaged } from '../factions/khador'
+import { activationCardOptions, endDigIns } from '../cards'
+import { hasCardGrant } from '../card-effects'
+import { CLAIM_CACHE_ABILITY, resolveScenarioSpecialAction, scenarioSpecialActions } from '../scenario-rules'
 import { hasGrantedCover } from '../factions/trollbloods'
 
 export type Out = FlowOut
@@ -232,13 +235,14 @@ function raiseStart(state0: GameState, b: B, events: GameEvent[]): Out {
     const did = nextId(state)
     state = patchX(state, { startQueue: queue })
     if (isWarpPick(ab)) {
-      const wopts: DecisionOption[] = WARP_OPTIONS.map((o) => ({ id: o.id, label: o.label, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: o.id } as Action }))
+      const wopts: DecisionOption[] = [...WARP_OPTIONS.map((o) => ({ id: o.id, label: o.label, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: o.id } as Action })), ...activationCardOptions(state, b)]
       const rw = raise({ ...state, window: 'activation.start' }, { player: m.owner, kind: 'abilityChoice', window: 'activation.start', context: { modelId: id, data: { code: 'startTrigger', entry, warp: true } }, options: wopts, canPass: false })
       return ok(rw.state, events)
     }
     const options: DecisionOption[] = [
       { id: 'skip', label: 'Not now', action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'skip' } as Action },
       { id: 'use', label: `Use ${ab.name}`, action: { type: 'abilityChoice', decisionId: did, player: m.owner, optionId: 'use' } as Action },
+      ...activationCardOptions(state, b), // M13: command cards ride on the activation's first decision
     ]
     const r = raise({ ...state, window: 'activation.start' }, { player: m.owner, kind: 'abilityChoice', window: 'activation.start', context: { modelId: id, data: { code: 'startTrigger', entry } }, options, canPass: false })
     return ok(r.state, events)
@@ -433,7 +437,7 @@ function raiseMovement(state0: GameState, b: B, events: GameEvent[]): Out {
   const lead = a.modelIds.find((id) => alive(state.models[id]))
   if (!lead) return finishActivation(state, b, events, 'forfeit')
   const id = nextId(state)
-  const options = [...movementOptionList(state, b, lead, id), ...(a.modelIds.length === 1 ? anytimeOptions(state, b, lead, id) : [])]
+  const options = [...movementOptionList(state, b, lead, id), ...(a.modelIds.length === 1 ? anytimeOptions(state, b, lead, id) : []), ...activationCardOptions(state, b)]
   // a self ability that may be used any time in the activation (Soul Phase) is offered before the move too
   if (a.modelIds.length === 1) for (const c of specialChoices(state, b, lead, true)) options.push(anytimeSpecialOption(c, id, ownerOf(state, lead), lead))
   const r = raise(state, { player: ownerOf(state, lead), kind: 'chooseMovement', window: 'movement.choose', context: { modelId: lead, unitId: state.units[a.activeId]?.id }, options, canPass: false })
@@ -1228,13 +1232,24 @@ function combatChoices(state: GameState, b: B, id: ModelId): CombatChoiceInfo[] 
   return out
 }
 
+/** M13 Blessings of the Gods: the model's weapons are Blessed while a live effect carries the grant (spells are not weapons). */
+function blessedWeapons(state: GameState, id: ModelId, spell: boolean): boolean {
+  return !spell && effectsOn(state, id).some((e) => ((e as EffectInstance & EffectExtras).weaponGrants ?? []).includes('blessed'))
+}
+
+/** M13 (91 B.1 SR11): the cache claims on offer to the model choosing its Combat Action; none unless the scenario has caches (WP3's scenarioSpecialActions). */
+function cacheOptions(state: GameState, b: B, id: ModelId): DecisionOption[] {
+  if (!scenarioDef(b, state.scenario.id).elements.some((el) => (el.kind as string) === 'cache')) return []
+  return scenarioSpecialActions(state, b, id)
+}
+
 function raiseCombatChoice(state0: GameState, b: B, events: GameEvent[]): Out {
   const state = { ...state0, window: 'combat.choose' as const }
   const id = act(state).x.cur!
   const m = state.models[id]!
   const did = nextId(state)
   const choices = combatChoices(state, b, id)
-  if (choices.length === 1 && choices[0]!.choice === 'forfeit' && !anytimeOptions(state, b, id, did).length) {
+  if (choices.length === 1 && choices[0]!.choice === 'forfeit' && !anytimeOptions(state, b, id, did).length && !cacheOptions(state, b, id).length) {
     events.push({ type: 'DecisionAutoResolved', kind: 'chooseCombatAction', optionId: 'forfeit' }, { type: 'CombatActionForfeited', modelId: id, reason: 'choice' })
     return nextCombat(patchX(setPm(state, id, { combat: 'forfeit', combatForfeited: true }), { cur: null }), b, events)
   }
@@ -1243,7 +1258,7 @@ function raiseCombatChoice(state0: GameState, b: B, events: GameEvent[]): Out {
     action: { type: 'chooseCombatAction', decisionId: did, player: m.owner, modelId: id, choice: c.choice, ...(c.abilityId ? { abilityId: c.abilityId } : {}), ...(c.targetId ? { targetId: c.targetId } : {}), ...(c.powerAttack ? { powerAttack: c.powerAttack } : {}) } as Action,
     ...(c.choice === 'powerAttack' && (m.type === 'warEngine' || m.type === 'beast') ? { cost: costFor(m, 1) } : {}),
   }))
-  options.push(...anytimeOptions(state, b, id, did))
+  options.push(...anytimeOptions(state, b, id, did), ...activationCardOptions(state, b), ...cacheOptions(state, b, id))
   const r = raise(state, { player: m.owner, kind: 'chooseCombatAction', window: 'combat.choose', context: { modelId: id, unitId: state.units[act(state).activeId]?.id }, options, canPass: false })
   return ok(r.state, events)
 }
@@ -1266,6 +1281,13 @@ function combatAnswer(state0: GameState, b: B, a0: ChooseCombatActionAction): Re
   let a = a0
   if (a.modelId !== cur || !cur) return reject('E_TARGET_INVALID', `${cur} is the model choosing`)
   const m = state.models[cur]!
+  if (a.choice === 'specialAction' && a.abilityId === CLAIM_CACHE_ABILITY) { // M13 (91 B.1 SR11): claim the opponent's cache instead of the Combat Action
+    if (!cacheOptions(state, b, cur).some((o) => o.action.type === 'chooseCombatAction' && o.action.elementId === a.elementId)) return reject('E_NOT_AN_OPTION', 'that cache cannot be claimed now')
+    const r = resolveScenarioSpecialAction(state, b, a)
+    if ('rejection' in r) return r
+    const forfeited = setPm(r.state, cur, { combat: 'forfeit', combatForfeited: true })
+    return nextCombat(patchX(forfeited, { cur: null }), b, [...r.events, { type: 'CombatActionForfeited', modelId: cur, reason: 'choice' }])
+  }
   const list = combatChoices(state, b, cur)
   // a targeted special action answered without a target gets the first option's (the one its hook used to pick by itself)
   if (a.choice === 'specialAction' && a.abilityId && !a.targetId && needsTarget(rec(b, a.abilityId))) {
@@ -1571,6 +1593,7 @@ function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
   options.push({ id: 'endAttacks', label: 'End attacks', action: { type: 'endAttacks', decisionId: did, player: m.owner, modelId: id } as Action })
   options.push(...any)
   for (const c of specialChoices(state, b, id, true)) options.push(anytimeSpecialOption(c, did, m.owner, id))
+  options.push(...activationCardOptions(state, b))
   const r = raise(state, { player: m.owner, kind: 'chooseAttack', window: 'combat.chooseAttack', context: { modelId: id }, options, canPass: false })
   state = r.state
   return ok(state, events)
@@ -1884,7 +1907,7 @@ function defFor(
   const r = defModifiers(state, target.id, {
     kind, baseDef: base, originId: atk?.originId ?? attacker.id, melee: { reach: (m) => meleeReach(state, b, m.id) },
     grantedConcealment: grantedConcealmentOf(state, b, target.id), // Exhaust Fumes, Ashen Veil
-    grantedCover: (kind === 'ranged' || kind === 'arcane') && hasGrantedCover(state, b, target.id),
+    grantedCover: (kind === 'ranged' || kind === 'arcane') && (hasGrantedCover(state, b, target.id) || hasCardGrant(state, b, target.id, 'core.a.dig-in')), // M13: Dig In
     ignoreTargetInMelee: o.ignoreTIM, ignoreCloudConcealment: hasIgnore(state, b, attacker.id, 'clouds'), ignoreAllConcealment: !!o.ignoreConcealment || hasIgnore(state, b, attacker.id, 'concealment'), ignoreCover: !!o.ignoreCover || hasIgnore(state, b, attacker.id, 'cover'),
   })
   let def = r.def
@@ -2016,7 +2039,7 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
   const a0 = actOf(state)
   const x: AtkX = {
     stage: 'start', weaponId: spell ? spell.id : p.weaponId, wloc: inst?.loc, group: chosen, specs, rollTargets: [tg.id], results: {}, boosted: !!p.flags?.frenzy, powerful: false,
-    noFocus: p.noFocus, atkAdd: 0, jobs: [], jobIdx: 0, aoe: (w.aoe ?? 0) > 0 ? w.aoe : undefined, blastPow: w.blastPow, star, starFlat, blessed: false, denyTough: false, rfp: false,
+    noFocus: p.noFocus, atkAdd: 0, jobs: [], jobIdx: 0, aoe: (w.aoe ?? 0) > 0 ? w.aoe : undefined, blastPow: w.blastPow, star, starFlat, blessed: blessedWeapons(state, at.id, !!spell), denyTough: false, rfp: false,
     needColumn: false, destroyed: [], hitModels: [], trig: [], trigIdx: 0, atkMods: [], dmgMods: {}, parent: p.parent,
     flags: { ...(forced.length ? { declForced: forced } : {}), ...((specs.includes('cir.a.blood-reaper') || p.star === THRESHER_ID) && !p.additional && kind === 'melee' ? { multi: true } : {}), ...(chosen === 'featherweight-arrow' && kind === 'ranged' ? { multi: true } : {}), ...(sprayLine ? { sprayLine: true } : {}), ...(p.flags ?? {}) }, chargeAttack: p.chargeAttack,
     basicRanged: !!p.basic && kind === 'ranged',
@@ -3361,6 +3384,7 @@ const hasPrey = (state: GameState, b: B, unitId: UnitId): boolean => state.units
 export function reraise(state: GameState, b: B, events: GameEvent[]): Out {
   const a = actOf(state)
   if (!a) return ok(state, events)
+  if (a.x.stage === 'start') return raiseStart(state, b, events) // M13: a card played on a start-of-activation prompt
   if (a.x.stage === 'movement') return raiseMovement(state, b, events)
   if (a.x.stage === 'combat' || a.x.stage === 'endMove') {
     const cur = a.x.cur
@@ -3666,6 +3690,12 @@ const ANYTIME_KINDS = new Set<DecisionKind>(['chooseMovement', 'chooseCombatActi
  * (endTurn, control-phase answers, setup). The caller has already checked nothing; we check id and player here.
  */
 export function handleActivationAction(state: GameState, b: B, a: Action): Result | null {
+  const r = handleActivationActionInner(state, b, a)
+  if (!r || 'rejection' in r || !r.state.effects.some((e) => (e as EffectInstance & EffectExtras).endsOn)) return r
+  const d = endDigIns(r.state, b) // M13: Dig In ends when its model moves, is placed or becomes engaged
+  return d.state === r.state ? r : { ...r, state: d.state, events: [...r.events, ...d.events] }
+}
+function handleActivationActionInner(state: GameState, b: B, a: Action): Result | null {
   const pd = state.pending
   if (!ACTIVATION_KINDS.has(pd.kind) && pd.kind !== 'chooseActivation') return null
   if (a.type === 'endTurn') return null

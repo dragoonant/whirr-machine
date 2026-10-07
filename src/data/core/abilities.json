@@ -563,5 +563,62 @@
       "who": "self"
     },
     "duration": "instant"
+  },
+  {
+    "id": "core.a.sturdy",
+    "name": "Sturdy",
+    "text": "Pushes cannot move this model. Slams and throws still do.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "sturdy"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.dig-in",
+    "name": "Dig In",
+    "text": "This model has cover against ranged and arcane attacks, Resistance: Blast, and does not block line of sight. It stops being dug in when it moves, is placed or becomes engaged.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "digIn"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "core.a.set-defense",
+    "name": "Set Defense",
+    "text": "Charge attack rolls and slam power attack rolls against this model take -2.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "setDefense"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
   }
 ]

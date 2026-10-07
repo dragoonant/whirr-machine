@@ -1,0 +1,213 @@
+{
+  "id": "scn-sr26-pressure-point",
+  "name": "Pressure Point",
+  "text": "Four flags mark terrain pieces that anyone can fight over, and one big objective sits dead centre. Each terrain piece you hold scores a point and the centre objective scores two. A three-point lead after your opponent's turn wins on the spot.",
+  "source": "SR p8",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "flag"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 2
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "setup": {
+    "flagRadius": 5,
+    "flagPickOrder": "attackerFirst"
+  },
+  "elements": [
+    {
+      "id": "el-flag-1",
+      "kind": "flag",
+      "pos": {
+        "x": -11.41,
+        "z": 3.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-2",
+      "kind": "flag",
+      "pos": {
+        "x": 11.41,
+        "z": 3.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-3",
+      "kind": "flag",
+      "pos": {
+        "x": -17.41,
+        "z": -7.59
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-4",
+      "kind": "flag",
+      "pos": {
+        "x": 17.41,
+        "z": -7.59
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50",
+      "kind": "objective50",
+      "pos": {
+        "x": 0.02,
+        "z": -1.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-1-48"
+}

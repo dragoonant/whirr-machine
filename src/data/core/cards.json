@@ -1,0 +1,143 @@
+[
+  {
+    "id": "core.card.bite-and-hold",
+    "name": "Bite and Hold",
+    "text": "Played during one of your activations. Either keep a scenario element you are securing right now in your hands until the end of this turn (an enemy contesting it still takes it away), or make the activating model or unit immovable by pushes for a round while it stands in scenario terrain or close to a scenario element.",
+    "cost": 0,
+    "armies": [],
+    "timing": "activationAny",
+    "subject": "modelOrUnit",
+    "options": [
+      {
+        "id": "secure",
+        "label": "Hold the element",
+        "text": "One element the subject secures right now stays secured by you until this turn ends, unless an enemy contests it.",
+        "code": "biteHoldSecure"
+      },
+      {
+        "id": "sturdy",
+        "label": "Sturdy",
+        "text": "For a round, while in scenario terrain or within 3 inches of another scenario element, the subject cannot be pushed.",
+        "code": "biteHoldSturdy"
+      }
+    ],
+    "source": "CL26 universal set; WA Commands page 2026-10-07"
+  },
+  {
+    "id": "core.card.blessings-of-the-gods",
+    "name": "Blessings of the Gods",
+    "text": "Played as one of your models begins its activation. Either its weapons become blessed and magical for that activation, or the model gains a single resource point (focus, fury, soul or corpse) if it can use one.",
+    "cost": 0,
+    "armies": [],
+    "timing": "activationStart",
+    "subject": "model",
+    "options": [
+      {
+        "id": "weapons",
+        "label": "Blessed weapons",
+        "text": "This activation the model's weapons are Blessed and deal magical damage.",
+        "code": "blessWeapons"
+      },
+      {
+        "id": "gain",
+        "label": "Gain a resource",
+        "text": "The model gains one focus, fury, soul token or corpse token, where its rules let it hold that.",
+        "code": "blessGain"
+      }
+    ],
+    "source": "CL26 universal set; WA Commands page 2026-10-07"
+  },
+  {
+    "id": "core.card.careful-reconnaissance",
+    "name": "Careful Reconnaissance",
+    "text": "Played during one of your activations. Either the activating model or unit gains Pathfinder for the activation, or it gains Reposition [3\"] so it may advance up to 3 inches when its activation ends, provided it did not run or fail a charge.",
+    "cost": 0,
+    "armies": [],
+    "timing": "activationAny",
+    "subject": "modelOrUnit",
+    "options": [
+      {
+        "id": "pathfinder",
+        "label": "Pathfinder",
+        "text": "The subject has Pathfinder this activation.",
+        "code": "reconPathfinder"
+      },
+      {
+        "id": "reposition",
+        "label": "Reposition [3\"]",
+        "text": "The subject has Reposition [3\"] this activation.",
+        "code": "reconReposition"
+      }
+    ],
+    "source": "CL26 universal set; WA Commands page 2026-10-07"
+  },
+  {
+    "id": "core.card.duck-and-cover",
+    "name": "Duck and Cover!",
+    "text": "Played during the activation of one of your warrior models or units. For a round, while it is in scenario terrain or close to a scenario element, it either digs in (cover and blast resistance, and it no longer blocks line of sight) or sets its defense (charge and slam attack rolls against it suffer a penalty).",
+    "cost": 0,
+    "armies": [],
+    "timing": "activationAny",
+    "subject": "warriorModelOrUnit",
+    "options": [
+      {
+        "id": "dig-in",
+        "label": "Dig In",
+        "text": "For a round, near an element: cover, Resistance: Blast, and no LOS block. It ends when the model moves, is placed or becomes engaged.",
+        "code": "duckDigIn"
+      },
+      {
+        "id": "set-defense",
+        "label": "Set Defense",
+        "text": "For a round, near an element: enemy charge attack rolls and slam power attack rolls against the subject take -2.",
+        "code": "duckSetDefense"
+      }
+    ],
+    "source": "CL26 universal set; WA Commands page 2026-10-07; WA Template:Dig_In, Template:Set_Defense"
+  },
+  {
+    "id": "core.card.put-the-fires-out",
+    "name": "Put the Fires Out",
+    "text": "Played at the start of your Maintenance Phase. Either wipe every shakeable and every continuous effect off one of your models or units, or remove a few damage points from one model.",
+    "cost": 0,
+    "armies": [],
+    "timing": "maintenanceStart",
+    "subject": "modelOrUnit",
+    "options": [
+      {
+        "id": "end-effects",
+        "label": "End effects",
+        "text": "Every shakeable effect and every continuous effect on the subject ends.",
+        "code": "firesOutEnd"
+      },
+      {
+        "id": "heal",
+        "label": "Remove d3+1 damage",
+        "text": "Roll a d3 and remove that many damage points plus one from one model.",
+        "code": "firesOutHeal"
+      }
+    ],
+    "source": "CL26 universal set; WA Commands page 2026-10-07"
+  },
+  {
+    "id": "kha.card.for-the-motherland",
+    "name": "For the Motherland",
+    "text": "Played during the activation of one of your warrior models or units. Those models gain Tough for a round.",
+    "cost": 0,
+    "armies": [
+      "kha.winter-korps",
+      "kha.old-umbrey"
+    ],
+    "timing": "activationAny",
+    "subject": "warriorModelOrUnit",
+    "options": [
+      {
+        "id": "tough",
+        "label": "Tough",
+        "text": "The subject models have Tough for a round.",
+        "code": "motherlandTough"
+      }
+    ],
+    "source": "WA Commands page 2026-10-07 (Khador Winter Korps, Old Umbrey); 91 A.3"
+  }
+]

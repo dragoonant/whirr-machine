@@ -3,11 +3,19 @@
 // (a RawGroup) and is spread in below, so parallel faction builders never edit this file.
 // tests/data checks that no JSON file on disk is missing from RAW.
 import d0 from './core/abilities.json'
+import d55 from './core/cards.json'
 import d1 from './core/qualities.json'
 import d2 from './core/systems.json'
 import d29 from './scenarios/ashwall-divide.json'
 import d30 from './scenarios/qs-demo.json'
 import d54 from './scenarios/copperline-crossing.json'
+import sr1 from './scenarios/sr26-trench-warfare.json'
+import sr2 from './scenarios/sr26-two-fronts.json'
+import sr3 from './scenarios/sr26-wolves.json'
+import sr4 from './scenarios/sr26-pressure-point.json'
+import sr5 from './scenarios/sr26-high-stakes.json'
+import sr6 from './scenarios/sr26-fault-line.json'
+import sr7 from './scenarios/sr26-payload.json'
 import d31 from './terrain/layouts/ashwall-divide.json'
 import d32 from './terrain/pieces.json'
 import d33 from './terrain/pieces-bog.json'
@@ -53,6 +61,9 @@ const CORE: RawGroup = {
   'systems': [
     { path: 'core/systems.json', data: d2 },
   ],
+  'card': [
+    { path: 'core/cards.json', data: d55 },
+  ],
 }
 
 const SHARED: RawGroup = {
@@ -60,6 +71,13 @@ const SHARED: RawGroup = {
     { path: 'scenarios/ashwall-divide.json', data: d29 },
     { path: 'scenarios/qs-demo.json', data: d30 },
     { path: 'scenarios/copperline-crossing.json', data: d54 },
+    { path: 'scenarios/sr26-trench-warfare.json', data: sr1 },
+    { path: 'scenarios/sr26-two-fronts.json', data: sr2 },
+    { path: 'scenarios/sr26-wolves.json', data: sr3 },
+    { path: 'scenarios/sr26-pressure-point.json', data: sr4 },
+    { path: 'scenarios/sr26-high-stakes.json', data: sr5 },
+    { path: 'scenarios/sr26-fault-line.json', data: sr6 },
+    { path: 'scenarios/sr26-payload.json', data: sr7 },
   ],
   'terrain-layout': [
     { path: 'terrain/layouts/ashwall-divide.json', data: d31 },
@@ -93,7 +111,7 @@ const SHARED: RawGroup = {
 }
 
 /** Record kinds in their historical order (byId insertion order follows it). */
-const KINDS = ['ability', 'systems', 'faction', 'feat', 'model', 'spell', 'weapon', 'list', 'scenario', 'terrain-layout', 'terrain', 'board'] as const
+const KINDS = ['ability', 'systems', 'faction', 'feat', 'model', 'spell', 'weapon', 'list', 'scenario', 'terrain-layout', 'terrain', 'board', 'card'] as const
 
 function merge(groups: readonly RawGroup[]): Record<string, RawFile[]> {
   const out: Record<string, RawFile[]> = {}

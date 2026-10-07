@@ -2,7 +2,7 @@
 // Additive since M2 (00 §14): registerBundle(), the bundle registry step() reads by state.dataVersion.
 import type { Action } from './actions'
 import type {
-  Aspect, AttackContext, BaseMm, DataBundle, ElementControl, GameSetup, GameState, Id, LosReason, ModelId, Mod, PendingDecision,
+  Aspect, AttackContext, BaseMm, DataBundle, ElementControl, ElementRuntime, GameSetup, GameState, Id, LosReason, ModelId, Mod, PendingDecision,
   PlayerId, PlayerView, Rejection, SaveFile, Stat, StatMod, StepResult, Vec2,
 } from './types'
 import { EngineInvariantError } from './types'
@@ -24,6 +24,8 @@ import { activationLegalActions, activeStar, declareAttack, handleActivationActi
 import { controlReport } from './scenario'
 import { answerSetup, createInitialState, isSetupDecision, setupLegalActions } from './setup'
 import { housekeeping } from './housekeeping'
+import { cardsView, handlePlayCard } from './cards'
+import { resolveClockExpired } from './clock'
 import { answerControlDecision, answerMaintenanceDecision, endTurn, flowLegalActions, isControlDecision, isMaintenanceDecision } from './turnflow'
 
 export * from './types'
@@ -81,7 +83,10 @@ function dispatch(state: GameState, b: DataBundle, a: Action): FlowResult {
   }
   if (!a || typeof a !== 'object' || typeof a.type !== 'string') return { rejection: { code: 'E_BAD_PAYLOAD', message: 'not an action' } }
   if (a.decisionId !== pd.id) return { rejection: { code: 'E_WRONG_DECISION', message: `expected an answer to ${pd.id}` } }
+  // M13 (91 C.2): the clock may run out for either side at any open decision, so the owner check is skipped
+  if (a.type === 'clockExpired') return resolveClockExpired(state, b, a)
   if (a.player !== pd.player) return { rejection: { code: 'E_NOT_YOUR_DECISION', message: `the decision belongs to player ${pd.player}` } }
+  if (a.type === 'playCard') return handlePlayCard(state, b, a) // M13 (91 A.5): offered by activation decisions and the Maintenance card prompt
   if (isSetupDecision(state)) return answerSetup(state, b, a)
   if (isControlDecision(state)) return answerControlDecision(state, b, a)
   if (isMaintenanceDecision(state)) return answerMaintenanceDecision(state, b, a)
@@ -235,9 +240,19 @@ export interface ControlReport {
   elements: Record<Id, ElementControl>
   vpNow: Record<PlayerId, number>
   killBox: Record<PlayerId, boolean>
+  /** M13 (91 B.2): moved, tokened or removed elements, the current Kill Box depth and a player whose clock ran out; each present only when the game uses it */
+  elementState?: Record<Id, ElementRuntime>
+  killBoxDepth?: number
+  clockOut?: PlayerId
   /** M12: the Kill Box is in force this turn (Skirmish deployment and the first round are not); `killBox` alone only says a Leader stands inside its strip */
   killBoxActive?: boolean
 }
+// ---------- M13 command-card query shapes (91 D.1); the body is cards.ts cardsView ----------
+/** One option of a card: `targets` = the model and unit ids it could be played on right now (empty = not playable now). */
+export interface CardOptionView { id: string; label: string; targets: Id[] }
+export interface CardView { cardId: Id; name: string; text: string; cost: number; played: boolean; playableNow: boolean; options: CardOptionView[] }
+/** A player's hand: `playsLeft` = of the 2 plays per turn; `usedOn` = the models and units a card has been played on this turn (one card each). */
+export interface CardsView { hand: CardView[]; playsLeft: number; usedOn: Id[] }
 export interface StatTrace { stat: Stat; value: number; base: number; steps: { source: string; mode: 'set' | 'double' | 'half' | 'add'; value: number; after: number }[] }
 export interface MoveCheck { ok: boolean; stopAt: Vec2 | null; reason: 'ok' | 'collision' | 'rough' | 'obstacle' | 'obstruction' | 'tooFar' | 'edge' | 'notStraight' | null; distance: number; cost: number }
 
@@ -357,8 +372,18 @@ export const query = {
 
   /** Scenario control right now (the client never computes control itself). */
   control(state: GameState): ControlReport {
-    return controlReport(state, bundleFor(state))
+    const r = controlReport(state, bundleFor(state))
+    const sc = state.scenario
+    return {
+      ...r,
+      ...(sc.elementState ? { elementState: sc.elementState } : {}),
+      ...(sc.killBoxDepth !== undefined ? { killBoxDepth: sc.killBoxDepth } : {}),
+      ...(sc.clockOut !== undefined ? { clockOut: sc.clockOut } : {}),
+    }
   },
+
+  /** M13 (91 A): a player's command-card hand, what is playable now and the plays left this turn. Both hands are open information. */
+  cards(state: GameState, player: PlayerId): CardsView { return cardsView(state, bundleFor(state), player) },
 
   /** A resolved stat with the effects that changed it. */
   stat(state: GameState, modelId: ModelId, stat: Stat): StatTrace {
@@ -487,6 +512,12 @@ function decisionTitle(state: GameState, pd: PendingDecision): string {
       if (data.code === 'prey') return 'pick the prey'
       if (data.code === 'startTrigger') return 'use an ability before moving?'
       if (data.code === 'declOpt') return 'use the shot ability?'
+      if (data.code === 'card') return 'play a command card?'
+      if (data.code === 'flagTerrain') return 'pick the terrain for your flag'
+      if (data.code === 'fuse') return 'pick what the fuse burns down'
+      if (data.code === 'heelToken') return 'add a token to your 40 mm objective?'
+      if (data.code === 'heelMove') return 'move the objective toward its 50?'
+      if (data.code === 'payload') return 'move your 50 mm objective?'
       return 'make a choice'
     case 'gameOver': return 'game over'
     case 'leech': return 'leech fury'
@@ -496,6 +527,9 @@ function decisionTitle(state: GameState, pd: PendingDecision): string {
     default: return String(pd.kind)
   }
 }
+
+/** A command card's name for log lines (falls back to the id). */
+const cardName = (state: GameState, cardId: Id): string => ((bundleFor(state).byId[cardId] ?? {}) as { name?: string }).name ?? cardId
 
 export const describe = {
   percent(p: number): string { return `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%` },
@@ -529,6 +563,14 @@ export const describe = {
     const target = pending.context.targetId ? nameOf(state, pending.context.targetId) : ''
     return { title: `${who}: ${decisionTitle(state, pending)}${target && !TITLE_NAMES_TARGET.has(pending.kind) ? ` → ${target}` : ''}`, lines }
   },
+  /** M13: one line for an action in a log or tooltip (the two new action types; the rest read as their type). */
+  action(state: GameState, a: Action): string {
+    switch (a.type) {
+      case 'playCard': return `Player ${a.player} plays ${cardName(state, a.cardId)}: ${a.option} on ${nameOf(state, a.targetId)}`
+      case 'clockExpired': return `Player ${a.timedOut}'s clock ran out`
+      default: return a.type
+    }
+  },
   event(state: GameState, ev: GameEvent): string {
     const e = ev as GameEvent & Record<string, unknown>
     const n = (k: string): string => nameOf(state, e[k] as string | undefined)
@@ -553,6 +595,15 @@ export const describe = {
       case 'BeastControlTaken': return `${n('warlockId')} takes control of ${n('modelId')}`
       case 'TokenGained': return `${n('modelId')} gains ${ev.count} ${ev.token} token${ev.count === 1 ? '' : 's'}`
       case 'TokenSpent': return `${n('modelId')} spends ${ev.count} ${ev.token} token${ev.count === 1 ? '' : 's'}`
+      case 'CardPlayed': return `Player ${ev.player} plays a command card: ${cardName(state, ev.cardId)} (${ev.option})`
+      case 'CacheClaimed': return `${n('modelId')} claims the cache (player ${ev.player})`
+      case 'FlagTerrainChosen': return ev.terrainId ? `Player ${ev.player} picks a terrain piece for the flag` : `Player ${ev.player}'s flag becomes a small obstruction`
+      case 'ElementMoved': return `An objective moves ${Math.hypot(ev.to.x - ev.from.x, ev.to.z - ev.from.z).toFixed(1)}"`
+      case 'ElementTokensChanged': return `An objective now holds ${ev.tokens} token${ev.tokens === 1 ? '' : 's'} (${ev.delta >= 0 ? '+' : ''}${ev.delta})`
+      case 'ElementDetonated': return 'An objective detonates'
+      case 'ElementRemoved': return `An objective is removed (${ev.reason})`
+      case 'KillBoxExtended': return `The Kill Box is now ${ev.depth}" deep`
+      case 'ClockExpired': return `Player ${ev.player}'s clock ran out`
       default: return ev.type
     }
   },

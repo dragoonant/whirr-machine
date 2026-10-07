@@ -1,0 +1,310 @@
+{
+  "id": "scn-sr26-trench-warfare",
+  "name": "Trench Warfare",
+  "text": "Both sides dig in around two big and two small objectives, with a cache behind each line. Every objective held scores a point a turn, and holding the terrain your opponent picked scores two. Forfeit a Combat Action by the enemy cache, uncontested, to claim two more. Small and medium warriors near their own objectives gain cover and resist blast. A three-point lead after your opponent's turn wins.",
+  "source": "SR p5",
+  "levels": [
+    "recon",
+    "skirmish",
+    "pitched",
+    "grandMelee"
+  ],
+  "table": {
+    "w": 48,
+    "d": 48
+  },
+  "frame": "attacker",
+  "deployment": {
+    "first": 6,
+    "second": 11,
+    "advance": 3,
+    "unitSpread": 3
+  },
+  "rounds": 7,
+  "scoring": {
+    "fromRound": 2,
+    "fromPlayer": "second",
+    "winMargin": 3,
+    "winOnOpponentTurnOnly": true,
+    "leaderPresence": 10,
+    "rules": [
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "objective40",
+            "objective50"
+          ],
+          "owner": "any"
+        },
+        "vp": 1
+      },
+      {
+        "kind": "control",
+        "select": {
+          "kinds": [
+            "flag"
+          ],
+          "owner": "opponent"
+        },
+        "vp": 2
+      },
+      {
+        "kind": "cache",
+        "vp": 2
+      }
+    ]
+  },
+  "killBox": {
+    "fromRound": 2,
+    "fromPlayer": "first",
+    "depth": 12,
+    "vp": 2
+  },
+  "setup": {
+    "flagRadius": 5,
+    "flagPickOrder": "attackerFirst"
+  },
+  "special": [
+    {
+      "kind": "earthworks",
+      "within": 3,
+      "bases": [
+        30,
+        40
+      ],
+      "warriorOnly": true,
+      "of": [
+        "objective40",
+        "objective50"
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "id": "el-50-blue",
+      "kind": "objective50",
+      "owner": "second",
+      "pos": {
+        "x": -11.02,
+        "z": 2.02
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-blue",
+      "kind": "objective40",
+      "owner": "second",
+      "pos": {
+        "x": -1.21,
+        "z": 11.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-cache-blue",
+      "kind": "cache",
+      "owner": "second",
+      "pos": {
+        "x": -3.41,
+        "z": 5.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "any"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-blue",
+      "kind": "flag",
+      "owner": "second",
+      "pos": {
+        "x": 17.41,
+        "z": 8.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-50-red",
+      "kind": "objective50",
+      "owner": "first",
+      "pos": {
+        "x": 11.02,
+        "z": 1.98
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "warEngine",
+          "battleEngine"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-40-red",
+      "kind": "objective40",
+      "owner": "first",
+      "pos": {
+        "x": 1.21,
+        "z": -9.21
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "leader",
+          "unitAll"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-cache-red",
+      "kind": "cache",
+      "owner": "first",
+      "pos": {
+        "x": 3.41,
+        "z": -1.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 1,
+        "eligible": [
+          "any"
+        ]
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    },
+    {
+      "id": "el-flag-red",
+      "kind": "flag",
+      "owner": "first",
+      "pos": {
+        "x": -17.41,
+        "z": -6.41
+      },
+      "hold": {
+        "within": 3,
+        "models": 2,
+        "eligible": [
+          "any"
+        ],
+        "single": [
+          "leader",
+          "solo"
+        ],
+        "mode": "area"
+      },
+      "contest": {
+        "within": 3,
+        "excludes": [
+          "leader",
+          "inert",
+          "disabled",
+          "wild"
+        ]
+      },
+      "vp": {}
+    }
+  ],
+  "terrainLayout": "layout.bog-3-48"
+}

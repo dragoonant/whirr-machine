@@ -3,6 +3,7 @@ import { game, uiActions, usePresentedState, usePrompt, usePromptLegal, useWaiti
 import './hud.css'
 import { AllocateForm, BoardForm, LeechForm, ShakeForm, TransferForm, UpkeepForm, VentForm } from './PromptForms'
 import { panelActions, useRailCollapsed } from '../store/panelStore'
+import { setPickHover } from './cards/pickHover'
 import { buildPromptView, isLegal, optionTestId, type PromptView } from './promptView'
 
 const typing = (t: EventTarget | null): boolean => {
@@ -28,6 +29,9 @@ export function PromptDock() {
   const waiting = useWaitingFor()
   const leftCollapsed = useRailCollapsed('left')
   const view: PromptView | null = useMemo(() => (pd && state ? buildPromptView(state, pd, legal) : null), [pd, state, legal])
+
+  // a flag's terrain pick lights the piece under the pointer: forget it when the decision changes
+  useEffect(() => () => setPickHover(null), [pd?.id])
 
   useEffect(() => {
     if (!view || !pd) return
@@ -70,8 +74,8 @@ export function PromptDock() {
               className={`hud-btn ${o.tone === 'primary' ? 'hud-btn-primary' : o.tone === 'decline' ? 'hud-btn-quiet' : ''}${o.id === view.defaultId ? ' hud-btn-default' : ''}`}
               data-testid={optionTestId(view.kind, o)}
               onClick={() => game.dispatch(o.action)}
-              onMouseEnter={() => o.hoverId && uiActions.hover(o.hoverId)} onMouseLeave={() => o.hoverId && uiActions.hover(null)}
-              onFocus={() => o.hoverId && uiActions.hover(o.hoverId)} onBlur={() => o.hoverId && uiActions.hover(null)}
+              onMouseEnter={() => { if (o.hoverId) uiActions.hover(o.hoverId); if (o.terrainId) setPickHover(o.terrainId) }} onMouseLeave={() => { if (o.hoverId) uiActions.hover(null); if (o.terrainId) setPickHover(null) }}
+              onFocus={() => { if (o.hoverId) uiActions.hover(o.hoverId); if (o.terrainId) setPickHover(o.terrainId) }} onBlur={() => { if (o.hoverId) uiActions.hover(null); if (o.terrainId) setPickHover(null) }}
             >
               <span className="btn-label">{o.label}</span>
               {o.cost && <span className={`btn-cost${o.forced ? ' btn-forced' : ''}`}>{o.cost}</span>}

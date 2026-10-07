@@ -158,6 +158,64 @@ export const HELP_TABS: HelpTab[] = [
     ],
   },
   {
+    id: 'cards', title: 'Command cards', blurb: 'Five one-shot tricks each, played in your own turn.',
+    blocks: [
+      { kind: 'p', text: 'With Command cards switched on at the start screen, each side takes a hand of five cards. A card is played once a game and then it is gone. You may play at most two cards in a turn, and a model or unit can be the subject of only one card in a turn: a card played on one trooper uses up the whole unit for that turn. Both hands are open, so you can see what the opponent still holds.' },
+      { kind: 'p', text: 'Open the Cards button in the top bar to see the tray. Every card says when it can be played. The buttons light up only when the game is waiting at a moment the card fits, and each button names the model or unit it lands on.' },
+      { kind: 'h', text: 'The five cards every army has' },
+      { kind: 'list', items: [
+        'Bite and Hold: during an activation. Either keep a scenario element the model is securing right now in your hands until the end of the turn (an enemy contesting it still takes it away), or make the model immovable by pushes for a round while it stands in scenario terrain or near a scenario element.',
+        'Blessings of the Gods: as an activation begins. Either the model\'s weapons become blessed and magical for that activation, or it gains a single resource point (focus, fury, a soul or a corpse) where its rules let it hold one.',
+        'Careful Reconnaissance: during an activation. Either the model or unit ignores the slowing of rough ground and forests this activation (Pathfinder), or it may advance up to 3 inches when the activation would end, as long as it did not run or fail a charge (Reposition).',
+        'Duck and Cover!: during the activation of a warrior model or unit. For a round, while it is in scenario terrain or near a scenario element, it either digs in (cover, blast resistance, and it stops blocking line of sight, until it moves, is placed or is engaged) or sets its defense (enemy charge and slam attack rolls against it take -2).',
+        'Put the Fires Out: at the start of your Maintenance Phase. Either end every shakeable and every continuous effect on one of your models or units, or remove a few damage points (a d3 plus one) from one model. The game asks before effects roll, and only if a card could do something.',
+      ] },
+      { kind: 'tip', text: 'A card that needs "near a scenario element" checks that all the time, not just when you play it, so a model that wanders off loses the bonus until it returns.' },
+      { kind: 'tip', text: 'Quick Start Demo games never use cards, to keep the first game simple. Skirmish and Steamroller games turn them on by default.' },
+    ],
+  },
+  {
+    id: 'steamroller', title: 'Steamroller 2026', blurb: 'The seven tournament scenarios and what is different about them.',
+    blocks: [
+      { kind: 'p', text: 'Pick a Steamroller 2026 scenario on the start screen, or Random (d8) to roll for one: 1 Trench Warfare, 2 Two Fronts, 3 Wolves at Our Heels, 4 Pressure Point, 5 High Stakes, 6 Fault Line, 7 Payload, and an 8 rolls again. They all use the 48 inch table.' },
+      { kind: 'h', text: 'What they share' },
+      { kind: 'list', items: [
+        'The first player is the Attacker and deploys within 6 inches of their edge. The second player is the Defender and deploys within 11 inches, and chooses the table edge.',
+        'Scoring starts at the end of the Defender\'s turn in round 2 and happens at the end of every turn after that, for both players. A player who is 3 or more points ahead right after the opponent\'s turn wins (Payload does not use this).',
+        'The Kill Box from the Attacker\'s second round: ending your turn with your warcaster or warlock completely within 12 inches of your own edge gives the opponent 2 VP.',
+        'Objectives: a 50 mm objective is secured by a warcaster, warlock, warjack, warbeast or battle engine within 3 inches. A 40 mm objective is secured by a leader within 3 inches, or by a unit with all its remaining models within 3 inches. An enemy within 3 inches, other than a leader, contests it.',
+      ] },
+      { kind: 'h', text: 'Flags and scenario terrain' },
+      { kind: 'p', text: 'Before deployment each side picks one terrain piece within 5 inches of its own flag; it becomes scenario terrain, shown outlined on the table. With nothing in reach the flag becomes a small obstruction instead. You hold scenario terrain with one leader, or one solo, or two or more models of any kind, standing inside it (or within 3 inches of a piece you cannot stand in). If the piece is destroyed or removed, the flag stays behind as a small obstruction.' },
+      { kind: 'h', text: 'Caches' },
+      { kind: 'p', text: 'Trench Warfare has a cache behind each line. Only the opponent\'s cache can be scored: a friendly model within 3 inches of it, with no enemy contesting, can give up its Combat Action to claim it. The cache is removed and you score 2 VP at that turn\'s scoring. This works only on turns that end with scoring.' },
+      { kind: 'h', text: 'One line per scenario' },
+      { kind: 'list', items: [
+        'Trench Warfare: 1 VP per objective held, 2 VP for holding the terrain your opponent picked, 2 for a claimed cache. Small and medium warriors near their own objectives gain cover and blast resistance.',
+        'Two Fronts: 1 VP per objective held and for the neutral flag terrain, plus 1 more for both 40 mm objectives and 1 more for both 50 mm.',
+        'Wolves at Our Heels: 1 VP per objective and flag. Each turn from round 3 the Kill Box grows 2 inches. After scoring you may put a token on your own 40 mm objective, and your opponent may then pull it 3 inches toward its 50 mm. First to three tokens alone scores 3 once.',
+        'Pressure Point: four neutral flags, picked in turn, 1 VP each, and 2 VP for the 50 mm objective.',
+        'High Stakes: countdown tokens sit on both flag terrains and the 50 mm objective. Each scoring point, the side securing the 50 mm picks an element and rolls a d3 to burn it down; if nobody holds it, a d3 chooses. An element at 0 detonates, hurting everything in or near it, then holding it at 0 scores.',
+        'Fault Line: 1 VP per objective, 1 more for securing two of your own and another for three.',
+        'Payload: your 50 mm objective can roll toward the enemy flag terrain after scoring, 3 inches and 1 more for every other objective you secure. Roll it into that terrain to score 3 VP and remove it. After moving it at the end of your own turn, one of your Cohort models may haul up to 5 inches toward it.',
+      ] },
+      { kind: 'tip', text: 'The top bar shows each element and who holds it. Decisions the scenario asks of you, such as picking flag terrain or moving an objective, come up in the bottom panel.' },
+    ],
+  },
+  {
+    id: 'clock', title: 'Game clock', blurb: 'An optional chess clock, as in tournament play.',
+    blocks: [
+      { kind: 'p', text: 'Switch the clock on at the start screen. Steamroller gives each side one pool for the whole game: 20 minutes at the 30-point size and 30 minutes at 50 points. Custom lets you pick the minutes and add a few seconds back at the end of each of your turns. The clock is off by default, and the bot is untimed unless you tick Time the bot.' },
+      { kind: 'list', items: [
+        'Your time runs while the game waits on you. It stops by itself during animations, while a menu, the settings or this guide is open, and while the tab is hidden.',
+        'Deployment onwards is on the clock. The roll-off, turn order, table edge and flag picks are not.',
+        'Run out of time on your own turn and you lose: the opponent scores what they can, and if that puts them ahead they win on points, otherwise your warcaster or warlock is destroyed.',
+        'Run out of time during the opponent\'s turn and any choice you owe is made for you with the safe default; at the end of their turn they win the same way.',
+        'Settings shows the clock and has a Turn the clock off button. It cannot be switched back on in that game.',
+      ] },
+    ],
+  },
+  {
     id: 'terrain', title: 'Terrain and LOS', blurb: 'What blocks shots and what slows you.',
     blocks: [
       { kind: 'list', items: [

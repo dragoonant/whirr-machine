@@ -4,11 +4,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import Ajv2020 from 'ajv/dist/2020.js'
+import { layoutFit } from '../src/data/battlefields'
 import { checkRefs, derivedLayouts, rawRecords, type RecordType, type TypedRecord } from '../src/data/index'
+import { CARD_CODES } from '../src/engine/cards'
 import { codeHooks, knownCodeConditions } from '../src/engine/code-hooks'
 import { baseRadius } from '../src/engine/geometry'
 import { distToShape, terrainTraits, worldShape } from '../src/engine/terrain'
-import type { TerrainInstance } from '../src/engine/types'
+import type { DataBundle, TerrainInstance } from '../src/engine/types'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const schemaDir = path.join(root, 'src/data/schema')
@@ -47,10 +49,11 @@ const words = (s: string): string[] => s.toLowerCase().replace(/[^a-z0-9' ]+/g, 
 
 type Any = Record<string, any>
 
-/** Objective base size by element kind (mm). Flags are 30 mm, scenario terrain and zones have no base. */
-const ELEMENT_MM: Record<string, number> = { objective50: 50, objective40: 40, flag: 30 }
+/** Objective base size by element kind (mm). Flags and caches are 30 mm, scenario terrain and zones have no base. */
+const ELEMENT_MM: Record<string, number> = { objective50: 50, objective40: 40, flag: 30, cache: 30 }
 
-export interface ClearanceRow { scenario: string; layout: string; element: string; piece: string; pieceType: string; impassable: boolean; gap: number }
+/** `fitted` (M13): the scenario is an SR one (attacker frame); setup drops the pieces that crowd an objective or cache (battlefields.ts layoutFit), so the row only reports. */
+export interface ClearanceRow { scenario: string; layout: string; element: string; piece: string; pieceType: string; impassable: boolean; gap: number; fitted?: boolean }
 /** Gap (base edge to footprint edge, 0 = overlapping) of every objective of every 48" scenario to every piece of every layout it can be played on. */
 export function objectiveClearances(byId: Record<string, TypedRecord>): ClearanceRow[] {
   const rows: ClearanceRow[] = []
@@ -71,12 +74,14 @@ export function objectiveClearances(byId: Record<string, TypedRecord>): Clearanc
         const tp = (byId[pc.terrain] ?? {}) as unknown as Any
         return { id: pc.id, t: { id: pc.id, pieceId: pc.terrain, rulesType: tp.rulesType, pos: pc.pos, rot: pc.rot ?? 0, footprint: tp.footprint, height: tp.height ?? 0, props: tp.props ?? {} } as TerrainInstance }
       })
+      const fit = sc.frame ? layoutFit({ byId } as unknown as DataBundle, sc.id, lid) : null // SR: the drop set over every edge choice (SR5)
       for (const el of sc.elements as Any[]) {
         const mm = ELEMENT_MM[el.kind as string]
-        if (mm === undefined) continue
+        if (mm === undefined || (fit && el.kind === 'flag')) continue // a flag moves onto the piece it picks (SR10)
         for (const pc of pieces) {
+          if (fit?.drop.includes(pc.id)) continue
           const gap = Math.max(0, distToShape(el.pos, worldShape(pc.t)) - baseRadius(mm))
-          rows.push({ scenario: sc.id, layout: lid, element: el.id, piece: pc.id, pieceType: pc.t.rulesType, impassable: terrainTraits(pc.t).move === 'impassable', gap })
+          rows.push({ scenario: sc.id, layout: lid, element: el.id, piece: pc.id, pieceType: pc.t.rulesType, impassable: terrainTraits(pc.t).move === 'impassable', gap, ...(fit ? { fitted: true } : {}) })
         }
       }
     }
@@ -87,7 +92,7 @@ export function objectiveClearances(byId: Record<string, TypedRecord>): Clearanc
 export function objectiveClearanceProblems(byId: Record<string, TypedRecord>): string[] {
   return objectiveClearances(byId).flatMap((c) =>
     c.impassable ? (c.gap < 1 - 1e-9 ? [`${c.scenario}: ${c.element} is ${c.gap.toFixed(2)}" from impassable ${c.piece} (${c.pieceType}) in ${c.layout}, needs 1"`] : [])
-      : c.gap <= 0 ? [`${c.scenario}: ${c.element} overlaps ${c.piece} (${c.pieceType}) in ${c.layout}`] : [])
+      : c.gap <= 0 && !c.fitted ? [`${c.scenario}: ${c.element} overlaps ${c.piece} (${c.pieceType}) in ${c.layout}`] : [])
 }
 
 export function validateAll(): ValidationReport {
@@ -142,7 +147,11 @@ export function validateAll(): ValidationReport {
 
   // 3. code hooks
   const codes = new Set<string>()
-  for (const r of Object.values(byId)) collectCodes(r, codes)
+  for (const r of Object.values(byId)) {
+    if (r.recordType !== 'card') { collectCodes(r, codes); continue }
+    // M13: a command card's option `code` names an effect in src/engine/cards.ts, not a code hook
+    for (const o of ((r as unknown as Any).options ?? []) as Any[]) if (!CARD_CODES.has(o.code)) errors.push(`${r.id}: card option '${o.id}' code '${o.code}' is not in cards.ts`)
+  }
   const registry = hookNames()
   if (!registry) warnings.push(`src/engine/code-hooks.ts not present yet: ${codes.size} code hooks unchecked`)
   else for (const c of codes) if (!registry.has(c)) errors.push(`code hook '${c}' not in the registry`)

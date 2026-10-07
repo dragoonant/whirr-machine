@@ -121,6 +121,17 @@ export interface TokenSpent extends Ev<'TokenSpent'> { modelId: ModelId; token: 
 export interface ControlChecked extends Ev<'ControlChecked'> { elements: Record<Id, ElementControl> }
 export interface ScenarioScored extends Ev<'ScenarioScored'> { player: PlayerId; delta: number; vp: Record<PlayerId, number>; sources: { elementId?: Id; reason: string; vp: number }[] }
 export interface KillBoxScored extends Ev<'KillBoxScored'> { offender: PlayerId; beneficiary: PlayerId; vp: number }
+// ---------- command cards, scenario elements and the clock (M13, 91 A, B, C) ----------
+export interface CardPlayed extends Ev<'CardPlayed'> { player: PlayerId; cardId: Id; option: string; targetIds: Id[] }
+export interface CacheClaimed extends Ev<'CacheClaimed'> { player: PlayerId; elementId: Id; modelId: ModelId }
+export interface FlagTerrainChosen extends Ev<'FlagTerrainChosen'> { player: PlayerId; flagId: Id; terrainId: Id | null } // null = the flag becomes a 30 mm obstruction piece
+export interface ElementMoved extends Ev<'ElementMoved'> { elementId: Id; from: Vec2; to: Vec2; by: PlayerId }
+export interface ElementTokensChanged extends Ev<'ElementTokensChanged'> { elementId: Id; tokens: number; delta: number; by: PlayerId | null }
+export interface ElementDetonated extends Ev<'ElementDetonated'> { elementId: Id }
+export interface ElementRemoved extends Ev<'ElementRemoved'> { elementId: Id; reason: 'claimed' | 'delivered' | 'terrainGone' }
+export interface KillBoxExtended extends Ev<'KillBoxExtended'> { depth: number }
+export interface ClockExpired extends Ev<'ClockExpired'> { player: PlayerId; active: PlayerId }
+
 export interface GameEnded extends Ev<'GameEnded'> { winner: PlayerId | null; reason: GameEndReason; vp: Record<PlayerId, number> }
 
 export type GameEvent =
@@ -137,6 +148,7 @@ export type GameEvent =
   | ControlChecked | ScenarioScored | KillBoxScored | GameEnded
   | FuryChanged | FuryLeeched | FuryReaved | BeastForced | ThresholdChecked | Frenzied | FrenzyEnded | DamageTransferred
   | AspectCrippled | AspectRestored | BeastWild | BeastControlTaken | TokenGained | TokenSpent
+  | CardPlayed | CacheClaimed | FlagTerrainChosen | ElementMoved | ElementTokensChanged | ElementDetonated | ElementRemoved | KillBoxExtended | ClockExpired
 
 export type GameEventType = GameEvent['type']
 export type EventOf<T extends GameEventType> = Extract<GameEvent, { type: T }>

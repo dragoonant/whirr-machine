@@ -224,6 +224,8 @@ export const queryAttackPreview = (attacker: ModelId, weaponId: Id, target: Mode
 export const queryThreat = (id: ModelId) => { const s = truth(); return s ? query.threat(s, id) : null }
 /** Scenario control, VP now, kill-box status. */
 export const queryControl = () => { const s = truth(); return s ? query.control(s) : null }
+/** M13 (91 D.1): a player's command-card hand, what is playable now and the plays left this turn. Both hands are open information. */
+export const queryCards = (player: PlayerId, state: GameState | null = truth()) => (state ? query.cards(state, player) : null)
 /** A resolved stat with its trace. */
 export const queryStat = (id: ModelId, stat: Stat) => { const s = truth(); return s ? query.stat(s, id, stat) : null }
 /** Would this advance path be legal? (drag preview; call at <= 30 Hz) */
@@ -282,3 +284,4 @@ function installFollowDecision(): () => void {
 // Additive changes after the M3 freeze:
 //   M8 terrain: Settings gained `showZones` and `battlefield` (useSettings returns them); NewGameOptions gained `board`;
 //   ClientSave gained optional `board`; `useBoard` / `useBoardName` selectors added.
+//   M13 (WP5): queryCards(player, state?) added.

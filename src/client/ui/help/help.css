@@ -41,7 +41,7 @@ kbd { background: #14161a; border: 1px solid #4a505c; border-bottom-width: 2px; 
 .help-legal { margin: 0; padding: 0 16px 8px; font-size: 11px; color: #7f7c72; text-align: center; }
 
 .coach {
-  position: fixed; left: 50%; top: 66px; transform: translateX(-50%); z-index: 9; /* under the HUD layer (z 10) so its popovers and cards are never covered by a tip */ max-width: min(640px, calc(100% - 520px));
+  position: fixed; left: 50%; top: 92px; transform: translateX(-50%); z-index: 9; /* under the HUD layer (z 10) so its popovers and cards are never covered by a tip */ max-width: min(640px, calc(100% - 520px));
   display: flex; align-items: center; gap: 10px; padding: 7px 12px; background: var(--card, #1e2127); color: var(--fg, #e8e6e1);
   border: 1px solid var(--accent2, #b87333); border-radius: 8px; font: 14px system-ui, sans-serif; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }

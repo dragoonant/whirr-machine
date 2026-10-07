@@ -1,0 +1,45 @@
+/* Game clock chips (91 C.2). Sits inside the top bar (.hud-top), so it can read the HUD variables; the fallbacks cover the portaled pause veil. */
+.clock-bar { position: relative; display: flex; align-items: center; gap: 8px; flex: none; }
+.clock-chip {
+  --clock-side: #888; --clock-fg: var(--fg, #e8e6e1); --clock-dim: var(--dim, #9a9a94);
+  display: flex; align-items: center; gap: 6px; padding: 2px 10px 2px 6px; border-radius: 16px; min-width: 128px;
+  background: #1a1d22; border: 1px solid var(--line, #343841); opacity: 0.62; color: var(--clock-fg);
+  transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.clock-chip-running { opacity: 1; border-color: var(--clock-side); animation: clock-pulse 2.4s ease-in-out infinite; }
+.clock-chip-paused { opacity: 0.9; border-style: dashed; border-color: var(--clock-side); }
+.clock-chip-untimed { opacity: 0.5; }
+.clock-ring { flex: none; }
+.clock-ring-track { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 3; }
+.clock-ring-fill { fill: none; stroke: var(--clock-side); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.2s linear; }
+.clock-name { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--clock-dim); }
+.clock-time { margin-left: auto; font: 700 15px/1 ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.clock-note { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--clock-dim); }
+.clock-glyph { font-size: 9px; letter-spacing: -1px; color: var(--accent, #c9a227); }
+.clock-tone-low .clock-time { color: #e0a93b; }
+.clock-tone-low .clock-ring-fill { stroke: #e0a93b; }
+.clock-tone-critical .clock-time { color: #e0584a; }
+.clock-tone-critical .clock-ring-fill { stroke: #e0584a; }
+.clock-tone-out .clock-time { color: #e0584a; }
+.clock-pause { font-size: 10px; }
+@keyframes clock-pulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 8px 1px color-mix(in srgb, var(--clock-side) 55%, transparent); } }
+
+.clock-toast {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 20; white-space: nowrap; cursor: pointer; pointer-events: auto;
+  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; background: #272b33; border: 1px solid #e0a93b; color: #f0d9a6;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.clock-toast-critical { border-color: #e0584a; color: #f3b4ac; }
+
+/* the paused board: dimmed and blocking every input underneath */
+.clock-veil {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(10, 11, 14, 0.82); backdrop-filter: blur(3px);
+  font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8e6e1; pointer-events: auto;
+}
+.clock-veil-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 26px; border-radius: 10px; background: #1e2127; border: 1px solid #c9a227; }
+.clock-veil-card b { font-size: 16px; color: #c9a227; letter-spacing: 0.04em; text-transform: uppercase; }
+.clock-veil-btn { cursor: pointer; padding: 6px 18px; border-radius: 6px; border: 1px solid #c9a227; background: #2c2a1e; color: #e8e6e1; font: inherit; font-weight: 600; }
+.clock-veil-btn:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
+
+@media (max-width: 1400px) { .clock-chip { min-width: 108px; } .clock-name { max-width: 56px; } }
+@media (prefers-reduced-motion: reduce) { .clock-chip-running { animation: none; } .clock-ring-fill { transition: none; } }

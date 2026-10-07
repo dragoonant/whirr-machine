@@ -3,7 +3,7 @@ import { boardFromUrl } from '../board/boards'
 import { loadBundle } from '../../data/index'
 import { query, type Action, type GameState, type Id, type ModelId, type PendingDecision, type PlayerId, type SaveFile, type Vec2 } from '../../engine/index'
 import { skipAll, skipBeat } from '../presentation/director'
-import { DEFAULT_SCENARIO, parseGameSize, sizeFromUrl, type GameSize } from '../ui/start/startOptions'
+import { DEFAULT_SCENARIO, handFor, parseGameSize, sizeFromUrl, type GameSize } from '../ui/start/startOptions'
 import { isPresentationIdle, usePresentedStore } from '../presentation/presentedStore'
 import {
   dispatch, exportSave, importSave, legalFor, newGame, useGameStore,
@@ -98,7 +98,7 @@ export function sizeFromSetup(search = typeof location !== 'undefined' ? locatio
 
 /**
  * Fast setup from the URL (50 §10): `?scenario=scn-qs-demo&lists=cyg.l.qs-recon,kha.l.qs-recon&seed=s1&bot=random`
- * plus `&control=human,bot` (A,B; default human,bot). `lists` also accepts faction ids, which mean the faction's list of
+ * plus `&control=human,bot` (A,B; default human,bot), `&cards=on` (command cards for both sides). `lists` also accepts faction ids, which mean the faction's list of
  * the game size: `&size=recon|skirmish` (unknown = recon with one console warning; a skirmish-only scenario implies skirmish).
  * With no `scenario` the size's own scenario is used (Quick Start Demo, Copperline Crossing). Null when the URL names no
  * scenario or lists.
@@ -121,5 +121,7 @@ export function setupFromUrl(search = typeof location !== 'undefined' ? location
     bot: { tier: ['random', 'easy', 'normal', 'hard'].includes(tier) ? tier : 'random' },
     ...(q.get('seed') ? { seed: q.get('seed')! } : {}),
     ...(boardFromUrl(search) ? { board: boardFromUrl(search)! } : {}),
+    // ?cards=on: both sides take the default hand of their list (91 A.4)
+    ...(q.get('cards') === 'on' ? { cards: { A: handFor(la), B: handFor(lb) } } : {}),
   }
 }
