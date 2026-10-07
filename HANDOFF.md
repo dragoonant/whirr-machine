@@ -1,6 +1,6 @@
 # Handoff
 
-**Current state:** M3 to M9 are done. The game is on Pages (https://dragoonant.github.io/whirr-machine/): pick one of
+**Current state:** M3 to M9 are done (M10 in progress). The game is on Pages (https://dragoonant.github.io/whirr-machine/): pick one of
 **six factions** (Cygnar, Khador, Trollbloods, Circle Orboros, Cryx, Protectorate of Menoth), an opponent army (any
 of the six or Random), the bot strength, a scenario, a battlefield and an animation speed, then play a whole game
 against the bot: roll-off, deployment, focus or fury, activations, attacks, spells, feats, scoring and game over.
@@ -12,43 +12,33 @@ strip, spiral card, leech/transfer/shed forms, frenzy flash) is in `src/client/u
 (`src/ai/fury.ts`). The 21 new figures are Hunyuan GLBs (listed in
 `public/assets/models/manifest.json`, contact sheets `art/figure-sheets/m9-*.png`; the procedural fallback still works). See STATUS.md "Factions (M9)" and `e2e-out/m9-*.png`.
 
-**Owner: verify the M9 stats in the app.** No MK4 card for the four new factions could be read from the app, so every
-stat, cost, spell and rule is marked U-cd. Open each starter in the official app and compare: Gunnbjorn, Dire Troll
-Bomber, Braylen, Highwaymen; Tanith, Pureblood Warpwolf, Lord of the Feast, Tharn Ravagers; Nekane, Hades,
-Chatterbane, The Furies; Feora, Crusader, Valeria, Pyrrhus, Defenders. Then read the M9 RULINGs in
-`docs/needs-rules-check.md` ("M9 factions" section: starter box choices, unit sizes, box counts, base sizes, spiral
-aspects, the Menoth profiles copied from older ones) and name any to change.
+**M9 stats:** no MK4 card for the four new factions could be read from the app, so every stat, cost, spell and rule is
+marked U-cd. The owner decided on 2026-10-07 that these are researched on the web, not only in the app (M10). The M9
+RULINGs are in `docs/needs-rules-check.md` ("M9 factions" section).
 
 **M4 AI (done):** easy/normal utility bot tiers in `src/ai/` (start screen default Normal), slam/trample and exact previews in the engine; normal beat random 20/20 (`npm run bench:ai -- --games 20 --seed 1`).
 
 **Audio (M6):** owner should audition every clip at /whirr-machine/sounds.html and name the ids to redo.
 
-**M5 figures + M7 polish (done):** eight Hunyuan SD figure GLBs replace the procedural figures (fallback kept), army
-painter shader, status visuals and attack VFX; feed breakdowns, end-screen stats, settings popover, narration pauses,
-title art. Review the figures at /whirr-machine/?gallery. `tests/e2e/art.spec.ts` plays Khador vs the Normal bot for two
-rounds and writes `e2e-out/art-*.png` and `gallery.png`.
+**M5 figures + M7 polish (done):** Hunyuan MGSD figure GLBs (33 in `public/assets/models/`, one per model and per
+trooper; fallback kept) replace the procedural figures, plus army painter shader, status visuals and attack VFX; feed
+breakdowns, end-screen stats, settings popover, narration pauses, title art. Review the figures at
+/whirr-machine/?gallery. `tests/e2e/art.spec.ts` plays Khador vs the Normal bot for two rounds and writes
+`e2e-out/art-*.png` and `gallery.png`.
 
 **M8 battlefields (done):** five themed boards with generated terrain, a random board per game (or pick one on the
 start screen, or `?board=bog|ruins|village|wasteland|outpost`). See STATUS.md "Battlefields (M8)" and
 `e2e-out/board-*.png`.
 
-**Owner: veto terrain pieces.** Look at `art/terrain-sheets/<board>.png` (four views per piece) and at the boards in game;
-name any slug to redo. Flagged in the integration pass as wrong in context (need a GPU redo, not run here):
-`wt-wasteland-ritual-dais` (reads as a sawn log slice), `wt-wasteland-bone-spikes` (bright orange tray under the
-spikes), `wt-ruins-grove` (unpainted pale trees). Also worth a decimation pass to about 6k triangles each (all
-pieces are about 12k; headless frame time on the overview camera is well over the 21.5 ms budget).
+**Terrain (accepted 2026-10-07):** the owner accepted the terrain; playtests found some issues (deferred). Commit 8ee9ef5 redid
+`wt-wasteland-ritual-dais`, `wt-wasteland-bone-spikes` and `wt-ruins-grove` and decimated all pieces to about 6k
+triangles. Contact sheets are in `art/terrain-sheets/<board>.png`.
 The trench and the ash flats are procedural now (no GLB). Ground mats are rebuilt by
 `art/board-textures/gen.py` (Hunyuan venv python: numpy, scipy, Pillow; bases in `%TEMP%/ph` from `fetch.py`).
 
-**Next, in order:**
-1. **Owner check of the M9 stats** (above), the **owner veto of the terrain pieces** (above), then the **owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
-   top items before new features. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
-2. **Owner veto of the figure concept picks.** Weakest of the 21 M9 figures: wm-hades, wm-nekane, wm-valeria, wm-pureblood. Tanith is not the real sculpt (a stand-in look). Review at /whirr-machine/?gallery. The candidates for each figure are in
-   `C:/Users/antho/Hunyuan3D-2/outputs/wm-<slug>/concepts/` (`s0.png`..`s5.png` plus `sheet.png`). Name any figure
-   to redo and which concept to use. Rebuild that GLB, drop it into `public/assets/models/<slug>.glb` (scaled in inches,
-   black base) and re-run the art spec.
-3. Then: an in-game army painter control (it is on the gallery page only today), and panels that cover less of the
-   board at 1280 wide.
+**Next:** M10 in progress overnight: web-sourced stats for the M9 factions and the Tanith figure redo. Then M11 to M13 (see
+PLAN.md). The owner accepted terrain, figures and audio on 2026-10-07; owner playtest fixes are deferred and multiplayer
+is on hold. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
 
 **Client map (`src/client/`):**
 - `App.tsx` start <-> game routing; `GameScreen.tsx` mounts `board/Board.tsx` (Battlefield) and `ui/Hud.tsx`.
@@ -60,9 +50,6 @@ The trench and the ash flats are procedural now (no GLB). Ground mats are rebuil
 - Test hooks: `?test=1` exposes `window.__game`; `?scenario=&lists=&control=bot,bot&seed=` skips the start screen;
   `?gallery` shows the figure gallery.
 - `figures/` (GLB loader, models map, painter, procedural fallback, gallery), `vfx/` (beat-driven effects, status FX).
-
-**Engine requests from M3 (not done; the client works around them):**
-- `query.attackPreview` should accept `attackType` (shot modes such as a blast shot) and infer `chargeAttack`.
 
 **Contracts:** additive changes since the first freeze are listed in `docs/spec/00-architecture.md` §14 (none in M3).
 

@@ -334,13 +334,13 @@ describe('CORE-M9 Menoth seams', () => {
     void caster
   })
 
-  it('CORE-032 Convection is offered against enemies in range and line of sight', () => {
+  it('CORE-032 Conflagration, Feora offensive bolt, is offered against enemies in range and line of sight', () => {
     let s = startList(MEN, 'core-32')
     s = park(s, ['A:L', 'B:e0'])
     s = place(s, 'A:L', { x: 0, z: 0 }); s = place(s, 'B:e0', { x: 0, z: 7 })
     s = withModel(s, 'A:L', { focus: 6 })
     const o = choose(asOut(s), 'A:L')
-    const opt = o.pending.options!.find((x) => x.action.type === 'castSpell' && (x.action as { spellId: string }).spellId === 'men.s.convection')
+    const opt = o.pending.options!.find((x) => x.action.type === 'castSpell' && (x.action as { spellId: string }).spellId === 'men.s.conflagration')
     expect(opt).toBeDefined()
     expect((opt!.action as { targetId?: string }).targetId).toBe('B:e0')
   })
@@ -398,8 +398,12 @@ describe('CORE-M9 shared mechanisms', () => {
     expect(c.pending?.kind).toBe('placeTroopers')
     expect(c.pending?.context.data?.code).toBe('ambush')
     const r = must(answerControlDecision(c.state, bundle, c.pending!.options![0]!.action))
-    for (const id of waiting) expect(r.state.models[id]!.offTable).toBeFalsy()
-    expect(r.state.players.A.ambushIds.length).toBe(0)
+    // the five 40 mm Highwaymen cannot sit within the 3" unit spread of one another inside a 3" edge strip, so they stay
+    // waiting (RULING in needs-rules-check.md); the lone ambusher arrives
+    const placed = new Set(((c.pending!.options![0]!.action as { placements: { modelId: string }[] }).placements).map((p) => p.modelId))
+    expect(placed.size).toBeGreaterThan(0)
+    for (const id of waiting) expect(Boolean(r.state.models[id]!.offTable)).toBe(!placed.has(id))
+    expect(r.state.players.A.ambushIds.length).toBe(waiting.length - placed.size)
     expect(r.state.effects.some((e) => e.name === 'Ambush entry' && e.forbid?.includes('moveOrAct'))).toBe(true)
   })
 

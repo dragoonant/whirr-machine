@@ -4,13 +4,42 @@
   "faction": "cir",
   "type": "beast",
   "beastClass": "heavy",
-  "keywords": ["circle", "devourers-host", "warpwolf"],
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "warpwolf"
+  ],
   "base": 50,
-  "stats": { "SPD": 6, "MAT": 6, "RAT": 5, "DEF": 14, "ARM": 17, "FURY": 4, "THR": 10 },
-  "damage": { "track": "spiral", "branches": ["MMMMM", "MMM", "BBBBB", "BBB", "SSSSSSS", "SSSSS"] },
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 5,
+    "DEF": 14,
+    "ARM": 17,
+    "FURY": 4,
+    "THR": 10
+  },
+  "damage": {
+    "track": "spiral",
+    "branches": [
+      "MMMMM",
+      "MMM",
+      "BBBBB",
+      "BBB",
+      "SSSSSSS",
+      "SSSSS"
+    ]
+  },
   "weapons": [
-    { "weapon": "cir.w.death-howler", "socket": "mouth" },
-    { "weapon": "cir.w.claw", "count": 2, "socket": "hand-l" }
+    {
+      "weapon": "cir.w.death-howler",
+      "socket": "mouth"
+    },
+    {
+      "weapon": "cir.w.claw",
+      "count": 2,
+      "socket": "hand-l"
+    }
   ],
   "abilities": [
     "core.a.dual-attack",
@@ -24,6 +53,9 @@
   ],
   "animus": "cir.s.wraithbane",
   "cost": 15,
-  "figure": { "archetype": "beast" },
-  "verify": "Spiral aspect assignment is assumed (whole branches: two Mind, two Body, two Spirit); the community data gives box counts only. Base 50 from the product photo label."
+  "figure": {
+    "archetype": "beast"
+  },
+  "verify": "Stats, 50 mm base, weapons, abilities and animus match the app data (S1, S2). Spiral: branch sizes 5/3/5/3/7/5 (S2) and aspect totals 8/8/12 (S1); whole-branch pairs match the totals; the Mind/Body/Spirit order of the totals is our reading (RULING).",
+  "fa": 4
 }

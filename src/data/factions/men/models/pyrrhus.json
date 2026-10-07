@@ -12,9 +12,9 @@
   "stats": {
     "SPD": 6,
     "MAT": 7,
-    "RAT": 5,
+    "RAT": 0,
     "DEF": 15,
-    "ARM": 14
+    "ARM": 16
   },
   "damage": {
     "track": "single",
@@ -23,23 +23,18 @@
   "weapons": [
     {
       "weapon": "men.w.pyrrhus-spear"
-    },
-    {
-      "weapon": "men.w.pyrrhus-shield"
     }
   ],
   "abilities": [
-    "core.a.tough",
+    "men.a.heroic-inspiration",
     "men.a.set-defense",
-    "men.a.steady",
-    "men.a.relentless-charge",
-    "men.a.impenetrable-shield",
-    "men.a.battle-plan"
+    "men.a.marshal-defenders",
+    "men.a.holy-martyrs"
   ],
   "cost": 4,
   "fa": "C",
   "figure": {
     "archetype": "solo"
   },
-  "verify": "Card not public yet: all numbers and rules are guesses from Pyrrhus, Flameguard Hero."
+  "verify": "Card values from S1: no ranged weapon, so RAT 0. ARM 16 is the printed stat; his Shield weapon quality adds +2 in play (RULING)."
 }

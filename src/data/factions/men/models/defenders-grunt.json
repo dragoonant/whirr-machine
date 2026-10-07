@@ -11,9 +11,9 @@
   "stats": {
     "SPD": 6,
     "MAT": 6,
-    "RAT": 5,
+    "RAT": 0,
     "DEF": 13,
-    "ARM": 13
+    "ARM": 16
   },
   "damage": {
     "track": "single",
@@ -22,19 +22,17 @@
   "weapons": [
     {
       "weapon": "men.w.flame-spear"
-    },
-    {
-      "weapon": "men.w.flameguard-shield"
     }
   ],
   "abilities": [
     "men.a.combined-melee-attack",
     "men.a.set-defense",
+    "men.a.shield-guard",
     "kha.a.shield-wall"
   ],
   "cost": 0,
   "figure": {
     "archetype": "infantry"
   },
-  "verify": "Card not public yet: guesses from Temple Flameguard."
+  "verify": "Card values from S1: one Spear, no ranged weapon (RAT 0), 1 box each. Shield Wall adds +2 ARM in play."
 }

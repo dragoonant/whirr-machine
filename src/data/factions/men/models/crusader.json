@@ -11,7 +11,7 @@
   "base": 50,
   "stats": {
     "SPD": 4,
-    "MAT": 6,
+    "MAT": 7,
     "RAT": 5,
     "DEF": 10,
     "ARM": 19
@@ -41,11 +41,16 @@
     "core.a.construct",
     "core.a.headbutt",
     "core.a.slam",
-    "core.a.trample"
+    "core.a.trample",
+    "core.a.dual-attack",
+    "men.a.heavy-boiler",
+    "men.a.sanctified-hull",
+    "men.a.gladiator"
   ],
-  "cost": 15,
+  "cost": 13,
+  "fa": 4,
   "figure": {
     "archetype": "heavyEngine"
   },
-  "verify": "Grid and chassis stats from community data; RAT, points and the head option rule (none given) are guesses."
+  "verify": "Chassis SPD 4, MAT 6 (+1 from the Venerable head = 7), RAT 5, DEF 10, ARM 19, 32 boxes, options Venerable 2 + Blazing Star 5 + Flame Belcher 6 = 13 points (S1). The grid layout is the older Crusader chassis from community data (U-cd)."
 }

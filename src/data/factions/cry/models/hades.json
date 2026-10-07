@@ -62,5 +62,5 @@
     "slug": "wm-hades",
     "archetype": "heavyEngine"
   },
-  "verify": "Community card data (U-cd); grid and base need the app check."
+  "verify": "Stats, weapons and points match S1 and S2 (cryx-sources.md); damage grid from S1 only; 50 mm heavy base from S2 and RB p71."
 }

@@ -4,12 +4,28 @@
   "faction": "trl",
   "type": "solo",
   "character": true,
-  "keywords": ["trollblood", "united-kriels", "trollkin", "outlaw"],
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "trollkin"
+  ],
   "base": 40,
-  "stats": { "SPD": 6, "MAT": 0, "RAT": 7, "DEF": 14, "ARM": 15 },
-  "damage": { "track": "single", "boxes": 8 },
+  "stats": {
+    "SPD": 6,
+    "MAT": 0,
+    "RAT": 7,
+    "DEF": 14,
+    "ARM": 15
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
   "weapons": [
-    { "weapon": "trl.w.heavy-pistol", "count": 2 }
+    {
+      "weapon": "trl.w.heavy-pistol",
+      "count": 2
+    }
   ],
   "abilities": [
     "core.a.advance-deployment",
@@ -23,6 +39,8 @@
   ],
   "cost": 4,
   "fa": "C",
-  "figure": { "archetype": "solo" },
-  "verify": "Community data; MAT 0 because the card lists no melee weapon. Base 40 read from a product label."
+  "figure": {
+    "archetype": "solo"
+  },
+  "verify": "Card values agree in S1, S2 and S10; base 40 (S10, S2). MAT 0: the card has no melee weapon."
 }

@@ -12,6 +12,13 @@ Settled 2026-10-04:
 - **Music:** ElevenLabs Music. Check the credit cost on the first track, and confirm with the owner
   before spending more than ~5k credits.
 
+Settled 2026-10-07:
+- Terrain, figures and audio are accepted as they are.
+- Tanith must be the real sculpt. Search the web for reference pictures instead of assuming.
+- Research the M9 faction stats on the web (rulebooks, stat sites) when the official app does not show them.
+  Do not treat the app as the only source.
+- Multiplayer is on hold.
+
 Carried over from Mallet:
 - Mechanics are ported 1:1.
 - Player vs AI comes first; multiplayer comes later.
@@ -27,17 +34,22 @@ Carried over from Mallet:
 - The full brief is `docs/WARMACHINE-HANDOFF.md` Parts E and G.
 
 ## Milestones
-See `docs/WARMACHINE-HANDOFF.md` Part H for the detail.
+See `docs/WARMACHINE-HANDOFF.md` Part H for the original detail.
 
 | Milestone | Scope |
 |---|---|
 | M0 | Specs, frozen contracts, rules checklist, skeleton on Pages |
 | M1 | Geometry and LOS engine, plus the headless sim and `validate-data` |
 | M2 | Rules core, with the Quick Start golden replay |
-| M3 | Playable vertical slice on Pages: procedural figures, prompts with odds, ruler, LOS view, grid card, dice tray, random bot. Owner gates: SD look and the loadout approach |
-| M4 | AI opponent (utility decider, assassination search, caster safety) |
-| M5 | Art pass (Gemini, then Hunyuan GLBs, army painter, status visuals, title art) |
-| M6 | Audio and music (weapon-flavour map, ~60 SFX, narrator, music, measure tool and trims) |
+| M3 | Playable vertical slice on Pages: procedural figures, prompts with odds, ruler, LOS view, grid card, dice tray, random bot |
+| M4 | AI opponent (utility decider, assassination search, caster safety), slam and trample, exact previews |
+| M5 | Art pass: MGSD figures (one per model and trooper), army painter, status visuals, VFX, title art |
+| M6 | Audio and music (weapon-flavour map, SFX, narrator, music, measure tool and trims) |
 | M7 | Polish |
-| M8 | Skirmish, 50 points, faction at a time with verify loops |
-| M9+ | Command cards, warlocks and fury, Steamroller scenarios, clock, multiplayer |
+| M8 | Five themed battlefields with generated terrain, decimated to about 6k triangles |
+| M9 | Warlocks and fury; Trollbloods, Circle, Cryx and Menoth; army picker, figures, faction audio; late polish (deployment clamp, hover tips, Feats tab, Prey prompt, ambient animation, `?fps`) |
+| M10 | Web-sourced stats for the M9 factions (not only the app), and the Tanith figure redone from the real sculpt |
+| M11 | Client and engine gaps: in-game army painter, slimmer side panels at 1280 wide, drag and multi-waypoint movement; reroll, rollAnyway, chooseGrid, combinedAttack and channel decisions, out-of-activation attacks, additional attacks listed as options |
+| M12 | Skirmish 50pt: starter plus popular add-ons per faction |
+| M13 | Command cards, Steamroller 2026 scenarios, game clock |
+| Later | Multiplayer (on hold by the owner, 2026-10-07); owner playtest fixes (deferred) |

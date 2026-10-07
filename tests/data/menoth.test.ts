@@ -16,15 +16,15 @@ describe('FAC-MEN data', () => {
   it('every model of the box is entered with the spec stat line', () => {
     const want: Record<string, Record<string, number>> = {
       'men.feora': { SPD: 6, AAT: 6, MAT: 7, RAT: 6, DEF: 15, ARM: 17, ARC: 6, CTRL: 12 },
-      'men.crusader': { SPD: 4, MAT: 6, RAT: 5, DEF: 10, ARM: 19 },
-      'men.valeria': { SPD: 7, MAT: 6, RAT: 8, DEF: 15, ARM: 12 },
-      'men.pyrrhus': { SPD: 6, MAT: 7, RAT: 5, DEF: 15, ARM: 14 },
-      'men.defenders-grunt': { SPD: 6, MAT: 6, RAT: 5, DEF: 13, ARM: 13 },
+      'men.crusader': { SPD: 4, MAT: 7, RAT: 5, DEF: 10, ARM: 19 },
+      'men.valeria': { SPD: 7, MAT: 0, RAT: 8, DEF: 16, ARM: 15 },
+      'men.pyrrhus': { SPD: 6, MAT: 7, RAT: 0, DEF: 15, ARM: 16 },
+      'men.defenders-grunt': { SPD: 6, MAT: 6, RAT: 0, DEF: 13, ARM: 16 },
     }
     for (const [id, stats] of Object.entries(want)) expect(rec(id).stats, id).toEqual(stats)
     expect(rec('men.feora').type).toBe('leader')
     expect(rec('men.defenders').composition.grunts).toEqual({ profile: 'men.defenders-grunt', min: 5, max: 5 })
-    expect(rec('men.defenders').composition.costBySize['5']).toBe(7)
+    expect(rec('men.defenders').composition.costBySize['5']).toBe(8)
   })
 
   it('the Crusader grid has 32 boxes, three of each system, and no head system', () => {
@@ -50,7 +50,7 @@ describe('FAC-MEN data', () => {
   })
 
   it('Feora knows her five spells and the feat; every weapon and ability the models name exists', () => {
-    expect(rec('men.feora').spells).toEqual(['kha.s.avenging-force', 'men.s.convection', 'men.s.fire-step', 'men.s.hex-hammer', 'men.s.incite'])
+    expect(rec('men.feora').spells).toEqual(['men.s.conflagration', 'men.s.debilitating-heat', 'men.s.lawgivers-judgement', 'men.s.sacred-paragon', 'men.s.teleport'])
     expect(rec('men.feora').feat).toBe('men.f.blessing-of-the-first-gift')
     for (const id of ['men.feora', 'men.crusader', 'men.valeria', 'men.pyrrhus', 'men.defenders-grunt']) {
       for (const w of rec(id).weapons) expect(bundle.byId[w.weapon], w.weapon).toBeDefined()
@@ -58,21 +58,21 @@ describe('FAC-MEN data', () => {
     }
   })
 
-  it('every Menoth model but the Crusader carries the flameguard keyword (Impenetrable Shield reads it)', () => {
+  it('every Menoth model but the Crusader carries the flameguard keyword', () => {
     for (const id of ['men.feora', 'men.valeria', 'men.pyrrhus', 'men.defenders', 'men.defenders-grunt']) expect(rec(id).keywords, id).toContain('flameguard')
     expect(rec('men.crusader').keywords).not.toContain('flameguard')
   })
 
-  it('Battle Plan is an optional start-of-activation choice and Relentless Charge fires on the charge', () => {
-    expect(rec('men.a.battle-plan')).toMatchObject({ trigger: 'activation.start', optional: true })
-    expect(rec('men.a.relentless-charge')).toMatchObject({ trigger: 'movement.charge', duration: 'activation' })
-    expect(rec('men.a.precision-strike').scope.range).toBe(10)
+  it('Prophet of the Covenant, Illumination and Marshal exist; the stoke boosts never add a die', () => {
+    expect(rec('men.a.illumination')).toMatchObject({ limit: 'oncePerTurn' })
+    expect(rec('men.a.stoke-the-pyre').name).toBe('Prophet of the Covenant')
+    expect(rec('men.a.marshal-covenant')).toBeDefined()
     for (const id of ['men.a.stoke-boost-attack', 'men.a.stoke-boost-damage']) expect(JSON.stringify(rec(id).effect)).not.toContain('addDie')
   })
 
   it('melee reach is 1" or 2", the run rule is core, and no MK3 words appear in Menoth data', () => {
     for (const id of ['men.w.blazing-star', 'men.w.flame-spear', 'men.w.pyrrhus-spear']) expect(rec(id).rng).toBe(2)
-    for (const id of ['men.w.flameguard-shield', 'men.w.pyrrhus-shield', 'men.w.valeria-knife']) expect(rec(id).rng).toBe(1)
+    expect(rec('men.w.truth-consequence-blade').rng).toBe(1)
     const text = JSON.stringify(Object.values(bundle.byId).filter((r) => String((r as Any).id).startsWith('men.')))
     expect(text).not.toMatch(/\b(STR|facing|free strike|template|scatter|deviation)\b/i)
   })

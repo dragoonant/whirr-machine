@@ -2,7 +2,7 @@
   {
     "id": "men.f.blessing-of-the-first-gift",
     "name": "Blessing of the First Gift",
-    "text": "Every enemy model in the caster's CTRL takes a POW 12 fire damage roll and then catches fire.",
+    "text": "Every enemy model and unit inside her CTRL catches fire.",
     "effect": [
       {
         "code": "blessingOfTheFirstGift"
@@ -13,6 +13,6 @@
       "range": "CTRL"
     },
     "duration": "instant",
-    "verify": "Press preview gives only the gist; numbers are ours."
+    "verify": "Card (S1): the feat only sets enemies in CTRL on fire. The blessingOfTheFirstGift hook also rolls POW 12 fire damage first (our earlier guess); that roll must be dropped in menoth.ts."
   }
 ]

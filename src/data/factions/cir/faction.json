@@ -2,8 +2,8 @@
   "id": "cir",
   "name": "Circle Orboros",
   "short": "Circle",
-  "appVersion": "community",
-  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/circle.md.",
+  "appVersion": "2026-07 (official app data, read from two community extracts)",
+  "source": "Official Warmachine app data (Jul 2026) read from two independent community extracts that agree on every value; cross-checked against Privateer Press app update notes and the Warmachine Academy wiki. See docs/spec/factions/circle-sources.md.",
   "keywords": [
     "circle",
     "devourers-host",

@@ -2,8 +2,8 @@
   "id": "trl",
   "name": "Trollbloods",
   "short": "Trollbloods",
-  "appVersion": "community",
-  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/trollbloods.md.",
+  "appVersion": "app-data-2026-07",
+  "source": "MK4 card values checked in three sources (two independent dumps of the official app data, Jul 2026, and the Warmachine Academy wiki); see docs/spec/factions/trollbloods-sources.md.",
   "keywords": [
     "united-kriels",
     "trollkin"

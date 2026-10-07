@@ -9,7 +9,7 @@
     "necrofactorium",
     "undead"
   ],
-  "base": 40,
+  "base": 50,
   "stats": {
     "SPD": 6,
     "MAT": 5,
@@ -43,5 +43,5 @@
     "slug": "wm-chatterbane",
     "archetype": "solo"
   },
-  "verify": "Community card data (U-cd); app check pending."
+  "verify": "Card values match S1 and S2 (cryx-sources.md); 50 mm (large) base from S2 only."
 }

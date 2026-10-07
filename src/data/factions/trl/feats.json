@@ -4,12 +4,23 @@
     "name": "Fortification",
     "text": "For a round, friendly Faction models inside Gunnbjorn's CTRL count as in cover against ranged and arcane attacks, resist blast damage and cannot be knocked down.",
     "effect": [
-      { "code": "grantCover" },
-      { "op": "grantResistance", "damageType": "blast" },
-      { "op": "forbid", "what": "knockDown" }
+      {
+        "code": "grantCover"
+      },
+      {
+        "op": "grantResistance",
+        "damageType": "blast"
+      },
+      {
+        "op": "forbid",
+        "what": "knockDown"
+      }
     ],
-    "scope": { "who": "friendly", "range": "CTRL" },
+    "scope": {
+      "who": "friendly",
+      "range": "CTRL"
+    },
     "duration": "round",
-    "verify": "Community data; the cover value is the standard +4 DEF."
+    "verify": "Feat agrees in S1, S2 and S10; the cover value is the standard +4 DEF."
   }
 ]

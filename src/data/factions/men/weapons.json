@@ -1,24 +1,27 @@
 [
   {
     "id": "men.w.truth-consequence-flame",
-    "name": "Truth & Consequence (flame)",
+    "name": "Flamethrower",
     "type": "ranged",
     "rng": "SP8",
     "rof": 1,
     "pow": 12,
     "damageTypes": [
-      "fire"
+      "fire",
+      "magical"
     ],
     "qualities": [
-      "core.q.pistol"
+      "core.q.pistol",
+      "core.q.magical"
     ],
     "abilities": [
       "men.a.continuous-fire"
-    ]
+    ],
+    "text": "The flame half of Truth & Consequence: punch-blades with built-in flamethrowers."
   },
   {
     "id": "men.w.truth-consequence-blade",
-    "name": "Truth & Consequence (blade)",
+    "name": "Truth & Consequence",
     "type": "melee",
     "rng": 1,
     "pow": 13,
@@ -26,7 +29,7 @@
       "core.q.magical"
     ],
     "abilities": [
-      "men.a.critical-fire"
+      "men.a.continuous-fire"
     ]
   },
   {
@@ -34,20 +37,22 @@
     "name": "Blazing Star",
     "type": "melee",
     "rng": 2,
-    "pow": 17,
+    "pow": 18,
     "location": "L",
     "abilities": [
-      "men.a.critical-fire",
-      "men.a.chain-weapon"
+      "men.a.chain-weapon",
+      "men.a.thresher"
     ]
   },
   {
     "id": "men.w.flame-belcher",
     "name": "Flame Belcher",
     "type": "ranged",
-    "rng": "SP8",
+    "rng": 10,
     "rof": 1,
-    "pow": 12,
+    "aoe": 3,
+    "pow": 15,
+    "blastPow": 9,
     "location": "R",
     "damageTypes": [
       "fire"
@@ -58,65 +63,43 @@
   },
   {
     "id": "men.w.valeria-bow",
-    "name": "Valeria Bow",
+    "name": "Idrian Bow",
     "type": "ranged",
-    "rng": 12,
+    "rng": 10,
     "rof": 1,
     "pow": 12,
-    "qualities": [
-      "core.q.magical",
-      "core.q.weapon-master"
-    ]
-  },
-  {
-    "id": "men.w.valeria-knife",
-    "name": "Valeria Knife",
-    "type": "melee",
-    "rng": 1,
-    "pow": 8
+    "abilities": [
+      "men.a.armor-piercing-arrow",
+      "men.a.featherweight-arrow",
+      "men.a.incendiary-arrow",
+      "men.a.incendiary-arrow-small"
+    ],
+    "text": "Each shot picks one arrow: armor-piercing, featherweight or incendiary."
   },
   {
     "id": "men.w.pyrrhus-spear",
-    "name": "Flame Spear (Pyrrhus)",
+    "name": "Spear & Shield",
     "type": "melee",
     "rng": 2,
-    "pow": 10,
+    "pow": 13,
     "qualities": [
-      "core.q.weapon-master"
-    ],
-    "abilities": [
-      "men.a.critical-fire"
-    ]
-  },
-  {
-    "id": "men.w.pyrrhus-shield",
-    "name": "Shield (Pyrrhus)",
-    "type": "melee",
-    "rng": 1,
-    "pow": 9,
-    "qualities": [
+      "core.q.weapon-master",
       "core.q.shield",
-      "core.q.weapon-master"
+      "core.q.magical"
     ],
     "abilities": [
-      "core.a.beat-back"
+      "men.a.continuous-fire",
+      "cry.a.blessed"
     ]
   },
   {
     "id": "men.w.flame-spear",
-    "name": "Flame Spear",
+    "name": "Spear",
     "type": "melee",
     "rng": 2,
-    "pow": 10,
+    "pow": 12,
     "abilities": [
       "men.a.critical-fire"
     ]
-  },
-  {
-    "id": "men.w.flameguard-shield",
-    "name": "Flameguard Shield",
-    "type": "melee",
-    "rng": 1,
-    "pow": 8
   }
 ]

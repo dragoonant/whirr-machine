@@ -3,15 +3,34 @@
   "name": "Tharn Ravagers",
   "faction": "cir",
   "type": "unit",
-  "keywords": ["circle", "devourers-host", "tharn"],
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "tharn"
+  ],
   "cost": 9,
   "composition": {
-    "grunts": { "profile": "cir.ravager-1", "min": 1, "max": 1 },
+    "grunts": {
+      "profile": "cir.ravager-1",
+      "min": 1,
+      "max": 1
+    },
     "extra": [
-      { "profile": "cir.ravager-2", "min": 1, "max": 1 },
-      { "profile": "cir.ravager-3", "min": 1, "max": 1 }
+      {
+        "profile": "cir.ravager-2",
+        "min": 1,
+        "max": 1
+      },
+      {
+        "profile": "cir.ravager-3",
+        "min": 1,
+        "max": 1
+      }
     ],
-    "costBySize": { "3": 9 }
+    "costBySize": {
+      "3": 9
+    }
   },
-  "verify": "Unit size 3 for 9 points is our choice; the community data stores only one trooper stat line."
+  "verify": "Unit of 3 Grunts for 9 points, 8 boxes each (app data S1: point cost description 3 Grunts; S2 and S4 agree on 9 points).",
+  "fa": 2
 }

@@ -518,3 +518,85 @@ otherwise. FURY-031 stays `todo` until non-attack damage can raise a transfer pr
 | FURY-049 | `npm run sim` with a fury list (30 games): every new decision's `legalActions` is non-empty and each member passes `validate`; 0 invariant violations | 00 §5, 81 C.1 |
 | FURY-050 | Recon setup: a warlock list whose only beast is lesser → `E_BAD_SETUP`; with a light beast → valid | F1.6 |
 | FURY-051 | A beast secures a 50 mm objective like a war-engine (Cohort); the same beast while wild cannot | F13.3 F11.2 |
+
+## M13 command cards (CARD)
+
+Spec: `91-cards-steamroller-clock.md` part A (CC*, A.2 to A.5).
+
+| ID | Case | Ref |
+|---|---|---|
+| CARD-001 | `GameSetup.cards` omitted → `players.*.cards` undefined, no `playCard` option anywhere; GOLD-001 replays unchanged | A.4 |
+| CARD-002 | Hand of six cards, or a duplicate, or For the Motherland for a list without a Khador Winter Korps / Old Umbrey `army` → `E_BAD_SETUP` | CC1 CC2 A.4 |
+| CARD-003 | Universal hand of five: Careful Reconnaissance offered on `chooseMovement` of a friendly activation; never on an enemy turn, never inside an attack or a trigger window | A.5 |
+| CARD-004 | Third card in one turn → `E_ALREADY_USED`; two cards in turn 1 and one more in turn 3 → allowed | CC4 |
+| CARD-005 | Second card on the same unit in one turn (first on trooper 1, second on trooper 2) → `E_ALREADY_USED` | CC5 |
+| CARD-006 | A played card is gone for the rest of the game (`played` has it; no option offered in later turns) | CC3 |
+| CARD-007 | Careful Reconnaissance A: a trooper unit advancing through a forest moves its full SPD (Pathfinder); next activation it is slowed again | A.2 |
+| CARD-008 | Careful Reconnaissance B: model advances, attacks, then gets a 3" advance and the activation ends; after a run → no Reposition move | A.2 |
+| CARD-009 | Blessings A: a magical, blessed attack hits an Incorporeal target normally and deals damage; the weapons lose both after the activation | A.2 |
+| CARD-010 | Blessings offered only on the activation's first decision; after `chooseMovement('advance')` it is gone | A.5 |
+| CARD-011 | Blessings B on a war-engine holding 3 focus → focus option not offered; on one holding 2 → 3. On a warlock below FURY → +1 fury. Soul token offered only to a model with a soul-gaining rule | A.2 |
+| CARD-012 | Duck and Cover A: a unit within 3" of a 40 mm objective → ranged attack target number +4 (cover) and blast damage resisted; LOS through a dug-in model is clear | A.2 |
+| CARD-013 | Dig In ends when the model moves, is placed, or becomes engaged (each case removes the effect) | A.2 |
+| CARD-014 | Duck and Cover B: an enemy charge attack roll against the model has −2; the same model 4" from every element → no −2 | A.2 |
+| CARD-015 | Duck and Cover on a warjack, warbeast or battle engine → `E_TARGET_INVALID` | A.2 |
+| CARD-016 | Bite and Hold A: unit secures the 40 mm objective, card played, unit runs off; end-of-turn scoring → still secured, VP scored; the same with one enemy model within 3" → contested, no VP; next turn → normal rules | A.2 |
+| CARD-017 | Bite and Hold B: model within 3" of an objective is not moved by a push (no collateral); slammed → moves normally | A.2 |
+| CARD-018 | Put the Fires Out: maintenance prompt raised only when a model would gain (on fire, corroded, knocked down, stationary, or damaged); A on a burning model → Fire ends before the continuous roll; B → d3+1 boxes healed | A.5 |
+| CARD-019 | Put the Fires Out B on a Grievous Wounds model → option not offered | A.2 |
+| CARD-020 | For the Motherland on a trooper unit: a trooper that would be disabled rolls Tough; after the round it does not | A.3 |
+| CARD-021 | `query.cards` for both players: hands visible, `playsLeft` 2 then 1 then 0, `usedOn` lists the unit | CC6 |
+| CARD-022 | `npm run sim` 30 games with both hands: every `playCard` in `legalActions` passes `validate`; 0 invariant violations; replay identical | 00 §5 |
+
+## M13 Steamroller 2026 scenarios (SR)
+
+Spec: `91-cards-steamroller-clock.md` part B (SR*, B.3, B.4).
+
+| ID | Case | Ref |
+|---|---|---|
+| SR-001 | Each of the seven `scn-sr26-*` files validates; element centres match B.4 to 0.01"; table 48×48; deployment 6 / 11 | B.4 SR2 |
+| SR-002 | Attacker on the −z edge → element positions as authored; Attacker on +z → every element rotated 180° (x, z negated); on west/east → rotated 90° | SR5 |
+| SR-003 | Flag pick: Attacker first; only pieces within 5" of the flag offered; with none, the flag becomes a 30 mm obstruction scenario terrain | SR10 |
+| SR-004 | Scenario terrain (area): one solo inside → secured; one trooper inside → not; two troopers → secured; two troopers 1" outside the forest edge → not | SR9 |
+| SR-005 | Scenario terrain (impassable / flag-obstruction): one Leader within 3" → secured | SR9 |
+| SR-006 | Trench Warfare: own flag terrain held → 0 VP; opponent's flag terrain held → 2 VP | B.4 S-SR1 |
+| SR-007 | Trench Warfare cache: a model within 3" of the opponent's cache forfeits its Combat Action, no enemy within 3" → `CacheClaimed`, cache removed, +2 VP at this turn's scoring; own cache → option not offered; contested → not offered | SR11 |
+| SR-008 | Cache claim before the Defender's round-2 turn → not offered | B.6 cache timing |
+| SR-009 | Earthworks: a medium-based trooper within 3" of its own 50 mm objective gets cover vs ranged; within 3" of the opponent's → none; a large-based model → none | B.3 |
+| SR-010 | Two Fronts: one player secures both 40 mm objectives and the flag terrain → 2 + 1 + 1 = 4 VP | B.4 S-SR2 |
+| SR-011 | Wolves: Kill Box depth 12" in round 2, 14" from the start of the Attacker's round-3 turn, 22" in round 7, for both players | B.3 killBoxGrowth |
+| SR-012 | Wolves heel tokens: securing own 40 → token offer; after a token the opponent may move it 3" toward the same-colour 50 (stops short of an obstruction it cannot clear) | B.3 heelTokens |
+| SR-013 | Wolves race: first player to reach 3 tokens alone → +3 VP once; both reach 3 at the same scoring point → no VP and no later award | B.3 tokenRace |
+| SR-014 | Pressure Point: 50 mm secured → 2 VP; four neutral flags picked A, D, A, D | B.4 S-SR4 |
+| SR-015 | High Stakes: 50 secured by A → A must pick an element with tokens and remove d3; nobody secures → d3 picks blue terrain / red terrain / 50 and removes 1 | B.4 S-SR5 |
+| SR-016 | High Stakes: an element reaching 0 → POW 14 magical blast roll on each model in or within 3" of it, friend and foe, once; then +1 VP while secured at 0 | B.4 S-SR5 |
+| SR-017 | Fault Line: a player securing two of their own objectives → +1; three → +2; two of the opponent's → no bonus | B.4 S-SR6 |
+| SR-018 | Payload: own 50 secured plus one other objective → move offer 0..4"; the move ends inside the opponent's flag terrain → +3 VP, objective removed | B.4 S-SR7 |
+| SR-019 | Payload haul: after the end-of-own-turn move, one Cohort model moves up to 5" straight toward the 50; on the opponent's turn → no haul | B.4 S-SR7 |
+| SR-020 | Payload: a 4 VP lead after the opponent's turn → no win (lead-by-3 off); the game runs to round 7 | B.6 Payload |
+| SR-021 | Every SR scenario: no scoring before the Defender's round-2 turn; Kill Box from the Attacker's round-2 turn | SR13 SR14 |
+| SR-022 | SR layout fit: no impassable piece within 1" of an element base after setup | B.5 item 12 |
+| SR-023 | Presence tiebreak in an SR scenario counts a unit inside area scenario terrain, not one 2" outside it | SR9 V1.5 |
+| SR-024 | `npm run sim -- --scenario scn-sr26-<id>` 20 games each: every game ends, 0 invariant violations, every scoring decision legal | 00 §5 |
+
+## M13 game clock (CLK)
+
+Spec: `91-cards-steamroller-clock.md` part C.
+
+| ID | Case | Ref |
+|---|---|---|
+| CLK-001 | Steamroller preset: 30 → 20 min, 50 → 30, 75 → 50, 100 → 60 per player | CLK1 |
+| CLK-002 | Clock off by default: no chips in the top bar, no `clockExpired` ever stepped | C.2 |
+| CLK-003 | Charged player = `pending.player`; nobody before deployment (turn order, edge, flag picks) or at game over | CLK2 C.2 |
+| CLK-004 | A reaction decision owned by the inactive player (power field, reroll, transfer) charges that player | CLK3 |
+| CLK-005 | Auto-pause while a presentation beat plays, a menu or modal is open, or the tab is hidden; resumes after | C.2 |
+| CLK-006 | Bot untimed by default (its pool never drains); "Time the bot" drains it by its answer time | C.2 |
+| CLK-007 | `clockExpired` for the active player, opponent scoring gives them more VP → winner opponent, reason `scenario`, `result.timeout` set | CLK5 |
+| CLK-008 | `clockExpired` for the active player, no VP lead → their Leader is destroyed (cause `timeout`), reason `assassination` | CLK5 |
+| CLK-009 | `clockExpired` before scoring starts (round 1) → no opponent scoring; Leader destroyed, `assassination` | CLK5 B.6 |
+| CLK-010 | `clockExpired` for the inactive player → `clockOut` set; their later decisions auto-answered; at the end of the active turn: more VP → `scenario`, else `assassination` | CLK6 |
+| CLK-011 | `clockExpired` is never in `legalActions`; with a stale `decisionId` → `E_WRONG_DECISION`; after `gameOver` → `E_GAME_OVER` | C.2 |
+| CLK-012 | A save with a `clockExpired` in its log replays to the same result with no clock running | C.2 |
+| CLK-013 | Continue restores both remaining times from `wm.save.<slot>.clock`, paused until the first decision shows | C.2 |
+| CLK-014 | Custom +30 s per turn: a player's pool gains 30 s when their turn ends | C.2 |
+| CLK-015 | E2E: `?clock=20&test=1`, `__clock.set('A', 500)` on the human's decision → "Out of time" banner, game-over screen names the clock | C.2 |

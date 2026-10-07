@@ -49,7 +49,7 @@ describe('Trollbloods data', () => {
     expect(l.entries).toEqual([
       { profile: 'trl.bomber' },
       { profile: 'trl.braylen', advanceDeploy: true },
-      { profile: 'trl.highwaymen', size: 3, advanceDeploy: true },
+      { profile: 'trl.highwaymen', size: 5, advanceDeploy: true },
     ])
     const cost = l.entries.reduce((n: number, e: Any) => n + rec(e.profile).cost, 0)
     expect(cost).toBe(28)

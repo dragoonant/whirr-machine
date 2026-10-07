@@ -5,13 +5,36 @@
   "type": "leader",
   "resource": "fury",
   "character": true,
-  "keywords": ["circle", "blackclad", "devourers-host", "warlock"],
+  "keywords": [
+    "circle",
+    "blackclad",
+    "devourers-host",
+    "warlock"
+  ],
   "base": 30,
-  "stats": { "SPD": 6, "AAT": 7, "MAT": 6, "RAT": 6, "DEF": 15, "ARM": 15, "ARC": 6, "CTRL": 12 },
-  "damage": { "track": "single", "boxes": 15 },
+  "stats": {
+    "SPD": 6,
+    "AAT": 7,
+    "MAT": 6,
+    "RAT": 6,
+    "DEF": 15,
+    "ARM": 15,
+    "ARC": 6,
+    "CTRL": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 15
+  },
   "weapons": [
-    { "weapon": "cir.w.jaws-of-the-earth", "socket": "hand-r" },
-    { "weapon": "cir.w.staff-of-fate", "socket": "hand-l" }
+    {
+      "weapon": "cir.w.jaws-of-the-earth",
+      "socket": "hand-r"
+    },
+    {
+      "weapon": "cir.w.staff-of-fate",
+      "socket": "hand-l"
+    }
   ],
   "abilities": [
     "core.a.dual-attack",
@@ -32,6 +55,9 @@
   ],
   "feat": "cir.f.rites-of-the-wurm",
   "cost": 0,
-  "figure": { "archetype": "caster" },
-  "verify": "Community card data only (no Quick Start coverage); base 30 is a guess; every value awaits the app check."
+  "figure": {
+    "archetype": "caster"
+  },
+  "verify": "All values match the app data (S1, S2): stats, 15 boxes, 30 mm base, weapons, abilities, five spells, feat. Veil of Mists replaced Bleed in the Jan 2024 app update (S3).",
+  "fa": "C"
 }

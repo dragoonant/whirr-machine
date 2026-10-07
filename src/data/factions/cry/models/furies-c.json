@@ -1,7 +1,7 @@
 {
   "faction": "cry",
   "id": "cry.furies-c",
-  "name": "Fury III (The Furies)",
+  "name": "Valak (The Furies)",
   "type": "trooper",
   "character": true,
   "keywords": [
@@ -21,7 +21,7 @@
   },
   "damage": {
     "track": "single",
-    "boxes": 5
+    "boxes": 8
   },
   "weapons": [
     {
@@ -41,5 +41,5 @@
     "slug": "wm-furies",
     "archetype": "infantry"
   },
-  "verify": "Community card data (U-cd); boxes and trooper names assumed."
+  "verify": "Card values from the app data dump and Warmachine Academy (cryx-sources.md S1, S2); 8 boxes, 40 mm base and trooper name from S2 only. Which sculpt carries which name is our pick."
 }

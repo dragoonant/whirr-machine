@@ -43,7 +43,7 @@ const damageRolls = (es: GameEvent[]): Ev<'DiceRolled'>[] => evs(es, 'DiceRolled
 describe('FAC-MEN data wiring', () => {
   it('FAC-MEN-000 every code hook the Menoth data names is registered', () => {
     const have = new Set(Object.keys(codeHooks().effects))
-    for (const c of ['stokeStripAttack', 'stokeStripDamage', 'inciteAttack', 'stokeRefund', 'fireStep', 'hexHammer', 'blessingOfTheFirstGift', 'battlePlan']) expect(have.has(c), c).toBe(true)
+    for (const c of ['stokeStripAttack', 'stokeStripDamage', 'stokeRefund', 'blessingOfTheFirstGift']) expect(have.has(c), c).toBe(true)
   })
 
   it('FAC-MEN-000 the starter list builds a legal 30-point army and starts a game', () => {
@@ -157,7 +157,7 @@ describe('FAC-MEN Stoke the Pyre', () => {
     s = place(s, 'B:e1', { x: 6, z: 0 })
     s = burning(s, 'B:e1')
     let o = choose(asOut(s), 'A:L')
-    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.incite' })
+    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.sacred-paragon' })
     expect(o.state.models['A:L']!.focus).toBe(6)
     expect(o.state.models['B:e1']!.conditions).not.toContain('fire')
     // nothing burning: the spell costs its focus
@@ -166,8 +166,8 @@ describe('FAC-MEN Stoke the Pyre', () => {
     t = withModel(t, 'A:L', { focus: 6 })
     t = place(t, 'A:L', { x: 0, z: 0 })
     let p = choose(asOut(t), 'A:L')
-    p = send(p, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.incite' })
-    expect(p.state.models['A:L']!.focus).toBe(2)
+    p = send(p, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.sacred-paragon' })
+    expect(p.state.models['A:L']!.focus).toBe(4)
   })
 })
 
@@ -186,46 +186,13 @@ describe('FAC-MEN Resistance, Steady, Relentless Charge, Shield Wall', () => {
     expect(statOf(s, bundle, 'A:L', 'ARM')).toBe(17)
   })
 
-  it('FAC-MEN-004 Steady: Pyrrhus cannot be knocked down; Valeria can', () => {
-    const s = startMen('steady')
-    expect(cannotKnockDown(s, bundle, 'A:e2')).toBe(true)
-    expect(cannotKnockDown(s, bundle, 'A:e1')).toBe(false)
-  })
-
-  it('FAC-MEN-005 Relentless Charge: Pathfinder only once Pyrrhus declares a charge, for that activation; a Defender never gets it', () => {
-    let s = startMen('relent')
-    s = park(s, ['A:e2', 'B:e0'])
-    s = place(s, 'A:e2', { x: 0, z: 0 })
-    s = place(s, 'B:e0', { x: 0, z: 7 })
-    expect(hasFlag(s, bundle, 'A:e2', 'pathfinder')).toBe(false) // not a standing ability
-    expect(hasFlag(s, bundle, 'A:u3.1', 'pathfinder')).toBe(false)
-    let o = choose(asOut(s), 'A:e2')
-    expect(hasFlag(o.state, bundle, 'A:e2', 'pathfinder')).toBe(false)
-    o = send(o, { type: 'chooseMovement', option: 'charge', modelId: 'A:e2' })
-    expect(o.pending.kind).toBe('chargeTarget')
-    expect(hasFlag(o.state, bundle, 'A:e2', 'pathfinder')).toBe(true)
-    o = send(o, { type: 'chargeTarget', targetId: 'B:e0' })
-    o = send(o, o.pending.options![0]!.action as unknown as Record<string, unknown>)
-    o = send(o, { type: 'chooseCombatAction', modelId: 'A:e2', choice: 'forfeit' })
-    while (o.pending.kind === 'moveModel') o = send(o, o.pending.options![0]!.action as unknown as Record<string, unknown>)
-    // the activation is over: the grant has expired
-    expect(hasFlag(o.state, bundle, 'A:e2', 'pathfinder')).toBe(false)
-    // a plain advance never grants it
-    let t2 = startMen('relent2')
-    t2 = park(t2, ['A:e2'])
-    t2 = place(t2, 'A:e2', { x: 0, z: 0 })
-    let q = choose(asOut(t2), 'A:e2')
-    q = send(q, { type: 'chooseMovement', option: 'advance', modelId: 'A:e2' })
-    expect(hasFlag(q.state, bundle, 'A:e2', 'pathfinder')).toBe(false)
-  })
-
   it('FAC-KHA Shield Wall reused: a Defender touching a unit-mate gets +2 ARM and cannot be knocked down', () => {
     let s = startMen('sw')
     s = place(s, 'A:u3.1', { x: 0, z: 0 })
     s = place(s, 'A:u3.2', { x: R, z: 0 })
     s = place(s, 'A:u3.3', { x: 10, z: 10 })
-    expect(statOf(s, bundle, 'A:u3.1', 'ARM')).toBe(15)
-    expect(statOf(s, bundle, 'A:u3.3', 'ARM')).toBe(13)
+    expect(statOf(s, bundle, 'A:u3.1', 'ARM')).toBe(18)
+    expect(statOf(s, bundle, 'A:u3.3', 'ARM')).toBe(16)
     expect(cannotKnockDown(s, bundle, 'A:u3.1')).toBe(true)
     expect(cannotKnockDown(s, bundle, 'A:u3.3')).toBe(false)
   })
@@ -243,36 +210,6 @@ describe('FAC-MEN Set Defense and Combined Melee Attack (core support pending)',
     expect(hasFlag(s, bundle, 'A:u3.2', 'combinedMeleeAttack')).toBe(true)
   })
   // Combined Melee Attack in play: CORE-034 (core-m9.test.ts)
-})
-
-describe('FAC-MEN-006 Impenetrable Shield', () => {
-  const hit = (seed: string, withDefender: boolean) => {
-    for (let i = 0; i < 120; i++) {
-      let s = startMen(seed + i, 'B')
-      s = park(s, ['A:e2', 'A:u3.1', 'B:e1'])
-      s = place(s, 'A:e2', { x: 0, z: 0 })
-      s = place(s, 'A:u3.1', withDefender ? { x: R, z: 0 } : { x: 9, z: 9 })
-      s = place(s, 'B:e1', { x: 0, z: 1.2 })
-      let o = openCombat(asOut(s), 'B:e1', 'melee')
-      o = send(o, { type: 'chooseAttack', modelId: 'B:e1', weaponId: 'cyg.w.sword', targetId: 'A:e2', additional: false })
-      o = settle(o)
-      const res = evs(o.events, 'AttackResolved')[0]!
-      if (!res.hit) continue
-      return { o, s }
-    }
-    throw new Error('no hit found')
-  }
-  it('a non-magical melee hit does no damage while a Flameguard model touches Pyrrhus', () => {
-    const { o, s } = hit('is-a', true)
-    expect(shieldedByFlameguard(s, bundle, 'A:e2')).toBe(true)
-    expect(evs(o.events, 'DamageRolled')[0]!.points).toBe(0)
-    expect(o.state.models['A:e2']!.damage).toMatchObject({ filled: 0 })
-  })
-  it('the same hit hurts him when he stands alone', () => {
-    const { o, s } = hit('is-b', false)
-    expect(shieldedByFlameguard(s, bundle, 'A:e2')).toBe(false)
-    expect(evs(o.events, 'DamageRolled')[0]!.points).toBeGreaterThan(0)
-  })
 })
 
 describe('FAC-MEN Critical Fire, Continuous Effect: Fire, Chain Weapon', () => {
@@ -297,11 +234,11 @@ describe('FAC-MEN Critical Fire, Continuous Effect: Fire, Chain Weapon', () => {
     let crit = false, plain = false
     for (let i = 0; i < 400 && !(crit && plain); i++) {
       let s = startMen('crf' + i)
-      s = park(s, ['A:e2', 'B:e1'])
-      s = place(s, 'A:e2', { x: 0, z: 0 })
+      s = park(s, ['A:u3.1', 'B:e1'])
+      s = place(s, 'A:u3.1', { x: 0, z: 0 })
       s = place(s, 'B:e1', { x: 0, z: 2 })
-      let o = openMen(asOut(s), 'A:e2', 'melee')
-      o = send(o, { type: 'chooseAttack', modelId: 'A:e2', weaponId: 'men.w.pyrrhus-spear', targetId: 'B:e1', additional: false })
+      let o = choose(asOut(s), 'A:u3'); o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:u3.1' }); o = send(o, { type: 'chooseCombatAction', modelId: 'A:u3.1', choice: 'melee' })
+      o = send(o, { type: 'chooseAttack', modelId: 'A:u3.1', weaponId: 'men.w.flame-spear', targetId: 'B:e1', additional: false })
       o = settle(o)
       const r = evs(o.events, 'AttackResolved')[0]!
       if (!r.hit) continue
@@ -311,7 +248,7 @@ describe('FAC-MEN Critical Fire, Continuous Effect: Fire, Chain Weapon', () => {
     expect(crit && plain).toBe(true)
   })
 
-  it('FAC-MEN-011 Chain Weapon: the Blazing Star ignores the Buckler ARM bonus (POW 17 +1 on the roll vs Deuce)', () => {
+  it('FAC-MEN-011 Chain Weapon: the Blazing Star ignores the Buckler ARM bonus (POW 18 +1 on the roll vs Deuce)', () => {
     let s = startMen('chain')
     s = park(s, ['A:e0', 'B:e0'])
     s = place(s, 'A:e0', { x: 0, z: 0 })
@@ -329,110 +266,13 @@ describe('FAC-MEN Critical Fire, Continuous Effect: Fire, Chain Weapon', () => {
       const d = damageRolls(o.events)[0]
       if (!d) continue
       seen = true
-      expect(flatOf(d)).toBe(18)
-    }
-    expect(seen).toBe(true)
-  })
-})
-
-describe('FAC-MEN Incite, Stir the Blood', () => {
-  const withEffect = (s: GameState, sourceId: string, name: string, targetIds: string[], casterId: string) =>
-    applyEffect(s, { sourceId, name, owner: 'A', casterId, targetIds, mods: [], duration: 'turn' }).state
-
-  it('FAC-MEN-015 Incite: +2 on attack and damage rolls against enemies within 10" of Feora, not beyond', () => {
-    let near = false
-    for (let i = 0; i < 80 && !near; i++) {
-      let s = startMen('inc' + i)
-      s = park(s, ['A:L', 'A:e2', 'B:e1'])
-      s = place(s, 'A:L', { x: 0, z: 0 })
-      s = place(s, 'A:e2', { x: 2, z: 0 })
-      s = place(s, 'B:e1', { x: 2, z: 2.5 })
-      s = withEffect(s, 'men.s.incite', 'Incite', ['A:L'], 'A:L')
-      let o = openMen(asOut(s), 'A:e2', 'melee')
-      o = send(o, { type: 'chooseAttack', modelId: 'A:e2', weaponId: 'men.w.pyrrhus-spear', targetId: 'B:e1', additional: false })
-      expect(evs(o.events, 'AttackMeasured')[0]!.mods.some((m) => m.source === 'men.s.incite' && m.value === 2)).toBe(true)
-      o = settle(o)
-      const d = damageRolls(o.events)[0]
-      if (!d) continue
-      near = true
-      expect(flatOf(d)).toBe(12) // POW 10 + Incite
-    }
-    expect(near).toBe(true)
-    let s = startMen('inc-far')
-    s = park(s, ['A:L', 'A:e2', 'B:e1'])
-    s = place(s, 'A:L', { x: -14, z: -14 })
-    s = place(s, 'A:e2', { x: 2, z: 0 })
-    s = place(s, 'B:e1', { x: 2, z: 2.5 })
-    s = withEffect(s, 'men.s.incite', 'Incite', ['A:L'], 'A:L')
-    let o = openMen(asOut(s), 'A:e2', 'melee')
-    o = send(o, { type: 'chooseAttack', modelId: 'A:e2', weaponId: 'men.w.pyrrhus-spear', targetId: 'B:e1', additional: false })
-    expect(evs(o.events, 'AttackMeasured')[0]!.mods.some((m) => m.source === 'men.s.incite')).toBe(false)
-  })
-
-  it('FAC-MEN-009 Stir the Blood: +2 on the next melee damage roll, then it is spent', () => {
-    let seen = false
-    for (let i = 0; i < 80 && !seen; i++) {
-      let s = startMen('stir' + i)
-      s = park(s, ['A:e2', 'A:u3.1', 'B:e1'])
-      s = place(s, 'A:u3.1', { x: 0, z: 0 })
-      s = place(s, 'B:e1', { x: 0, z: 2 })
-      s = withEffect(s, 'men.a.stir-the-blood', 'Stir the Blood', ['A:u3.1'], 'A:e2')
-      let o = send(asOut(s), { type: 'chooseActivation', activate: 'A:u3' })
-      o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:u3.1' })
-      o = send(o, { type: 'chooseCombatAction', modelId: 'A:u3.1', choice: 'melee' })
-      o = send(o, { type: 'chooseAttack', modelId: 'A:u3.1', weaponId: 'men.w.flame-spear', targetId: 'B:e1', additional: false })
-      o = settle(o)
-      const d = damageRolls(o.events)[0]
-      if (!d) continue
-      seen = true
-      expect(flatOf(d)).toBe(12)
-      expect(o.state.effects.some((e) => e.sourceId === 'men.a.stir-the-blood')).toBe(false)
+      expect(flatOf(d)).toBe(19)
     }
     expect(seen).toBe(true)
   })
 })
 
 describe('FAC-MEN-013 Fire Step, FAC-MEN-014 Hex Hammer, FAC-MEN-016 feat', () => {
-  it('FAC-MEN-013 Fire Step: enemies within 2" take fire damage and Feora is placed within 2"; a second cast the same activation is rejected', () => {
-    let s = startMen('fs')
-    s = park(s, ['A:L', 'B:e1'])
-    s = place(s, 'A:L', { x: 0, z: 0 })
-    s = place(s, 'B:e1', { x: 1.5, z: 0 })
-    let o = choose(asOut(s), 'A:L')
-    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.fire-step' })
-    const hurt = evs(o.events, 'DamageApplied').filter((e) => e.targetId === 'B:e1')
-    expect(hurt.length).toBe(1)
-    expect(hurt[0]!.points).toBeGreaterThan(0) // 2d6 + 13 against ARM 12 always hurts
-    expect(hurt[0]!.damageTypes).toEqual(['fire'])
-    const moved = evs(o.events, 'ModelMoved')[0]!
-    expect(moved.modelId).toBe('A:L')
-    expect(moved.distance).toBeLessThanOrEqual(2 + 1e-9)
-    const pos = o.state.models['A:L']!.pos
-    expect(o.state.models['B:e1']!.life === 'active' || o.state.models['B:e1']!.life === 'destroyed').toBe(true)
-    // the repeat is rejected outright, so no focus is taken for it
-    const focus = o.state.models['A:L']!.focus
-    const again = trySend(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.fire-step' })
-    expect(again && 'rejection' in again ? again.rejection.code : 'accepted').toBe('E_ALREADY_USED')
-    expect(o.state.models['A:L']!.focus).toBe(focus)
-    expect(o.state.models['A:L']!.pos).toEqual(pos)
-  })
-
-  it('FAC-MEN-013 Fire Step: Feora is still placed within 2" when no enemy is within 2"', () => {
-    let s = startMen('fs2')
-    s = park(s, ['A:L', 'B:e1'])
-    s = place(s, 'A:L', { x: 0, z: 0 })
-    s = place(s, 'B:e1', { x: 5, z: 0 })
-    let o = choose(asOut(s), 'A:L')
-    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.fire-step' })
-    expect(evs(o.events, 'DamageApplied').length).toBe(0)
-    const moved = evs(o.events, 'ModelMoved').filter((e) => e.modelId === 'A:L')
-    expect(moved.length).toBe(1)
-    expect(moved[0]!.distance).toBeLessThanOrEqual(2 + 1e-9)
-    expect(o.state.models['A:L']!.pos.x).toBeLessThan(0) // away from the enemy at +x
-    const again = trySend(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.fire-step' })
-    expect(again && 'rejection' in again ? again.rejection.code : 'accepted').toBe('E_ALREADY_USED')
-  })
-
   it('FAC-MEN-014 Hex Hammer: an enemy declaring a spell inside Feora\'s CTRL takes d3 first; outside it does not', () => {
     let s = startMen('hh', 'B')
     s = park(s, ['A:L', 'B:L'])
@@ -469,81 +309,6 @@ describe('FAC-MEN-013 Fire Step, FAC-MEN-014 Hex Hammer, FAC-MEN-016 feat', () =
     expect(o.state.models['B:L']!.conditions).not.toContain('fire')
     expect(o.state.models['A:L']!.featUsed).toBe(true)
   })
-})
-
-describe('FAC-MEN-012 Convection, FAC-MEN-007/008 Battle Plan', () => {
-  it('FAC-MEN-012 Convection: destroying a living enemy gives a warjack in CTRL a focus (loop seeds for a kill)', () => {
-    let seen = false
-    for (let i = 0; i < 120 && !seen; i++) {
-      let s = startMen('conv' + i)
-      s = park(s, ['A:L', 'A:e0', 'B:e1'])
-      s = place(s, 'A:L', { x: 0, z: 0 })
-      s = place(s, 'A:e0', { x: 4, z: -4 })
-      s = place(s, 'B:e1', { x: 0, z: 6 })
-      s = withModel(s, 'B:e1', { damage: { track: 'single', filled: 7, boxes: 8 } })
-      let o = choose(asOut(s), 'A:L')
-      const r = trySend(o, { type: 'castSpell', casterId: 'A:L', spellId: 'men.s.convection', targetId: 'B:e1' })
-      if (!r || 'rejection' in r) throw new Error('convection rejected: ' + JSON.stringify(r))
-      o = r
-      o = settle(o)
-      if (o.state.models['B:e1']!.life !== 'destroyed') continue
-      seen = true
-      expect(o.state.models['A:e0']!.focus).toBe(1)
-    }
-    expect(seen).toBe(true)
-  })
-
-  const planSetup = (seed: string, mates: Array<[string, { x: number; z: number }]>) => {
-    let s = startMen(seed)
-    s = park(s, ['A:e2', ...mates.map((m) => m[0])])
-    s = place(s, 'A:e2', { x: 0, z: 0 })
-    for (const [id, pos] of mates) s = place(s, id, pos)
-    return choose(asOut(s), 'A:e2')
-  }
-  const planOptions = (o: ReturnType<typeof asOut>) => (o.pending.options ?? []).map((x) => x.id)
-
-  it('FAC-MEN-007 Battle Plan: raised as an abilityChoice at the start of the activation; Stir the Blood aims at a chosen unit, warriors only', () => {
-    const o0 = planSetup('plan', [['A:u3.1', { x: 3, z: 0 }], ['A:u3.2', { x: 4, z: 1 }], ['A:e0', { x: -3, z: 0 }]])
-    expect(o0.pending.kind).toBe('abilityChoice')
-    const ids = planOptions(o0)
-    expect(ids).toContain('skip')
-    expect(ids).toContain('plan:men.a.stir-the-blood|A:u3')
-    expect(ids).toContain('plan:men.a.fight-to-the-last|A:u3')
-    expect(ids.some((id) => id.startsWith('plan:men.a.stir-the-blood') && id.includes('A:e0'))).toBe(false) // the Crusader is a warjack, not a warrior
-    const o = send(o0, { type: 'abilityChoice', optionId: 'plan:men.a.stir-the-blood|A:u3' })
-    expect(o.pending.kind).toBe('chooseMovement')
-    const e = o.state.effects.find((x) => x.sourceId === 'men.a.stir-the-blood')!
-    expect(e).toBeDefined()
-    expect(e.targetIds.length).toBe(5) // the whole unit, because a member is within 5"
-    expect(e.targetIds).not.toContain('A:e0')
-    expect(e.targetIds).toContain('A:u3.1')
-  })
-
-  it('FAC-MEN-007 Battle Plan: no prompt when no friend is within 10"', () => {
-    const o = planSetup('plan-none', [])
-    expect(o.pending.kind).toBe('chooseMovement')
-  })
-
-  it('FAC-MEN-008 Battle Plan: Fight to the Last gives the chosen unit Tough for the round', () => {
-    const o0 = planSetup('plan8', [['A:u3.1', { x: 3, z: 0 }]])
-    const o = send(o0, { type: 'abilityChoice', optionId: 'plan:men.a.fight-to-the-last|A:u3' })
-    const e = o.state.effects.find((x) => x.sourceId === 'men.a.fight-to-the-last')!
-    expect((e as { grants?: string[] }).grants).toContain('core.a.tough')
-    expect(e.duration).toBe('round')
-    expect(hasFlag(o.state, bundle, 'A:u3.2', 'tough')).toBe(true)
-  })
-
-  it('FAC-MEN-010 Battle Plan: Precision Strike covers every friendly model within 10", not one group', () => {
-    const o0 = planSetup('plan10', [['A:u3.1', { x: 3, z: 0 }], ['A:e1', { x: -8, z: 0 }], ['A:e0', { x: 0, z: 9 }], ['A:L', { x: 0, z: -12 }]])
-    const o = send(o0, { type: 'abilityChoice', optionId: 'plan:men.a.precision-strike|all' })
-    const e = o.state.effects.find((x) => x.sourceId === 'men.a.precision-strike')!
-    expect(e).toBeDefined()
-    expect(e.targetIds).toEqual(expect.arrayContaining(['A:e2', 'A:u3.1', 'A:e1', 'A:e0']))
-    expect(e.targetIds).not.toContain('A:L') // 12" away
-    expect(e.targetIds).not.toContain('A:u3.2') // parked out of range
-    expect(e.duration).toBe('turn')
-  })
-  // Fight to the Last grants Tough and Precision Strike passes friends: CORE-030 and CORE-075
 })
 
 describe('FAC-MEN-003 Combined Melee Attack (CORE-034): +1 per participant, primary included, no cap', () => {
@@ -583,7 +348,7 @@ describe('FAC-MEN-003 Combined Melee Attack (CORE-034): +1 per participant, prim
       const d = damageRolls(o.events)[0]
       if (!d) continue
       seen = true
-      expect(flatOf(d)).toBe(10 + 5) // flame spear POW 10 plus five participants
+      expect(flatOf(d)).toBe(12 + 5) // Spear POW 12 plus five participants
     }
     expect(seen).toBe(true)
   })

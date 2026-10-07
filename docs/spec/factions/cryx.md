@@ -1,63 +1,59 @@
 # Faction: Cryx (Necrofactorium) — Recon starter
 
-- **Sources:** the official MK4 rulebook (abridged digital, `docs/sources/`, core rules only: tokens p97,
-  Incorporeal p113, advantages p136) and community MK4 card data (`isorna/wardice-warmachine-data`,
-  `mk4/profiles/cryx.necrofactorium.profiles.json`, `abilities.json`, `spells.json`, fetched 2026-10-06). The
-  box contents come from retailer listings of the SFG product (Noble Knight, Asmodee Canada, SKU SFIK-CRX055);
-  the steamforged.com store page was rate-limited (HTTP 429) during research. The app version of the community
-  data is unknown.
-- **Nothing here is in the Quick Start.** The QS (Jul 2025) covers Cygnar and Khador only, so no Cryx value can be
-  `verified (QS pN)`, and handoff G has no Cryx entry, so nothing can be `V-cd` either. Every card value below is
-  `U-cd` until the **open app check** (record the app version, confirm every value). Core-rule citations (RB pN)
-  confirm how a rule works, not a card number.
-- **Confidence key** (QS beats community data on any conflict):
-  - `verified (QS pN)`: printed in the Quick Start on page N (or read from its diagram); data entry may use it;
-  - `V-cd`: community data and handoff G agree, not contradicted by the QS;
-  - `U-cd`: community data only;
-  - `U-guess`: no source; data entry must not trust it.
+- **Sources:** listed as S1..S7 in `cryx-sources.md` (researched 2026-10-07). S1 is the community dump of the
+  official app's card data (July 2026); S2 is the Warmachine Academy wiki (2026 revisions); S3 and S5 are the
+  official store pages on warmachine.gg; S7 is the MK4 rulebook for core rules (RB pN).
+- **Confidence key:**
+  - `S1+S2` (or more tags): two independent sources agree; data may rely on it;
+  - `S1` or `S2` alone: one source shows it and nothing contradicts it;
+  - `U-cd`: no source showed it; listed in `cryx-sources.md` with what was tried;
+  - `ours`: a ruling, not a card value.
+- Earlier versions of this file marked every card value `U-cd` (community data only, app check pending). The
+  2026-10-07 audit replaced those tags; no card value is left `U-cd`.
 - All prose is ours. Names are real (Mallet posture). UI names come from `shipName`.
 
 ## Chosen box
 
 **Cryx Necrofactorium Command Starter** (SFG, SKU SFIK-CRX055, released with the Necrofactorium wave, pre-orders
-Jul–Aug 2024). Retail copy calls it a ready-to-play 30-point force and lists exactly: Wraithbinder Nekane
+Jul–Aug 2024; still in stock on warmachine.gg, S3). The store calls it a 30-point force and lists exactly: Wraithbinder Nekane
 (warcaster), Hades (character warjack), Master Necrotech Chatterbane (character solo), The Furies (unit of three
 character models). This is the same shape as the Cygnar and Khador Recon starters, so no trimming is needed.
 
-RULING: starter box choice | Cryx uses the Necrofactorium Command Starter as-is (Nekane, Hades, Chatterbane, The Furies; 0+16+4+10 = 30) | it is the official 30-point MK4 Cryx starter and already matches the leader / heavy / solo / 3-model unit shape
+RULING: starter box choice | Cryx uses the Necrofactorium Command Starter as-is (Nekane, Hades, Chatterbane, The Furies; 0+16+4+10 = 30) | it is the official 30-point MK4 Cryx starter (S3, in stock 2026-10-07) and already matches the leader / heavy / solo / 3-model unit shape; the newer Wraithbinder's Host army box (S5) is larger than 30 points and drops Chatterbane, and the Boneyard Keeper command set (S5) has models no source gives cards for
 
 ## Roster (30 points)
 
 | id | Source model | shipName | Type | Pts | Base | Boxes | conf |
 |---|---|---|---|---|---|---|---|
-| cry.nekane | Wraithbinder Nekane | Nekane | Leader (warcaster), living | 0 | 30 | 16 | pts, boxes U-cd; base U-guess (product photo) |
-| cry.hades | Hades | Hades | Heavy war-engine (warjack), character, construct | 16 | 50 | grid 28 | pts, grid U-cd; base U-guess (product photo, standard heavy) |
-| cry.chatterbane | Master Necrotech Chatterbane | Chatterbane | Solo, character, undead | 4 | 40 | 10 | pts, boxes U-cd; base U-guess (product photo) |
-| cry.furies | The Furies | Furies | Unit, 3 character troopers, undead, Incorporeal, Wraith | 10 | 40 | per trooper; use 5 each until the app check | pts U-cd; base U-guess (product photo); boxes U-guess (the data has none) |
+| cry.nekane | Wraithbinder Nekane | Nekane | Leader (warcaster), living | 0 | 30 | 16 | pts, boxes S1+S2+S4; base S2+S6 |
+| cry.hades | Hades | Hades | Heavy war-engine (warjack), character, construct | 16 | 50 | grid 28 | pts, health S1+S2+S4; grid layout S1; base S2 (Heavy Warjack) |
+| cry.chatterbane | Master Necrotech Chatterbane | Chatterbane | Solo, character, undead | 4 | **50** | 10 | pts, boxes S1+S2+S4; base S2 (Large Base; was a 40 mm photo guess) |
+| cry.furies | The Furies | Furies | Unit, 3 character troopers, undead, Incorporeal, Wraith | 10 | 40 | **8** per trooper | pts S1+S2+S4; base S2 (Medium Base); boxes S2 (was a 5-box guess) |
 
-Points: 0 + 16 + 4 + 10 = **30** (U-cd). Recon needs at least one non-lesser cohort: Hades.
+Points: 0 + 16 + 4 + 10 = **30** (S1+S2+S4). Recon needs at least one non-lesser cohort: Hades.
 
-The Furies troopers (ids `cry.furies-a`, `cry.furies-b`, `cry.furies-c`) share one profile in the data. Their
-individual names are unknown; shipNames `Fury I`, `Fury II`, `Fury III` until the app check (U-guess). The trooper
-letters follow the product photo (see the figure refs): **a** = the open-armed wraith at the left, **b** = the
-upright wraith at the back right with arms raised, **c** = the front-right wraith with arms spread low.
+The Furies troopers share one profile (S1, S2). S2 names them **Anathan**, **Dogreth** and **Valak**; the ids stay
+`cry.furies-a`, `cry.furies-b`, `cry.furies-c` (figure slugs depend on them). The trooper letters follow the product
+photo: **a** = the open-armed wraith at the left, **b** = the upright wraith at the back right with arms raised,
+**c** = the front-right wraith with arms spread low. Which sculpt carries which name is our pick (a Anathan, b Dogreth,
+c Valak): no source ties a name to a sculpt.
 
-Base estimates (U-guess): measured on the official group photo against Hades' heavy base (assumed 50 mm).
-Nekane's base is the smallest (30 mm); Chatterbane's and each Fury's are clearly wider than hers and about 0.8×
-Hades' (40 mm).
+Bases (S2 base templates; S7 p71): Nekane small 30 mm, each Fury medium 40 mm, Chatterbane large 50 mm, Hades 50 mm
+as every heavy warjack. The old photo estimate (Chatterbane 40 mm) was wrong; a product photo is a composite and
+can't fix scale.
 
 ## Stat lines
 
 | id | SPD | AAT | MAT | RAT | DEF | ARM | ARC | CTRL | conf |
 |---|---|---|---|---|---|---|---|---|---|
-| cry.nekane | 7 | 7 | 6 | 7 | 16 | 15 | 6 | 12 | U-cd |
-| cry.hades | 6 | — | 6 | 6 | 13 | 18 | — | — | U-cd |
-| cry.chatterbane | 6 | — | 5 | 5 | 13 | 17 | — | — | U-cd |
-| cry.furies (each) | 6 | 7 | 6 | — | 14 | 14 | — | — | U-cd |
+| cry.nekane | 7 | 7 | 6 | 7 | 16 | 15 | 6 | 12 | S1+S2 |
+| cry.hades | 6 | — | 6 | 6 | 13 | 18 | — | — | S1+S2 |
+| cry.chatterbane | 6 | — | 5 | 5 | 13 | 17 | — | — | S1+S2 |
+| cry.furies (each) | 6 | 7 | 6 | — | 14 | 14 | — | — | S1+S2 |
 
 - A missing stat is stored as 0 (as Caine's MAT): Hades and Chatterbane have no AAT, the Furies have no ranged
   weapon so RAT 0.
-- Hades' ARM is 20 while its Death Claw system (L) works: **Shield** adds +2 ARM (U-cd; quality RB p18).
+- Hades' ARM is 20 while its Death Claw system (L) works: **Shield** adds +2 ARM (S1+S2; quality RB p18).
 - Incorporeal models within 10" of Nekane get +3 ARM (**Wraithbinder**): the Furies stand at ARM 17 near her, and
   Hades too while Soul Phase makes it Incorporeal.
 - Warcaster and warjack basics are the standard ones: Nekane refills focus to ARC 6, Hades powers up for 1 in her
@@ -68,13 +64,13 @@ Hades' (40 mm).
 
 | id | Advantages | Abilities | conf |
 |---|---|---|---|
-| cry.nekane | Dual Attack, Pathfinder | **Dodge**: after an enemy attack misses her, she may advance up to 2". **Grappling Hook**: at the end of her activation she may pay 1 focus to be placed anywhere completely within 5". **Vital Magic**: when something would end her upkeep spells, she may keep any of them by taking d3 damage per spell kept. **Wraithbinder**: friendly Incorporeal models within 10" get +3 ARM | U-cd |
-| cry.hades | Construct, Dual Attack, Headbutt, Slam, Trample, Unstoppable | **Aggressive**: runs and charges cost it no focus. **Soul Taker: Collector**: holds up to 3 soul tokens, gaining one when a living enemy is destroyed within 10" (nearest eligible taker wins, RB p97); it spends them on the three rules below. **Shadow Gate**: once per turn, right after it hits an enemy with a melee attack in its activation, spend 1 corpse or soul token to be placed completely within 2". **Soul Generator**: at the start of its activation, spend soul tokens for 1 focus each. **Soul Phase**: during its activation, spend a soul token to become Incorporeal for one turn | U-cd; token rules RB p97 |
-| cry.chatterbane | Dual Attack, Pathfinder, Undead | **Ancillary Attack** (★Action, RNG 3): a friendly Cryx cohort in range immediately makes one basic melee or ranged attack; each model at most once per turn. **Enliven** (★Action, RNG 3): for one round, the next time the friendly Cryx cohort takes damage from an enemy attack it may make a full advance after the attack, then Enliven ends. **Repair [d3+3]** (★Action, RNG 1): remove d3+3 damage from a friendly Cryx construct. **Exhaust Fumes**: when he advances in his Normal Movement, other friendly models within 3" of him have concealment for one round | U-cd |
-| cry.furies | Incorporeal, Undead | **Magic Ability**: their ★Attacks and ★Actions count as casting a spell. **Marionette** (★Attack, arcane, RNG 10, no damage): for one round, the player may make one model attacking the affected enemy model or unit reroll one attack or damage roll, then Marionette ends. **Power of Death** (★Action): for one turn, friendly undead models within 10" of this Fury get +2 on melee damage rolls. **Stygian Abyss** (★Attack, arcane, RNG 10, POW 12): a critical hit makes the target Blind for one round. **Mortal Fear**: living enemy models within 8" take −2 on damage rolls | U-cd |
+| cry.nekane | Dual Attack, Pathfinder | **Dodge**: after an enemy attack misses her, she may advance up to 2". **Grappling Hook**: at the end of her activation she may pay 1 focus to be placed anywhere completely within 5". **Vital Magic**: when something would end her upkeep spells, she may keep any of them by taking d3 damage per spell kept. **Wraithbinder**: friendly Incorporeal models within 10" get +3 ARM | S1+S2 |
+| cry.hades | Construct, Dual Attack, Headbutt, Slam, Trample, Unstoppable | **Aggressive**: runs and charges cost it no focus. **Soul Taker: Collector**: holds up to 3 soul tokens, gaining one when a living enemy is destroyed within 10" (nearest eligible taker wins, RB p97); it spends them on the three rules below. **Shadow Gate**: once per turn, right after it hits an enemy with a melee attack in its activation, spend 1 corpse or soul token to be placed completely within 2". **Soul Generator**: at the start of its activation, spend soul tokens for 1 focus each. **Soul Phase**: at any point in its activation, spend a soul token to become Incorporeal for one turn (we offer it at activation start) | S1+S2; Dual Attack S1 only; token rules RB p97 |
+| cry.chatterbane | Dual Attack, Pathfinder, Undead | **Ancillary Attack** (★Action, RNG 3): a friendly Cryx cohort in range immediately makes one basic melee or ranged attack; each model at most once per turn. **Enliven** (★Action, RNG 3): for one round, the next time the friendly Cryx cohort takes damage from an enemy attack it may make a full advance after the attack, then Enliven ends. **Repair [d3+3]** (★Action, RNG 1): remove d3+3 damage from a friendly Cryx construct. **Exhaust Fumes**: when he advances in his Normal Movement, other friendly models within 3" of him have concealment for one round | S1+S2 |
+| cry.furies | Incorporeal, Undead | **Magic Ability**: their ★Attacks and ★Actions count as casting a spell. **Marionette** (★Attack, arcane, RNG 10, no damage): for one round, the Furies' player may force one affected enemy model to reroll one of its own attack or damage rolls, then Marionette ends (corrected 2026-10-07: it hampers the enemy, it does not help a friendly attacker). **Power of Death** (★Action): for one turn, friendly undead models within 10" of this Fury get +2 on melee damage rolls. **Stygian Abyss** (★Attack, arcane, RNG 10, POW 12): a critical hit makes the target Blind for one round. **Mortal Fear**: living enemy models within 8" take −2 on damage rolls | S1+S2 |
 
-Keywords: every model is Cryx and Necrofactorium; the Furies are also Wraith; Nekane carries the Scout keyword in the
-data (no rule attached). "Faction cohort" in Chatterbane's actions means a Cryx war-engine (Hades).
+Keywords: every model is Cryx and Necrofactorium; the Furies are also Wraith; Nekane carries the Scout keyword (S1, S2;
+no rule attached). "Faction cohort" in Chatterbane's actions means a Cryx war-engine (Hades).
 
 **Same-name effects don't stack** (RB p10): three Furies give one Mortal Fear (−2), and two Power of Death
 activations give one +2. The one-per-unit marker (•) on Marionette, Power of Death and Stygian Abyss means only one
@@ -113,7 +109,7 @@ Test ids `FAC-CRY-*` are new.
 | Repair [d3+3] | ★Action | target friendly construct RNG 1; `{op:'heal', value:'d3+3'}` | FAC-CRY-012 |
 | Exhaust Fumes | `movement.end` (Normal Movement, advanced) | aura 3", other friendly models; grant concealment, duration round | FAC-CRY-013 |
 | Magic Ability | passive | ★Attacks/★Actions marked `magic: true` count as a spell cast (Banishing Ward-style immunity, "cast a spell" triggers) | FAC-CRY-014 |
-| Marionette | ★Attack (arcane) | arcane attack roll vs DEF, no damage; on hit apply effect (round) to the model/unit; one reroll for a friendly attacker, then expire | FAC-CRY-015 |
+| Marionette | ★Attack (arcane) | arcane attack roll vs DEF, no damage; on hit apply effect (round) to the model/unit; the Furies' player may make one affected enemy model reroll one of its own attack or damage rolls, then expire (not offered yet: no reroll engine) | FAC-CRY-015 |
 | Power of Death | ★Action | aura 10" friendly undead; `{op:'modRoll', roll:'damage', value:2}` melee only, duration turn | FAC-CRY-016 |
 | Stygian Abyss | ★Attack (arcane) | POW 12 magical; on crit `{op:'applyCondition', condition:'blind'}` (new condition) | FAC-CRY-017 |
 | Mortal Fear | passive | aura 8" living enemies; `{op:'modRoll', roll:'damage', value:-2}` | FAC-CRY-018 |
@@ -135,21 +131,21 @@ Test ids `FAC-CRY-*` are new.
 
 | id | Weapon | Qty | Type | Stat | RNG | ROF | AOE | POW | Loc | Qualities | Rules (summary) | conf |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| cry.nekane | Rune Thrower | 1 | ranged | RAT 7 | 10 | d3+1 | — | 10 | — | Blessed, Magical, Pistol | Banish (after it damages a non-Leader enemy, move that model anywhere completely within 1") | U-cd |
-| cry.nekane | Hellspike | 1 | melee | MAT 6 | 1 | — | — | 12 | — | Magical | Blood Shadow (if it boxes a living or undead model, Nekane may become Incorporeal for a round) | U-cd |
-| cry.hades | Soul Cannon | 1 | ranged | RAT 6 | 12 | 1 | 2 | 15 / blast 8 | R | Magical | AT: Wraith Shot (spend a soul: ignore LOS, cover and concealment, attack and damage boosted) / Shadow Fire (the model hit doesn't block LOS for a turn). Devour Soul (living enemies it kills give their soul to a Soul Taker the player picks; enemies never gain these souls) | U-cd |
-| cry.hades | Death Claw | 1 | melee | MAT 6 | 1 | — | — | 17 | L | Shield (+2 ARM while L works), Throw PA | — | U-cd |
-| cry.hades | Tusks | 1 | melee | MAT 6 | 1 | — | — | 14 | H | — | Critical Knockdown | U-cd |
-| cry.chatterbane | Light Spiker | 1 | ranged | RAT 5 | 11 | d3 | — | 11 | — | Pistol, Critical Corrosion | Volume Fire (+1 attack and damage vs 40 mm bases, +2 vs 50 mm and larger) | U-cd |
-| cry.chatterbane | Eviscerator | 1 | melee | MAT 5 | 2 | — | — | 13 | — | — | Critical Shred (on a crit in his Combat Action, one more attack with it at the model hit) | U-cd |
-| cry.furies (each) | Wraith Strike | 1 | melee | MAT 6 | 1 | — | — | 12 | — | Magical | — | U-cd |
+| cry.nekane | Rune Thrower | 1 | ranged | RAT 7 | 10 | d3+1 | — | 10 | — | Blessed, Magical, Pistol | Banish (after it damages a non-Leader enemy, move that model anywhere completely within 1") | S1+S2 |
+| cry.nekane | Hellspike | 1 | melee | MAT 6 | 1 | — | — | 12 | — | Magical | Blood Shadow (if it boxes a living or undead model, Nekane may become Incorporeal for a round) | S1+S2 |
+| cry.hades | Soul Cannon | 1 | ranged | RAT 6 | 12 | 1 | 2 | 15 / blast 8 | R | Magical | AT: Wraith Shot (spend a soul: ignore LOS, cover and concealment, attack and damage boosted) / Shadow Fire (the model hit doesn't block LOS for a turn). Devour Soul (living enemies it kills give their soul to a Soul Taker the player picks; enemies never gain these souls) | S1+S2 |
+| cry.hades | Death Claw | 1 | melee | MAT 6 | 1 | — | — | 17 | L | Shield (+2 ARM while L works), Throw PA | — | S1+S2 |
+| cry.hades | Tusks | 1 | melee | MAT 6 | 1 | — | — | 14 | H | — | Critical Knockdown | S1+S2 |
+| cry.chatterbane | Light Spiker | 1 | ranged | RAT 5 | 11 | d3 | — | 11 | — | Pistol, Critical Corrosion | Volume Fire (+1 attack and damage vs 40 mm bases, +2 vs 50 mm and larger) | S1+S2 |
+| cry.chatterbane | Eviscerator | 1 | melee | MAT 5 | 2 | — | — | 13 | — | — | Critical Shred (on a crit in his Combat Action, one more attack with it at the model hit) | S1+S2 |
+| cry.furies (each) | Wraith Strike | 1 | melee | MAT 6 | 1 | — | — | 12 | — | Magical | — | S1+S2 |
 
 Whether Shadow Fire and Wraith Shot are alternative Attack Types or separate rules is not marked in the data; we
 treat Wraith Shot as an optional add-on paid per attack and Shadow Fire as always on (see RULINGs).
 
 ## Hades damage grid (heavy, 28 boxes)
 
-From the community data (U-cd, open app check). `·` = hull box, letter = system box. The engine stores the
+From S1 only (the app data dump; S2 gives the 28 boxes but no layout). `·` = hull box, letter = system box. The engine stores the
 column strings below (top box first, filled first, R3.4):
 
 | Column | Boxes (top → bottom) | Data string |
@@ -179,20 +175,20 @@ As a card draws it (columns bottom-aligned, `x` = no box):
 
 ## Spells (Nekane)
 
-From the community data (U-cd). `OFF` = offensive (needs a magic attack roll).
+COST, RNG, AOE, POW and DUR from S1 and S2; OFF from S2. `OFF` = offensive (needs a magic attack roll).
 
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Banishing Ward | 2 | 6 | — | — | UP | no | Enemy upkeep spells and animi on the friendly model or unit end; enemy spells and animi can't target it | U-cd |
-| Crimson Veil | 2 | 6 | — | — | UP | no | A friendly Cryx model's melee weapons gain Blood Shadow | U-cd |
-| Crippling Grasp | 3 | 8 | — | — | UP | yes | The target model or unit has −2 SPD, −2 DEF and −2 ARM, and −2 on its melee damage rolls | U-cd |
-| Mirage | 2 | 6 | — | — | UP | no | The friendly Cryx model or unit gains Apparition: in your Control Phase, each model may be placed completely within 2" of where it stands | U-cd |
-| Venom | 2 | SP10 | — | 10 | — | yes | A 10" spray of corrosion damage; models hit also suffer the Corrosion continuous effect | U-cd |
+| Banishing Ward | 2 | 6 | — | — | UP | no | Enemy upkeep spells and animi on the friendly model or unit end; enemy spells and animi can't target it | S1+S2 (OFF: S2) |
+| Crimson Veil | 2 | 6 | — | — | UP | no | A friendly Cryx model's melee weapons gain Blood Shadow | S1+S2 (OFF: S2) |
+| Crippling Grasp | 3 | 8 | — | — | UP | yes | The target enemy model or unit has −2 SPD, −2 DEF and −2 ARM, and −2 on its melee damage rolls | S1+S2 (OFF: S2) |
+| Mirage | 2 | 6 | — | — | UP | no | The friendly Cryx model or unit gains Apparition: in your Control Phase, each model may be placed completely within 2" of where it stands | S1+S2 (OFF: S2) |
+| Venom | 2 | SP10 | — | 10 | — | yes | A 10" spray of corrosion damage; models hit also suffer the Corrosion continuous effect | S1+S2 (OFF: S2) |
 
 Venom is a **spray spell**: the spell schema allows `rng` number/SELF/CTRL only, so it needs `"SP10"` added (see New
-mechanics). OFF for Crippling Grasp is our reading (it targets any model/unit, normally an enemy).
+mechanics). S2 marks Crippling Grasp OFF yes and its target as an enemy model or unit.
 
-## Feat (Nekane): Wrath of Lyliss (U-cd)
+## Feat (Nekane): Wrath of Lyliss (S1+S2+S6)
 
 Lasts one round:
 - Nekane may take 1 damage point instead of paying a spell's COST in focus; each spell can be cast this way once.
@@ -258,18 +254,20 @@ Per STATUS.md the engine runs the Cygnar and Khador starters only; none of these
 ## Needs rules check
 
 - RULING: starter box choice | Cryx uses the Necrofactorium Command Starter as-is (Nekane, Hades, Chatterbane, The Furies; 0+16+4+10 = 30) | it is the official 30-point MK4 Cryx starter and already matches the leader / heavy / solo / 3-model unit shape
-- RULING: base sizes | Nekane 30 mm, Hades 50 mm, Chatterbane 40 mm, each Fury 40 mm | the community data has no bases; sizes estimated from the official group photo against a 50 mm heavy base
-- RULING: Furies health | 5 boxes per Fury | the community data omits it; 5 matches the other starter character troopers until the app check
-- RULING: Furies trooper names | `Fury I/II/III` shipNames, one shared profile | the data gives no individual names or profiles
+- RULING: base sizes | Nekane 30 mm, Hades 50 mm, Chatterbane 50 mm, each Fury 40 mm | Warmachine Academy base templates (S2: small, heavy warjack, large, medium); Nekane also S6. Replaces the 2026-10-06 photo estimate (Chatterbane 40)
+- RULING: Furies health | 8 boxes per Fury | Warmachine Academy (S2) gives 8; the app data dump (S1) has no unit health field. Replaces the 5-box guess
+- RULING: Furies trooper names | Anathan, Dogreth, Valak (S2) on troopers a, b, c; one shared profile | S2 names the three; no source ties a name to a sculpt, so the order is ours
 - RULING: one-per-unit (•) ★Attacks and ★Actions | only one Fury per unit activation may use each of Marionette, Power of Death and Stygian Abyss | the • marker in MK4 limits a rule to one model in the unit per activation
 - RULING: Furies attacking and Incorporeal | a Fury making a ★Attack (arcane) keeps Incorporeal; making a Wraith Strike melee attack loses it until its next activation | RB p113 strips Incorporeal only for melee or ranged attacks
 - RULING: Wraith Shot and Shadow Fire | Wraith Shot is an optional soul-paid add-on per Soul Cannon attack; Shadow Fire always applies | the data lists both as weapon abilities, not as an AT choice
 - RULING: Wraith Shot "ignores LOS" | the shot still needs range and a legal target, but no LOS, cover or concealment | the rule removes those three checks only
 - RULING: Soul Cannon AOE | stored as `aoe: 2`, `pow: 15`, `blastPow: 8` | the data gives "AOE 2, POW 15/8" with the same AOE scale as the Cygnar Blast AT
-- RULING: Crippling Grasp offensive | `offensive: true` | it targets any model/unit and debuffs; friendly use is pointless
+- RULING: Crippling Grasp offensive | `offensive: true`, enemy targets only | confirmed: S2 lists OFF yes and an enemy target
 - RULING: Mortal Fear stacking | three Furies still give −2 total | same-name effects are not cumulative (RB p10)
 - RULING: Shadow Gate token type | Hades may pay with a soul token; it has no way to collect corpse tokens in this list | Collector only gathers souls
 - RULING: Wrath of Lyliss spell payment | each distinct spell once per feat round may be paid with 1 damage; upkeeps paid in Maintenance are unaffected | the feat speaks of casting, not upkeep
 - RULING: Aggressive | Hades runs and charges for 0 focus with or without a marshal | the rule waives the MK4 1-focus run/charge cost directly
 - RULING: Venom range | `SP10` spray from Nekane, using her AAT 7 for each model in the spray | spells use AAT for magic attacks
-- RULING: app check open | every card value stays U-cd | the steamforged.com page was rate-limited and the data's app version is unknown
+- RULING: card values checked | every card value carries a source tag (cryx-sources.md); single-source values: Hades grid layout and Dual Attack (S1), Chatterbane base, Fury health and names (S2) | 2026-10-07 web audit; the official app itself was not read
+- RULING: Nekane spell rack | not modelled: she casts only her five card spells | MK4 lets a warcaster rack extra army spells (RB p101), but no reliable source gives her rack slot count (S6 says 3 on a copied entry) and the starter is played without racks, as the Quick Start does
+- RULING: Marionette | the Furies' player makes one affected enemy model reroll one of its own attack or damage rolls; still not offered (no reroll engine) | S1 and S2 word it that way; the 2026-10-06 text had it helping a friendly attacker

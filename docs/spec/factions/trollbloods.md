@@ -1,35 +1,41 @@
 # Faction: Trollbloods (United Kriels, Gunnbjorn's gun line) — Recon starter
 
-- **Sources:** the MK4 rulebook (abridged digital, `docs/sources/`, ch. 4 pp96–97 life spirals and crippled
-  aspects, ch. 7 pp104–105 warlocks and fury, ch. 8 pp106–107 warbeasts, ch. 9 pp108–110 animi) for the
-  general rules; community MK4 card data (`isorna/wardice-warmachine-data`, `trollbloods.united-kriels`
-  profiles, fetched 2026-10-06) for every model value. The app version of the community data is unknown.
-  Privateer Press product photos (PIP 71045, 71058, 71087, 71096; retailer copies) for base sizes and
-  sculpts only.
-- **No Quick Start or MK4 starter covers this faction.** Nothing here is printed in an official MK4 source;
-  every model value stays community data until the **open app check** (record the app version, confirm
-  every value).
-- **Confidence key** (QS beats community data on any conflict):
-  - `verified (QS pN)`: printed in the Quick Start on page N (or read from its diagram); data entry may use it;
-  - `V-cd`: community data and handoff G agree, not contradicted by the QS;
-  - `U-cd`: community data only;
-  - `U-guess`: no source; data entry must not trust it.
+- **Sources:** listed as S1..S10 with URLs in `trollbloods-sources.md` (audit 2026-10-07). In short: **S1** the
+  app data dump in `isorna/wardice-warmachine-data` (commit "app data dump", 2026-07-10); **S2** the Warmachine
+  Academy wiki card pages (revisions Feb–Apr 2026); **S3** the MK4 rulebook (abridged digital, `docs/sources/`:
+  p65 and p71 base sizes, pp96–97 life spirals and crippled aspects, pp104–107 warlocks, fury and warbeasts,
+  pp108–110 animi); **S4** list exports from the official app (Bomber at 17 points); **S5** warmachine.gg store
+  pages (current boxes); **S6** the 2017 Trollbloods Army Box contents; **S7** the Academy's United Kriels army
+  page; **S8** a fan army-builder data file (base sizes only); **S10** a second, independent dump of the
+  official app data (`tate4490/Warmachine`, `data_general.json` split into files, 2026-07-01).
+- **Every card value below carries a source tag.** A value tagged with several sources (e.g. `S1+S2+S10`) was
+  seen in each of them and they agree. A single tag means only that source showed it (S1 has no field for it). `U-cd` is
+  left only where no source showed the value; after the audit none is left (the Bomber's aspect order is a
+  RULING, not a gap).
+- **Confidence key:**
+  - `S1+S2+S10` (or any pair): independent sources agree; data entry may trust it;
+  - `Sn`: one source only, nothing contradicts it;
+  - `U-cd`: no source shows it; our assumption, flagged in `needs-rules-check.md`.
 - All prose is ours. Names are real (Mallet posture). UI names come from `shipName`.
 - This is a Hordes faction: a **warlock** runs a battlegroup of **warbeasts** on **fury**, not focus. The
-  fury rules are specified in `81-warlocks-fury.md` (written in parallel); this file only states the
-  per-model numbers in plain terms. The Quick Start key's `verified` tier is empty here.
+  fury rules are specified in `81-warlocks-fury.md`; this file only states the per-model numbers in plain terms.
 
 ## Chosen box and why
 
-SFG sells **no MK4 Trollbloods starter**: the MK4 Command Starters and battlegroup box for the trollkin
-went to the Southern Kriels (Foulblood's Armada, Kithguard, Brineblood Marauders), and the classic
-Trollbloods live on as the United Kriels and Storm of the North armies built from older kits. The closest
-official box is the **Trollbloods Army Box (2017, Privateer Press)**: Captain Gunnbjorn, Dire Troll
-Mauler, Dire Troll Bomber, Dozer & Smigg, Trollkin Highwaymen (10), Krielstone Bearer & Stone Scribes and
-Braylen Wanderheart. Every model in it is in the MK4 **United Kriels** army, so one army covers the list.
+There is **no MK4 starter for the Trollbloods faction** (S5, S7). In the official app the Trollbloods faction
+holds the United Kriels and Storm of the North armies, built from older Privateer Press kits; the United
+Kriels are a "Legend" army, out of print, whose story moved to the separate **Southern Kriels** faction (S7).
+Steamforged's current trollkin boxes are all Southern Kriels: Foulblood's Armada (Brinebloods) and, since
+April 2026, the **Kithguard Command Starter** (Sergeant Craghorn, Corporal Rhud Felleye, Klangor, Scrappers,
+Pvt. Rattles; 30 points by S1's Kithguard file; S5). Those are a different faction with other models, so this
+file keeps the Trollbloods faction and its old box (switching is an owner question, see the RULING).
 
-Trimmed to the Cygnar/Khador shape (leader 0, one heavy war-engine, one solo, one 3-model unit):
-Gunnbjorn (0) + **Dire Troll Bomber** (17) + **Braylen Wanderheart** (4) + **Trollkin Highwaymen ×3** (7)
+The closest official Trollbloods box is the **Trollbloods Army Box (2017, Privateer Press)**: Captain
+Gunnbjorn, Dire Troll Mauler, Dire Troll Bomber, Dozer & Smigg, Trollkin Highwaymen (10), Krielstone Bearer
+& Stone Scribes and Braylen Wanderheart (S6). Every model in it is in the MK4 **United Kriels** army (S1).
+
+Trimmed to the Cygnar/Khador shape (leader 0, one heavy beast, one solo, one unit):
+Gunnbjorn (0) + **Dire Troll Bomber** (17) + **Braylen Wanderheart** (4) + **Trollkin Highwaymen ×5** (7)
 = **28 points** (≤30, and ≥26 as `validate-data` requires). Braylen's Leadership names the Highwaymen
 (like Falk and the Black 13th), and the Bomber's gun suits Gunnbjorn's ranged spells and feat.
 
@@ -37,24 +43,24 @@ Gunnbjorn (0) + **Dire Troll Bomber** (17) + **Braylen Wanderheart** (4) + **Tro
 
 | id | Source model | shipName | Type | Pts | Base | Boxes | conf |
 |---|---|---|---|---|---|---|---|
-| trl.gunnbjorn | Captain Gunnbjorn | Gunnbjorn | Leader (warlock) | 0 | 40 | 17 | pts, boxes U-cd; base U-guess (product label PIP 71045 reads 40 mm, not an MK4 source) |
-| trl.bomber | Dire Troll Bomber | Bomber | Heavy war-engine (warbeast) | 17 | 50 | spiral 30 | pts, boxes U-cd; base U-guess (label PIP 71058: 50 mm) |
-| trl.braylen | Braylen Wanderheart, Trollkin Outlaw | Braylen | Solo, character | 4 | 40 | 8 | pts, boxes U-cd; base U-guess (label PIP 71087: 40 mm) |
-| trl.highwaymen | Trollkin Highwaymen | Highwaymen | Unit, 3 grunts (`trl.highwaymen-grunt`) | 7 | 40 | 1 each (Tough) | pts U-cd; size 3 U-guess (see RULING); boxes U-cd (no health field = 1 box); base U-guess (label PIP 71096: 40 mm) |
+| trl.gunnbjorn | Captain Gunnbjorn | Gunnbjorn | Leader (warlock) | 0 | 40 | 17 | pts, boxes S1+S2+S10; base S10 (40 mm) + S2 (medium) + S8 |
+| trl.bomber | Dire Troll Bomber | Bomber | Heavy warbeast | 17 | 50 | spiral 30 | pts S1+S2+S10+S4; boxes S1+S2+S10; base S10 (50 mm) + S3 p65 (heavy warbeast = 50 mm) + S2 |
+| trl.braylen | Braylen Wanderheart, Trollkin Outlaw | Braylen | Solo, character | 4 | 40 | 8 | pts, boxes S1+S2+S10; base S10 (40 mm) + S2 (medium) + S8 |
+| trl.highwaymen | Trollkin Highwaymen | Highwaymen | Unit, 5 grunts (`trl.highwaymen-grunt`) | 7 | 40 | 1 each (Tough) | pts S1+S2+S10; size 5 S2+S10 ("5 Grunts"; S1 has no size field); boxes 1 S2+S10 (no health track = one box); base S10 (40 mm) + S2 |
 
-Field allowance (U-cd): Gunnbjorn C, Bomber 4, Braylen C, Highwaymen 2.
-Keywords (U-cd): all are Trollblood and United Kriels; Gunnbjorn, Braylen are Trollkin (Gunnbjorn also
-Scout); the Bomber is a Heavy Warbeast (also Storm of the North). The Highwaymen entry lists no Trollkin
-keyword in the data (ASSUMED Trollkin; open app check).
+Field allowance: Gunnbjorn C, Bomber 4, Braylen C, Highwaymen 2 (S1+S2+S10).
+Keywords (S1): all are Trollblood and United Kriels; Gunnbjorn is Trollkin and Scout; Braylen is Trollkin;
+the Bomber is a Heavy Warbeast and also Storm of the North (S1+S10). The Highwaymen card lists no Trollkin
+keyword in S1 or S10 (we keep it; see the RULING). The old `outlaw` keyword was on no source and is removed.
 
 ## Stat lines
 
 | id | SPD | AAT | MAT | RAT | DEF | ARM | ARC | CTRL | FURY | THR | conf |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| trl.gunnbjorn | 6 | — | 6 | 7 | 15 | 16 | 6 | 12 | — | — | U-cd (no AAT in the data: he has no offensive spell) |
-| trl.bomber | 5 | — | 6 | 5 | 12 | 18 | — | — | 4 | 8 | U-cd |
-| trl.braylen | 6 | — | — | 7 | 14 | 15 | — | — | — | — | U-cd (no melee weapon, so no MAT) |
-| trl.highwaymen-grunt | 6 | — | — | 6 | 12 | 14 | — | — | — | — | U-cd (no melee weapon, so no MAT) |
+| trl.gunnbjorn | 6 | — | 6 | 7 | 15 | 16 | 6 | 12 | — | — | S1+S2+S10 (no AAT on any: he has no offensive spell) |
+| trl.bomber | 5 | — | 6 | 5 | 12 | 18 | — | — | 4 | 8 | S1+S2+S10 |
+| trl.braylen | 6 | — | — | 7 | 14 | 15 | — | — | — | — | S1+S2+S10 (no melee weapon, so no MAT) |
+| trl.highwaymen-grunt | 6 | — | — | 6 | 12 | 14 | — | — | — | — | S1+S2+S10 (no melee weapon, so no MAT) |
 
 Fury in plain terms (rulebook pp104–107; details belong to `81-warlocks-fury.md`):
 - **Gunnbjorn (ARC 6):** starts the game with 6 fury and never leeches above 6. In his Control Phase he
@@ -71,10 +77,10 @@ Fury in plain terms (rulebook pp104–107; details belong to `81-warlocks-fury.m
 
 | id | Advantages | Abilities | conf |
 |---|---|---|---|
-| trl.gunnbjorn | Tough | **Field Marshal [Run & Gun]**: warbeasts in his battlegroup gain Run & Gun. **Resourceful**: he keeps upkeep spells running on his battlegroup for free | U-cd |
-| trl.bomber | Dual Attack, Headbutt, Slam, Trample | **Regeneration [d3]**: once per activation, force it to heal d3; not in an activation it ran. **Snacking**: when it boxes a living model with a melee attack, it may remove that model from play to heal d3 | U-cd |
-| trl.braylen | Advance Deployment, Ambush, Pathfinder, Tough | **Dodge**: after an enemy attack misses her, she may advance up to 2". **Leadership [Trollkin Highwaymen]**: Highwaymen within 10" gain Dodge. **Prowl**. **Run & Gun** | U-cd |
-| trl.highwaymen | Advance Deployment, Ambush, Pathfinder, Tough | **Prowl**; **Swift Hunter**: after a basic ranged attack destroys an enemy, the model may advance up to 2" | U-cd |
+| trl.gunnbjorn | Tough | **Field Marshal [Run & Gun]**: warbeasts in his battlegroup gain Run & Gun. **Resourceful**: he keeps upkeep spells running on his battlegroup for free | S1+S2+S10 |
+| trl.bomber | Dual Attack, Headbutt, Slam, Trample | **Regeneration [d3]**: once per activation, force it to heal d3; not in an activation it ran. **Snacking**: when it boxes a living model with a melee attack, it may remove that model from play to heal d3 | S1+S2+S10 (S2 gives the three power attacks through its Heavy Warbeast entry) |
+| trl.braylen | Advance Deployment, Ambush, Pathfinder, Tough | **Dodge**: after an enemy attack misses her, she may advance up to 2". **Leadership [Trollkin Highwaymen]**: Highwaymen within 10" gain Dodge. **Prowl**. **Run & Gun** | S1+S2+S10 |
+| trl.highwaymen | Advance Deployment, Ambush, Pathfinder, Tough | **Prowl**; **Swift Hunter**: after a basic ranged attack destroys an enemy, the model may advance up to 2" | S1+S2+S10, except Advance Deployment: S1+S10 (S2 says Forward Deployment; the two app dumps win) |
 
 ## Ability → descriptor / code hook map
 
@@ -103,22 +109,28 @@ Fury ops (`gainFury`, `force`) are **not in `hooks.ts` yet**; they wait for `81-
 
 | id | Weapon | Qty | Type | Stat | RNG | ROF | AOE | POW | Loc | Qualities | Rules (summary) | conf |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| trl.gunnbjorn | Bazooka | 1 | ranged | RAT 7 | 12 | 1 | 2 | 14 (blast 8) | — | Magical damage | Critical Devastation (above) | U-cd |
-| trl.gunnbjorn | Axe | 1 | melee | MAT 6 | 1 | — | — | 11 | — | — | — | U-cd |
-| trl.bomber | Powder Bomb | 1 | ranged | RAT 5 | 8 | 1 | 3 | 16 (blast 8) | H | — | Forced Reload [1]: force once to make one more shot with it | U-cd; loc U-guess (warbeasts have no locations; use `-`, see Data notes) |
-| trl.bomber | Claw | 2 | melee | MAT 6 | 1 | — | — | 15 | — | Throw PA | — | U-cd |
-| trl.braylen | Heavy Pistol | 2 | ranged | RAT 7 | 8 | 1 | — | 12 | — | Pistol | Both Barrels (★Attack); Luck (reroll missed attack rolls once each) | U-cd |
-| trl.highwaymen-grunt | Pistol | 2 | ranged | RAT 6 | 8 | 1 | — | 10 | — | Pistol | Both Barrels (★Attack) | U-cd |
+| trl.gunnbjorn | Bazooka | 1 | ranged | RAT 7 | 12 | 1 | 2 | 14 (blast 8) | — | Magical damage | Critical Devastation (above) | S1+S2+S10 (quality S1+S10) |
+| trl.gunnbjorn | Axe | 1 | melee | MAT 6 | 1 | — | — | 11 | — | — | — | S1+S2+S10 |
+| trl.bomber | Powder Bomb | 1 | ranged | RAT 5 | 8 | 1 | 3 | 16 (blast 8) | - | — | Forced Reload [1]: force once to make one more shot with it | S1+S2+S10; loc `-` is ours (warbeasts have no locations) |
+| trl.bomber | Claw | 2 | melee | MAT 6 | 1 | — | — | 15 | - | Throw PA | — | S1+S2+S10 |
+| trl.braylen | Heavy Pistol | 2 | ranged | RAT 7 | 8 | 1 | — | 12 | — | Pistol | Both Barrels (★Attack); Luck (reroll missed attack rolls once each) | S1+S2+S10 |
+| trl.highwaymen-grunt | Pistol | 2 | ranged | RAT 6 | 8 | 1 | — | 10 | — | Pistol | Both Barrels (★Attack) | S1+S2+S10 |
 
 Use `location: '-'` on every warbeast weapon: a spiral has no L/R systems; crippled aspects act on all
 weapons (Body: −1 damage die; Mind: −1 attack die and no chain, power or special attacks).
 
+Data shims (not card values): the Powder Bomb also lists `core.a.reload-1` so the engine's existing Reload
+path offers the extra shot (Forced Reload swaps the focus cost for 1 fury on the Bomber), and the two guns
+list `trl.a.guided-fire-die` so Guided Fire's free boost is checked when each attack is rolled.
+
 ## Bomber life spiral (heavy, 30 boxes)
 
-Branch sizes 6 / 3 / 7 / 5 / 6 / 3 are **U-cd** (community `health.grid.columns`, layout `spiral`). The data
-does not say which boxes belong to which aspect. **ASSUMED** (U-guess, open app check): each aspect owns two
-neighbouring branches, as on the older cards — **Mind = branches 1–2 (9 boxes), Body = 3–4 (12),
-Spirit = 5–6 (9)**. Every box is an aspect box.
+Branch sizes 6 / 3 / 7 / 5 / 6 / 3 are **S1** (app dump `health.grid.columns`, layout `spiral`; the total of
+30 also S2). **S10** stores the card's three aspect totals, **9 / 12 / 9**, which are exactly branches 1+2,
+3+4 and 5+6, so each aspect owns two whole neighbouring branches and every box is an aspect box (S1+S10).
+No source names the aspect of each total; we read them in the rulebook order **Mind = branches 1–2 (9 boxes),
+Body = 3–4 (12), Spirit = 5–6 (9)** (RULING, same reading as Circle's Pureblood). The rulebook (p96) would
+also allow mixed branches, but these totals leave no room for them.
 
 | Branch | Boxes (outer → inner) | Aspect |
 |---|---|---|
@@ -135,22 +147,20 @@ boxes are marked, and recovers when any of them is healed. Crippled **Body**: on
 Crippled **Mind**: one fewer attack die, no chain, power or special attacks. Crippled **Spirit**: can't be
 forced (so no run, charge, power attack, Regeneration or Forced Reload).
 
-Proposed data shape (additive, for `20-data-schema` §4): `{track:'spiral', branches:[6 strings]}`, each
-string outer box first, letters `M B S` (or `-` for a box with no aspect, if the app shows some).
+Data shape: `{track:'spiral', branches:[6 strings]}`, each string outer box first, letters `M B S` (or `-`
+for a box with no aspect, if a card ever shows some).
 
 ## Spells (Gunnbjorn) and animus (Bomber)
 
-All four spells and the animus are community data; **open app check** for the current list and every stat.
-
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Guided Fire | 3 | SELF | CTRL | — | TURN | no | This turn, models in Gunnbjorn's battlegroup inside his CTRL have their ranged attack rolls boosted for free (Gunnbjorn included; checked when the attack is rolled) | U-cd |
-| Rock Wall | 2 | CTRL | — | — | UP | no | Put a straight wall piece fully inside his CTRL, clear of bases and terrain; it is an obstacle giving cover; an 80 mm or 120 mm base touching it removes it | U-cd; DUR UP looks odd (older cards: TURN) and wall size rulebook piece 4" × 3/4" |
-| Sentry | 2 | 6 | — | — | UP | no | A friendly Faction model gets Rapid Fire: one basic ranged attack in your Maintenance Phase | U-cd |
-| Snipe | 2 | 6 | — | — | UP | no | A friendly Faction model's or unit's ranged weapons reach 3" further | U-cd |
-| Far Strike (animus) | 1 | SELF | — | — | TURN | no | The caster's ranged weapons reach 3" further this turn | U-cd |
+| Guided Fire | 3 | SELF | CTRL | — | TURN | no | This turn, models in Gunnbjorn's battlegroup inside his CTRL have their ranged attack rolls boosted for free (Gunnbjorn included; checked when the attack is rolled) | S1+S2+S10 |
+| Rock Wall | 2 | CTRL | — | — | UP | no | Put a straight wall piece fully inside his CTRL, clear of bases, obstacles and obstructions; it is an obstacle giving cover; an 80 mm or 120 mm base touching it removes it | S1+S2+S10 (DUR Up in both); wall piece 4" × 3/4" from the rulebook |
+| Sentry | 2 | 6 | — | — | UP | no | A friendly Faction model gets Rapid Fire: one basic ranged attack in your Maintenance Phase | S1+S2+S10 |
+| Snipe | 2 | 6 | — | — | UP | no | A friendly Faction model's or unit's ranged weapons reach 3" further | S1+S2+S10 |
+| Far Strike (animus) | 1 | SELF | — | — | TURN | no | The caster's ranged weapons reach 3" further this turn | S1+S2+S10 |
 
-## Feat (Gunnbjorn): Fortification (U-cd)
+## Feat (Gunnbjorn): Fortification (S1+S2+S10)
 
 Lasts one round: friendly Faction models inside Gunnbjorn's CTRL count as in cover (+4 DEF against ranged
 and arcane attacks, R6), gain Resistance: Blast, and can't be knocked down.
@@ -164,8 +174,8 @@ Faction id `trl` (engine file key `trollbloods`: `src/engine/factions/trollblood
 `trl.a.regeneration`, `trl.a.snacking`, `trl.a.dodge`, `trl.a.leadership-highwaymen`,
 `trl.a.critical-devastation`, `trl.a.forced-reload`, `trl.a.luck`, `trl.a.swift-hunter` (or promote to
 `core.a.swift-hunter` together with Khador). Spells `trl.s.guided-fire`, `trl.s.rock-wall`, `trl.s.sentry`,
-`trl.s.snipe`, `trl.s.far-strike` (animus). Feat `trl.f.fortification`. List `trl.l.army-recon`
-(entries: Bomber; Braylen `advanceDeploy`; Highwaymen size 3 `advanceDeploy`).
+`trl.s.snipe`, `trl.s.far-strike` (animus). Feat `trl.f.fortification`. List `trl.l.starter-recon`
+(entries: Bomber; Braylen `advanceDeploy`; Highwaymen size 5 `advanceDeploy`).
 
 ## Palette and marking
 
@@ -181,9 +191,10 @@ Faction id `trl` (engine file key `trollbloods`: `src/engine/factions/trollblood
 (our own name: a three-loop knot stencil for the army painter).
 
 ## Data notes
-- Bases: from the product photos' labels (40 mm trollkin, 50 mm Dire Troll); no MK4 source yet.
-- Trooper and warbeast damage: Highwaymen have no health field, so 1 box each with Tough; the Bomber
-  has a 30-box spiral, Gunnbjorn 17, Braylen 8.
+- Bases: Gunnbjorn, Braylen and the Highwaymen are medium (40 mm, S2 + rulebook p71 sizes); the Bomber is a
+  heavy warbeast, large (50 mm, rulebook p65).
+- Trooper and warbeast damage: Highwaymen have 1 box each with Tough (S2); the Bomber has a 30-box spiral,
+  Gunnbjorn 17, Braylen 8.
 - No model here has a melee weapon except Gunnbjorn and the Bomber; Braylen and the Highwaymen have no
   melee range (engaging rules as for Caine).
 - Gunnbjorn's warlock basics apply to every warlock: Fury Manipulation, Battlegroup Controller, Leader,
@@ -214,13 +225,14 @@ Faction id `trl` (engine file key `trollbloods`: `src/engine/factions/trollblood
 
 ## Needs rules check
 
-- RULING: MK4 Trollbloods starter | used the 2017 Trollbloods Army Box (Gunnbjorn), trimmed to Gunnbjorn + Dire Troll Bomber + Braylen + Highwaymen ×3 = 28 pts | SFG sells no MK4 Trollbloods starter; every model in that box is in the MK4 United Kriels army.
+- RULING: MK4 Trollbloods starter | kept the 2017 Trollbloods Army Box (Gunnbjorn), trimmed to Gunnbjorn + Dire Troll Bomber + Braylen + Highwaymen ×5 = 28 pts | no MK4 starter exists for the Trollbloods faction (S5, S7); the only current trollkin starter, the Kithguard Command Starter (Craghorn, Felleye, Klangor, Scrappers, Pvt. Rattles), belongs to the separate Southern Kriels faction. Owner question: switch to it?
 - RULING: heavy choice | Dire Troll Bomber (17) over Dozer & Smigg (14) or the Mauler (12) | 14+4+7 = 25 and 12+4+7 = 23 fall below the 26-point floor in `validate-data`; the Bomber's gun fits Gunnbjorn's ranged feat and spells.
-- RULING: Highwaymen unit size | field 3 grunts at the listed 7 pts | the community data gives no MK4 size range or cost by size; 3 matches the Black 13th and Hounds shape. Open app check for the minimum size and its cost.
-- RULING: spiral aspects | branches 1–2 Mind, 3–4 Body, 5–6 Spirit, every box an aspect box | the community data gives branch sizes only; the rulebook text allows mixed branches, so confirm against the card.
+- RULING: Highwaymen unit size | 5 models at 7 pts, was 3 | S10 (app data) says "5 Grunts" for 7 points and S2 lists 5 models; S1 confirms 7 points but has no size field.
+- RULING: Highwaymen deployment | Advance Deployment | S1 and S10 (both app dumps) say Advance Deployment; S2 lists Forward Deployment (8"), a wiki slip.
+- RULING: spiral aspects | branches 1–2 Mind, 3–4 Body, 5–6 Spirit, every box an aspect box | S1 branch sizes 6/3/7/5/6/3 pair exactly to S10's aspect totals 9/12/9; only the Mind/Body/Spirit order of the totals is our reading (rulebook order).
 - RULING: warbeast weapon location | `-` on the Powder Bomb and Claws | spirals have no L/R/H systems; crippled aspects cover all weapons.
-- RULING: base sizes | Gunnbjorn, Braylen, Highwaymen 40 mm; Bomber 50 mm | read from Privateer Press product labels; MK4 stat bars not seen.
-- RULING: Rock Wall duration | keep UP as the data says, wall 4" × 3/4" and clear of every base and terrain piece (obstacles and obstructions included) | the rulebook wall piece is 4 by 3/4 inch; community data says Up; older cards were one turn. Confirm the duration.
-- RULING: Highwaymen keyword | treat as Trollkin | the data entry lacks the Trollkin keyword the sculpts and other trollkin units carry; it matters only for keyword-scoped rules.
-- RULING: Gunnbjorn AAT | none | the data has no arcane attack stat for him and all his spells are non-offensive.
+- RULING: base sizes | Gunnbjorn, Braylen, Highwaymen 40 mm; Bomber 50 mm (now sourced) | S10 carries the 40 mm and 50 mm base advantages on the cards; S2 agrees; rulebook p65 puts every heavy warbeast on a large (50 mm) base.
+- RULING: Rock Wall duration | Up, wall 4" × 3/4", clear of every base, obstacle and obstruction; 80/120 mm bases remove it | S1 and S2 both say Up; the wall piece size is the rulebook's.
+- RULING: Highwaymen keyword | treat as Trollkin | both app dumps (S1, S10) list only United Kriels, Trollblood and Unit on the card; it matters only for keyword-scoped rules, and none in this list uses it.
+- RULING: Gunnbjorn AAT | none | S1, S2 and S10 show no arcane attack stat, and all his spells are non-offensive.
 - RULING: Fortification cover | +4 DEF against ranged and arcane attacks as normal cover (R6) | the feat grants "cover" with no number; MK4 cover is +4 DEF.

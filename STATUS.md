@@ -77,14 +77,13 @@
 - **Figures:** the 21 new models are now Hunyuan GLBs in `public/assets/models/` (`wm-<slug>.glb`, listed in `manifest.json`;
   slug to model map in `m9-slugs.json`; contact sheets `art/figure-sheets/m9-*.png`). Highwaymen and Defenders share one sculpt
   each; Ravagers and Furies have three sculpts, one per trooper. The procedural archetypes remain as the fallback. Every M9
-  stat stays "U-cd" (unverified against the app; see the M9 RULINGs in `docs/needs-rules-check.md`). Weakest figures:
-  hades, nekane, valeria, pureblood; Tanith is not the real sculpt.
+  stat stays "U-cd" (unverified; M10 researches them on the web; see the M9 RULINGs in `docs/needs-rules-check.md`). Weakest figures:
+  hades, nekane, valeria, pureblood; Tanith is being redone from the real sculpt (M10).
 - `tests/e2e/factions.spec.ts`: the picker shot; the M9 gallery (`e2e-out/m9-gallery*.png`); each new faction bot vs bot (Normal) against a random other faction
   to round 2 with no page errors (`e2e-out/m9-<trl|cir|cry|men>.png`); a human Trollbloods game to the leech form.
 
 ## Figures and VFX (M5)
-- Eight Hunyuan SD figure GLBs in `public/assets/models/` (wm-caine, wm-falk, wm-black13 for all three Black 13th,
-  wm-deuce, wm-vilkul, wm-lazarenko, wm-hounds for all three Hounds, wm-razor; 8.8 MB). `figures/glbModels.ts` maps
+- 33 Hunyuan MGSD figure GLBs in `public/assets/models/`, one per model and per trooper (the M5 eight plus the M9 set). `figures/glbModels.ts` maps
   profile ids to slugs; `glbLoader.ts` loads each once (shared geometry and materials). The procedural figure stands
   in while a GLB loads or if it fails.
 - Army painter (`glbPaint.ts`, `paintStore.ts`): a hue-band shader remaps each faction's two main hues; stock colours
@@ -94,7 +93,7 @@
   by presentation beats. Low graphics drops particles and shadows.
 - `?gallery`: every figure GLB on a turntable with names, paint pickers and status toggles (procedural twin off by
   default).
-- Frame time (headless Chromium, software WebGL, 1280x760, all 8 GLBs on the table, camera panning): 18.5 ms mean,
+- Frame time (headless Chromium, software WebGL, 1280x760, the first 8 GLBs on the table, camera panning): 18.5 ms mean,
   33 ms p95. A real GPU will be faster.
 
 ## Battlefields (M8)
@@ -103,7 +102,7 @@
   `art/board-textures/gen.py` from CC0 Poly Haven bases), light and fog tint, and 7-8 pieces; 15 layouts. A game picks
   the board and layout from its seed unless the start screen (Battlefield select) or `?board=` names one; `?layout=`
   forces an eligible layout (tests). The Quick Start demo keeps its own terrain, reskinned by the board.
-- 35 Hunyuan terrain GLBs in `public/assets/terrain/` (contact sheets in `art/terrain-sheets/`), fitted to the rules
+- 35 Hunyuan terrain GLBs in `public/assets/terrain/` (about 6k triangles each after the decimation in 8ee9ef5, which also redid the dais, bone spikes and grove) (contact sheets in `art/terrain-sheets/`), fitted to the rules
   footprints by `board/terrainFit.ts` and instanced per slug; the procedural stand-in draws while loading or on failure.
   The trench and the ash flats are procedural (`board/proceduralPieces.tsx`): a stencil-cut zig-zag trench with plank
   revetments, duckboards and berms that blend into the mat, and an ash decal with ember cracks and charred stumps.
@@ -111,7 +110,7 @@
   errors, every terrain GLB 200, screenshots `e2e-out/board-<id>.png` (and `-close.png` for outpost and wasteland).
 - Frame time (headless Chromium, software WebGL, 1280x760, High): the art spec (M5 method, close camera) 23.4 ms mean
   on Cinder Blight; the overview camera panning over the whole table with the HUD up 76-86 ms per board (Low
-  graphics about 20 ms). Main costs there: MSAA, the 12k-triangle terrain GLBs, the mat maps. A real GPU is far faster.
+  graphics about 20 ms). Main costs there: MSAA, the terrain GLBs (12k triangles each when measured; decimated to about 6k in 8ee9ef5), the mat maps. A real GPU is far faster.
 
 ## Polish (M7)
 - Event feed with attack breakdowns (dice, boosts, target number, expected vs actual damage) and per-turn damage
@@ -160,14 +159,10 @@
 - Additional attacks while initial attacks remain are accepted but not listed as options.
 
 ## Known gaps (client)
-- Attack previews for weapons with shot modes (e.g. a blast shot) show the standard shot's odds:
-  `query.attackPreview` has no attackType option (engine change needed). Charge-attack previews do not pass
-  `chargeAttack` (the client cannot tell a charge attack apart; the engine could infer it).
 - Movement is click-to-place (single waypoint); multi-waypoint paths need Shift-click. No drag yet.
 - Left activation panel repeats some card stats.
 - Game chunks total ~1.1 MB (three.js, board, figures); the start chunk is ~0.55 MB. At 1280 wide the side panels
   cover much of the board.
 - The army painter has no in-game control yet (gallery only).
 
-Next: owner check of the M9 faction stats in the app, then owner veto of the terrain pieces (`art/terrain-sheets/*.png`; three flagged for a GPU redo in HANDOFF.md), owner
-playtest on Pages, and the figure concept veto. See HANDOFF.md.
+Next: M10 in progress overnight (web-sourced M9 faction stats, Tanith redo). Then M11 to M13; see PLAN.md and HANDOFF.md.

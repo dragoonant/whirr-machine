@@ -6,9 +6,18 @@
   "points": 28,
   "leader": "trl.gunnbjorn",
   "entries": [
-    { "profile": "trl.bomber" },
-    { "profile": "trl.braylen", "advanceDeploy": true },
-    { "profile": "trl.highwaymen", "size": 3, "advanceDeploy": true }
+    {
+      "profile": "trl.bomber"
+    },
+    {
+      "profile": "trl.braylen",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "trl.highwaymen",
+      "size": 5,
+      "advanceDeploy": true
+    }
   ],
-  "source": "Community card data, trimmed Army Box"
+  "source": "2017 Trollbloods Army Box trimmed to 28 pts (no MK4 Trollbloods starter); see trollbloods-sources.md"
 }

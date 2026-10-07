@@ -3,12 +3,29 @@
   "name": "Highwayman",
   "faction": "trl",
   "type": "trooper",
-  "keywords": ["trollblood", "united-kriels", "trollkin", "highwaymen"],
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "trollkin",
+    "highwaymen"
+  ],
   "base": 40,
-  "stats": { "SPD": 6, "MAT": 0, "RAT": 6, "DEF": 12, "ARM": 14 },
-  "damage": { "track": "single", "boxes": 1 },
+  "stats": {
+    "SPD": 6,
+    "MAT": 0,
+    "RAT": 6,
+    "DEF": 12,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 1
+  },
   "weapons": [
-    { "weapon": "trl.w.pistol", "count": 2 }
+    {
+      "weapon": "trl.w.pistol",
+      "count": 2
+    }
   ],
   "abilities": [
     "core.a.advance-deployment",
@@ -19,6 +36,8 @@
     "trl.a.swift-hunter"
   ],
   "cost": 0,
-  "figure": { "archetype": "infantry" },
-  "verify": "Community data; the card lists no health, so 1 box with Tough. MAT 0: no melee weapon. Trollkin keyword assumed."
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Card values agree in S1, S2 and S10; base 40 (S10, S2); no health track, so 1 box, with Tough. MAT 0: no melee weapon. The app keywords lack Trollkin (kept; RULING)."
 }

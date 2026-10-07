@@ -22,7 +22,7 @@
   },
   "damage": {
     "track": "single",
-    "boxes": 16
+    "boxes": 17
   },
   "weapons": [
     {
@@ -38,19 +38,20 @@
     "core.a.dual-attack",
     "core.a.resist-fire",
     "men.a.stoke-the-pyre",
-    "men.a.incite-link"
+    "men.a.illumination",
+    "men.a.marshal-covenant"
   ],
   "spells": [
-    "kha.s.avenging-force",
-    "men.s.convection",
-    "men.s.fire-step",
-    "men.s.hex-hammer",
-    "men.s.incite"
+    "men.s.conflagration",
+    "men.s.debilitating-heat",
+    "men.s.lawgivers-judgement",
+    "men.s.sacred-paragon",
+    "men.s.teleport"
   ],
   "feat": "men.f.blessing-of-the-first-gift",
   "cost": 0,
   "figure": {
     "archetype": "caster"
   },
-  "verify": "Box card not public yet: every number is a guess built from Feora, Priestess of the Flame (app check pending)."
+  "verify": "Card values from the Warmachine Academy wiki transcription of the app (S1, menoth-sources.md), names cross-checked with S2/S5. Base 30 mm (Small Base). Several rules wait on engine work (menoth.md, New mechanics needed)."
 }

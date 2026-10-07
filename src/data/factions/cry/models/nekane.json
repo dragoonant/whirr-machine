@@ -7,6 +7,7 @@
   "keywords": [
     "cryx",
     "necrofactorium",
+    "scout",
     "warcaster"
   ],
   "base": 30,
@@ -53,5 +54,5 @@
     "slug": "wm-nekane",
     "archetype": "caster"
   },
-  "verify": "Community card data (U-cd); base size estimated from a product photo; app check pending."
+  "verify": "Card values match S1 and S2 (cryx-sources.md); 30 mm base from S2 and S6. Spell rack not modelled (RULING)."
 }

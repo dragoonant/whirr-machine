@@ -2,11 +2,14 @@
   "id": "men",
   "name": "Protectorate of Menoth",
   "short": "Menoth",
-  "appVersion": "community",
-  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/menoth.md.",
+  "appVersion": "2026-09 (app rules via community wiki)",
+  "source": "Card values from the community Warmachine Academy wiki (transcribed from the app, Sept 2026), cross-checked with press previews and the box listing; see docs/spec/factions/menoth-sources.md.",
   "keywords": [
     "covenant-of-the-flame",
     "flameguard"
+  ],
+  "abilities": [
+    "men.a.four-gifts"
   ],
   "palette": {
     "primary": "#e6d6b0",

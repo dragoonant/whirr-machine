@@ -69,9 +69,9 @@ describe('M9 procedural archetypes', () => {
   it('infantry and solos carry the kit their weapons name', () => {
     expect(arch('cir.ravager-1')).toBe('trooper:axe')
     expect(arch('trl.highwaymen-grunt')).toBe('trooper:gun')
-    expect(arch('men.defenders-grunt')).toBe('trooper:spear+shield')
+    expect(arch('men.defenders-grunt')).toBe('trooper:spear')
     expect(arch('men.valeria')).toBe('solo:bow')
-    expect(arch('men.pyrrhus')).toBe('solo:spear+shield')
+    expect(arch('men.pyrrhus')).toBe('solo:spear')
     expect(arch('trl.braylen')).toBe('solo:gun')
     expect(kitOf(['x.w.unknown']).kit).toBe('none')
   })

@@ -7,9 +7,15 @@
     "rng": 6,
     "dur": "UP",
     "offensive": false,
-    "effect": [{ "code": "cirAdmonition" }],
-    "scope": { "who": "warbeasts" },
-    "verify": "Battlegroup only (warbeasts she controls, spells.ts). Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired."
+    "effect": [
+      {
+        "code": "cirAdmonition"
+      }
+    ],
+    "scope": {
+      "who": "warbeasts"
+    },
+    "verify": "Battlegroup only (warbeasts she controls, spells.ts). Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired. Card (S1): COST 2, RNG 6, UP, OFF No; the card allows any model of her battlegroup, Tanith included, but the engine scope warbeasts leaves her out (RULING)."
   },
   {
     "id": "cir.s.affliction",
@@ -21,11 +27,19 @@
     "dur": "UP",
     "offensive": true,
     "effect": [
-      { "op": "modStat", "stat": "DEF", "value": -2 },
-      { "code": "cirAffliction" }
+      {
+        "op": "modStat",
+        "stat": "DEF",
+        "value": -2
+      },
+      {
+        "code": "cirAffliction"
+      }
     ],
-    "scope": { "who": "enemy" },
-    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cirAffliction puts the upkeep effect (-2 DEF, 1-damage floor via afflictionFloor() in the damage roll) on the model hit. Single enemy model only; the unit version is not built."
+    "scope": {
+      "who": "enemy"
+    },
+    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cirAffliction puts the upkeep effect (-2 DEF, 1-damage floor via afflictionFloor() in the damage roll) on the model hit. Single enemy model only; the unit version is not built. Card (S1): COST 2, RNG 8, UP, OFF Yes, target model or unit."
   },
   {
     "id": "cir.s.rift",
@@ -37,9 +51,15 @@
     "pow": 13,
     "dur": "RND",
     "offensive": true,
-    "effect": [{ "code": "cirRift" }],
-    "scope": { "who": "enemy" },
-    "verify": "Core: cirRift adds a temporary rough piece (props.tempRound); housekeeping removes it when the round passes."
+    "effect": [
+      {
+        "code": "cirRift"
+      }
+    ],
+    "scope": {
+      "who": "enemy"
+    },
+    "verify": "Core: cirRift adds a temporary rough piece (props.tempRound); housekeeping removes it when the round passes. Card (S1): COST 3, RNG 10, AOE -, POW 13, DUR *, OFF Yes; the 3 inch rough area is the one its text places, not a blast."
   },
   {
     "id": "cir.s.scything-touch",
@@ -49,9 +69,15 @@
     "rng": 6,
     "dur": "UP",
     "offensive": false,
-    "effect": [{ "code": "cirScythingTouch" }],
-    "scope": { "who": "friendly" },
-    "verify": "Core: statOf adds scythingTouchArmPenalty() to ARM."
+    "effect": [
+      {
+        "code": "cirScythingTouch"
+      }
+    ],
+    "scope": {
+      "who": "friendly"
+    },
+    "verify": "Core: statOf adds scythingTouchArmPenalty() to ARM. Card (S1): COST 2, RNG 6, UP, OFF No."
   },
   {
     "id": "cir.s.veil-of-mists",
@@ -63,11 +89,21 @@
     "dur": "UP",
     "offensive": false,
     "effect": [
-      { "op": "cloud", "aoe": 3, "placement": "ctrl", "blocksLos": false },
-      { "code": "cirVeilOfMists" }
+      {
+        "op": "cloud",
+        "aoe": 3,
+        "placement": "ctrl",
+        "blocksLos": false
+      },
+      {
+        "code": "cirVeilOfMists"
+      }
     ],
-    "scope": { "who": "friendly", "range": "CTRL" },
-    "verify": "RULING: the cloud is placed toward the nearest enemy (no point choice). Core: friendly-only transparency (cloud.friendlyTransparent) and Pathfinder plus ghostly movement inside."
+    "scope": {
+      "who": "friendly",
+      "range": "CTRL"
+    },
+    "verify": "RULING: the cloud is placed toward the nearest enemy (no point choice). Core: friendly-only transparency (cloud.friendlyTransparent) and Pathfinder plus ghostly movement inside. Card (S1): COST 2, RNG CTRL, AOE -, UP, OFF No; the cloud is the standard 3 inch cloud (rulebook p98)."
   },
   {
     "id": "cir.s.wraithbane",
@@ -78,8 +114,14 @@
     "dur": "TURN",
     "offensive": false,
     "animus": true,
-    "effect": [{ "code": "cirWraithbane" }],
-    "scope": { "who": "friendly" },
-    "verify": "Blessed is applied by the Wraithbane Weapons ability on the attacker; core adds the magical damage type while the animus is on the attacker."
+    "effect": [
+      {
+        "code": "cirWraithbane"
+      }
+    ],
+    "scope": {
+      "who": "friendly"
+    },
+    "verify": "Blessed is applied by the Wraithbane Weapons ability on the attacker; core adds the magical damage type while the animus is on the attacker. Card (S1): COST 2, RNG 6, DUR Turn, OFF No."
   }
 ]

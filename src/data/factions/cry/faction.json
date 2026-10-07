@@ -2,8 +2,8 @@
   "id": "cry",
   "name": "Cryx",
   "short": "Cryx",
-  "appVersion": "community",
-  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/cryx.md.",
+  "appVersion": "community-2026-07",
+  "source": "Checked against the app data dump (July 2026) and Warmachine Academy; see docs/spec/factions/cryx-sources.md.",
   "keywords": [
     "necrofactorium"
   ],

@@ -231,7 +231,7 @@ describe('Cryx faction rules', () => {
     expect(small('a').mods.some((m) => m.source.startsWith('cry.a.volume-fire'))).toBe(false)
     expect(measured(DEUCE, 'cry-vf-b').mods.find((m) => m.source === 'cry.a.volume-fire-large')?.value).toBe(2)
     const s0 = start('cry-vf-c').state
-    expect(s0.models['A:e1']!.base).toBe(40)
+    expect(s0.models['A:e1']!.base).toBe(50)
     // Chatterbane (a 40 mm model) as the target of a Cygnar shot would earn the +1 band; check the data directly
     const w = bundle.byId['cry.a.volume-fire'] as unknown as { when: unknown }
     expect(JSON.stringify(w.when)).toContain('"baseAtLeast"')

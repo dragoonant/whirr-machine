@@ -3,12 +3,23 @@
   "name": "Trollkin Highwaymen",
   "faction": "trl",
   "type": "unit",
-  "keywords": ["trollblood", "united-kriels", "trollkin", "highwaymen"],
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "trollkin",
+    "highwaymen"
+  ],
   "cost": 7,
   "fa": 2,
   "composition": {
-    "grunts": { "profile": "trl.highwaymen-grunt", "min": 3, "max": 3 },
-    "costBySize": { "3": 7 }
+    "grunts": {
+      "profile": "trl.highwaymen-grunt",
+      "min": 5,
+      "max": 5
+    },
+    "costBySize": {
+      "5": 7
+    }
   },
-  "verify": "Size 3 at 7 points is assumed; the community data gives no size range."
+  "verify": "Unit of 5 grunts for 7 points, FA 2: S10 (\"5 Grunts\"), S2 (5 models), S1 (7 points). See trollbloods-sources.md."
 }

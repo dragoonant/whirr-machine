@@ -38,7 +38,7 @@
   {
     "id": "cry.s.crippling-grasp",
     "name": "Crippling Grasp",
-    "text": "The target model or unit has -2 SPD, DEF and ARM, and -2 on its melee damage rolls. Upkeep.",
+    "text": "The target enemy model or unit has -2 SPD, DEF and ARM, and -2 on its melee damage rolls. Upkeep.",
     "cost": 3,
     "rng": 8,
     "pow": 0,

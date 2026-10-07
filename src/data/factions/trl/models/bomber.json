@@ -4,16 +4,44 @@
   "faction": "trl",
   "type": "beast",
   "beastClass": "heavy",
-  "keywords": ["trollblood", "united-kriels", "warbeast", "heavy-warbeast", "storm-of-the-north"],
+  "keywords": [
+    "trollblood",
+    "united-kriels",
+    "warbeast",
+    "heavy-warbeast",
+    "storm-of-the-north"
+  ],
   "base": 50,
-  "stats": { "SPD": 5, "MAT": 6, "RAT": 5, "DEF": 12, "ARM": 18, "FURY": 4, "THR": 8 },
+  "stats": {
+    "SPD": 5,
+    "MAT": 6,
+    "RAT": 5,
+    "DEF": 12,
+    "ARM": 18,
+    "FURY": 4,
+    "THR": 8
+  },
   "damage": {
     "track": "spiral",
-    "branches": ["MMMMMM", "MMM", "BBBBBBB", "BBBBB", "SSSSSS", "SSS"]
+    "branches": [
+      "MMMMMM",
+      "MMM",
+      "BBBBBBB",
+      "BBBBB",
+      "SSSSSS",
+      "SSS"
+    ]
   },
   "weapons": [
-    { "weapon": "trl.w.powder-bomb", "location": "-" },
-    { "weapon": "trl.w.claw", "location": "-", "count": 2 }
+    {
+      "weapon": "trl.w.powder-bomb",
+      "location": "-"
+    },
+    {
+      "weapon": "trl.w.claw",
+      "location": "-",
+      "count": 2
+    }
   ],
   "abilities": [
     "core.a.dual-attack",
@@ -26,6 +54,8 @@
   "animus": "trl.s.far-strike",
   "cost": 17,
   "fa": 4,
-  "figure": { "archetype": "beast" },
-  "verify": "Community data. Spiral branch sizes 6/3/7/5/6/3 are data; the aspect split (branches 1-2 Mind, 3-4 Body, 5-6 Spirit) is assumed. Open app check."
+  "figure": {
+    "archetype": "beast"
+  },
+  "verify": "Card values agree in S1, S2 and S10; base 50 (S10, rulebook p65). Spiral branches 6/3/7/5/6/3 (S1) pair to the app aspect totals 9/12/9 (S10); reading them as Mind, Body, Spirit is our RULING."
 }

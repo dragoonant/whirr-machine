@@ -3,9 +3,15 @@
     "id": "cir.f.rites-of-the-wurm",
     "name": "Rites of the Wurm",
     "text": "For a turn she can channel spells through any warbeast of her battlegroup in her CTRL. Her spells, and animi cast by those warbeasts while in her CTRL, cost 1 less; her own spells never drop below 1.",
-    "effect": [{ "code": "cirRitesOfTheWurm" }],
-    "scope": { "who": "self" },
+    "effect": [
+      {
+        "code": "cirRitesOfTheWurm"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
     "duration": "turn",
-    "verify": "Core: castSpell and the option lists use circleSpellCost(); channel() accepts ritesChannelers()."
+    "verify": "Core: castSpell and the option lists use circleSpellCost(); channel() accepts ritesChannelers(). Card (S1) and the Jan 2024 app update (S3): animi cast by her warbeasts can drop to COST 0."
   }
 ]

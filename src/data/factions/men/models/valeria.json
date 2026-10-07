@@ -11,33 +11,33 @@
   "base": 30,
   "stats": {
     "SPD": 7,
-    "MAT": 6,
+    "MAT": 0,
     "RAT": 8,
-    "DEF": 15,
-    "ARM": 12
+    "DEF": 16,
+    "ARM": 15
   },
   "damage": {
     "track": "single",
-    "boxes": 5
+    "boxes": 8
   },
   "weapons": [
     {
       "weapon": "men.w.valeria-bow"
-    },
-    {
-      "weapon": "men.w.valeria-knife"
     }
   ],
   "abilities": [
-    "core.a.advance-deployment",
+    "core.a.unstoppable",
     "core.a.pathfinder",
-    "core.a.stealth",
-    "core.a.reposition"
+    "core.a.ambush",
+    "core.a.advance-deployment",
+    "men.a.cleansing-volley",
+    "men.a.reconnaissance",
+    "kha.a.swift-hunter"
   ],
-  "cost": 4,
+  "cost": 5,
   "fa": "C",
   "figure": {
     "archetype": "solo"
   },
-  "verify": "Card not public yet: stats and weapon names are guesses from Nicia and Eiryss."
+  "verify": "Card values from S1: no melee weapon, so MAT 0 (the Braylen convention). Keywords are ours."
 }

@@ -208,7 +208,7 @@
   {
     "id": "cry.a.ancillary-attack",
     "name": "Ancillary Attack",
-    "text": "Special action, range 3: a friendly Cryx cohort model in range immediately makes one basic melee or ranged attack. Each model can be given this only once per turn.",
+    "text": "Special action, range 3: a friendly Cryx warjack in range immediately makes one basic melee or ranged attack. Each model can be given this only once per turn.",
     "kind": "specialAction",
     "trigger": "combat.choose",
     "effect": [
@@ -336,7 +336,7 @@
   {
     "id": "cry.a.marionette",
     "name": "Marionette",
-    "text": "Arcane special attack, range 10, no damage. For a round, the owner may have one model that attacks the affected model or unit reroll one attack or damage roll, after which Marionette ends. Only one model in the unit may use it per activation.",
+    "text": "Arcane special attack, range 10, no damage. For a round, the Furies player may force one affected enemy model to reroll one of its own attack or damage rolls, after which Marionette ends. Only one model in the unit may use it per activation.",
     "kind": "specialAttack",
     "trigger": "combat.choose",
     "effect": [

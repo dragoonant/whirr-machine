@@ -8,21 +8,34 @@
     "aoe": "CTRL",
     "dur": "TURN",
     "offensive": false,
-    "effect": [{ "code": "guidedFire" }],
-    "scope": { "who": "warbeasts", "range": "CTRL" },
-    "verify": "Community data; open app check."
+    "effect": [
+      {
+        "code": "guidedFire"
+      }
+    ],
+    "scope": {
+      "who": "warbeasts",
+      "range": "CTRL"
+    },
+    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
   },
   {
     "id": "trl.s.rock-wall",
     "name": "Rock Wall",
-    "text": "Raise a straight stone wall completely inside Gunnbjorn's CTRL, clear of bases and terrain. It is an obstacle that gives cover; a large base touching it tears it down.",
+    "text": "Raise a straight stone wall completely inside Gunnbjorn’s CTRL, clear of bases, obstacles and obstructions. It is an obstacle that gives cover; an 80 mm or 120 mm base touching it tears it down.",
     "cost": 2,
     "rng": "CTRL",
     "dur": "UP",
     "offensive": false,
-    "effect": [{ "code": "rockWall" }],
-    "scope": { "who": "point" },
-    "verify": "Duration Up as the data says (older cards: one turn); wall is 4 by 3/4 inch (rulebook wall piece)."
+    "effect": [
+      {
+        "code": "rockWall"
+      }
+    ],
+    "scope": {
+      "who": "point"
+    },
+    "verify": "COST/RNG/DUR agree in S1, S2 and S10 (Up); wall size is the rulebook wall piece, 4 by 3/4 inch."
   },
   {
     "id": "trl.s.sentry",
@@ -32,9 +45,16 @@
     "rng": 6,
     "dur": "UP",
     "offensive": false,
-    "effect": [{ "code": "sentry" }],
-    "scope": { "who": "friendly", "count": 1 },
-    "verify": "Community data; open app check."
+    "effect": [
+      {
+        "code": "sentry"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "count": 1
+    },
+    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
   },
   {
     "id": "trl.s.snipe",
@@ -44,9 +64,18 @@
     "rng": 6,
     "dur": "UP",
     "offensive": false,
-    "effect": [{ "op": "modStat", "stat": "RNG", "value": 3 }],
-    "scope": { "who": "friendly", "count": 1 },
-    "verify": "Community data; open app check."
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "RNG",
+        "value": 3
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "count": 1
+    },
+    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
   },
   {
     "id": "trl.s.far-strike",
@@ -57,8 +86,16 @@
     "dur": "TURN",
     "offensive": false,
     "animus": true,
-    "effect": [{ "op": "modStat", "stat": "RNG", "value": 3 }],
-    "scope": { "who": "self" },
-    "verify": "Community data; open app check."
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "RNG",
+        "value": 3
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "verify": "COST/RNG/AOE/DUR/OFF agree in S1, S2 and S10."
   }
 ]

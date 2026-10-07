@@ -1,8 +1,8 @@
 [
   {
     "id": "men.a.stoke-the-pyre",
-    "name": "Stoke the Pyre",
-    "text": "Friendly Menoth models in this model's CTRL may burn the fire off an enemy to boost one melee attack or damage roll against it. This model may burn fire off an enemy in her CTRL to cast a spell for free.",
+    "name": "Prophet of the Covenant",
+    "text": "When a friendly Faction model in this model's CTRL attacks an enemy that is burning in melee, it may put the fire out to boost that attack roll or that damage roll.",
     "kind": "aura",
     "trigger": "passive",
     "effect": [
@@ -27,8 +27,8 @@
   },
   {
     "id": "men.a.stoke-boost-attack",
-    "name": "Stoke the Pyre (attack)",
-    "text": "Granted: against an enemy on fire, strip the fire to boost a melee attack roll (a roll is boosted once, so this is skipped when it already is). Used on the attack only when the hit is a long shot; otherwise the fire is kept for damage.",
+    "name": "Prophet of the Covenant (attack)",
+    "text": "Granted: against a burning enemy, put its fire out to boost a melee attack roll (never a roll already boosted). Used on the attack only when the hit is a long shot; otherwise the fire is kept for damage.",
     "kind": "triggered",
     "trigger": "attack.beforeRoll",
     "when": {
@@ -56,8 +56,8 @@
   },
   {
     "id": "men.a.stoke-boost-damage",
-    "name": "Stoke the Pyre (damage)",
-    "text": "Granted: against an enemy on fire, strip the fire to boost a melee damage roll (skipped when the roll is already boosted).",
+    "name": "Prophet of the Covenant (damage)",
+    "text": "Granted: against a burning enemy, put its fire out to boost a melee damage roll (never a roll already boosted).",
     "kind": "triggered",
     "trigger": "damage.beforeRoll",
     "when": {
@@ -84,41 +84,43 @@
     "duration": "instant"
   },
   {
-    "id": "men.a.incite-link",
-    "name": "Incite Link",
-    "text": "Carries the attack bonus of the Incite spell to friendly Menoth models while this model lives.",
-    "kind": "aura",
+    "id": "men.a.illumination",
+    "name": "Illumination",
+    "text": "Once per turn in her activation she may put out the fire on an enemy in her CTRL to cast one spell without paying its focus.",
+    "kind": "passive",
     "trigger": "passive",
     "effect": [
       {
-        "op": "grantAbility",
-        "ability": "men.a.incite-attack"
-      }
-    ],
-    "scope": {
-      "who": "friendly",
-      "filter": {
-        "test": "keyword",
-        "value": "menoth"
-      }
-    },
-    "duration": "continuous"
-  },
-  {
-    "id": "men.a.incite-attack",
-    "name": "Incite (attack)",
-    "text": "While Incite is up, attack rolls against enemies close to its caster get +2.",
-    "kind": "triggered",
-    "trigger": "attack.beforeRoll",
-    "effect": [
-      {
-        "code": "inciteAttack"
+        "code": "coreFlag",
+        "params": {
+          "flag": "illumination"
+        }
       }
     ],
     "scope": {
       "who": "self"
     },
-    "duration": "instant"
+    "duration": "continuous",
+    "limit": "oncePerTurn"
+  },
+  {
+    "id": "men.a.marshal-covenant",
+    "name": "Marshal [Covenant of the Flame]",
+    "text": "Friendly Covenant of the Flame models never block this model's line of sight, and it may advance through them when it has the movement to get fully past.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "marshalCovenant"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
   },
   {
     "id": "men.a.critical-fire",
@@ -157,7 +159,7 @@
   {
     "id": "men.a.chain-weapon",
     "name": "Chain Weapon",
-    "text": "Ignores the ARM bonus of a Buckler, a Shield and Shield Wall on the target.",
+    "text": "This weapon wraps around shields: Buckler, Shield and the Shield Wall ARM bonus give the target nothing against it.",
     "kind": "triggered",
     "trigger": "attack.declared",
     "effect": [
@@ -172,9 +174,89 @@
     "duration": "instant"
   },
   {
+    "id": "men.a.thresher",
+    "name": "Thresher",
+    "text": "Special attack: one swing at every model, friend or foe, in its melee range and line of sight, all resolved at once.",
+    "kind": "weaponQuality",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "thresher"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Not offered yet: needs a sweep attack in core (menoth.md New mechanics)."
+  },
+  {
+    "id": "men.a.heavy-boiler",
+    "name": "Heavy Boiler",
+    "text": "Its run is 2 inches longer than other warjacks of its speed.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "heavyBoiler"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Needs core: +2 SPD only while running."
+  },
+  {
+    "id": "men.a.sanctified-hull",
+    "name": "Sanctified Hull",
+    "text": "While inside its Leader's CTRL, models within 3 inches of it share the Gift of Menoth chosen this round.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "sanctifiedHull"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "The Four Gifts of Menoth are not built yet, so this does nothing."
+  },
+  {
+    "id": "men.a.gladiator",
+    "name": "Gladiator",
+    "text": "Venerable head: +2 on its power attack damage rolls and their collateral damage rolls.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "gladiator"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Needs core: power attack damage +2."
+  },
+  {
     "id": "men.a.set-defense",
     "name": "Set Defense",
-    "text": "Charge attack rolls and slam rolls against this model take -2.",
+    "text": "Charge attack rolls and slam power attack rolls against this model take -2.",
     "kind": "passive",
     "trigger": "passive",
     "effect": [
@@ -189,143 +271,6 @@
       "who": "self"
     },
     "duration": "continuous"
-  },
-  {
-    "id": "men.a.steady",
-    "name": "Steady",
-    "text": "This model cannot be knocked down.",
-    "kind": "passive",
-    "trigger": "passive",
-    "effect": [
-      {
-        "op": "forbid",
-        "what": "knockDown"
-      }
-    ],
-    "scope": {
-      "who": "self"
-    },
-    "duration": "continuous"
-  },
-  {
-    "id": "men.a.relentless-charge",
-    "name": "Relentless Charge",
-    "text": "This model has Pathfinder while it charges.",
-    "kind": "triggered",
-    "trigger": "movement.charge",
-    "effect": [
-      {
-        "op": "grantAbility",
-        "ability": "core.a.pathfinder"
-      }
-    ],
-    "scope": {
-      "who": "self"
-    },
-    "duration": "activation"
-  },
-  {
-    "id": "men.a.impenetrable-shield",
-    "name": "Impenetrable Shield",
-    "text": "While in base contact with a friendly Flameguard model, this model takes no damage from non-magical melee or ranged attacks.",
-    "kind": "passive",
-    "trigger": "passive",
-    "effect": [
-      {
-        "code": "coreFlag",
-        "params": {
-          "flag": "impenetrableShield"
-        }
-      }
-    ],
-    "scope": {
-      "who": "self"
-    },
-    "duration": "continuous"
-  },
-  {
-    "id": "men.a.battle-plan",
-    "name": "Battle Plan",
-    "text": "Once in its activation this model picks a plan: Fight to the Last or Stir the Blood for a friendly Menoth warrior model or unit within 5 inches, or Precision Strike for friendly models within 10 inches.",
-    "kind": "triggered",
-    "trigger": "activation.start",
-    "effect": [
-      {
-        "code": "battlePlan"
-      }
-    ],
-    "scope": {
-      "who": "self"
-    },
-    "duration": "instant",
-    "optional": true
-  },
-  {
-    "id": "men.a.fight-to-the-last",
-    "name": "Plan: Fight to the Last",
-    "text": "The chosen model or unit gains Tough for a round.",
-    "kind": "specialAction",
-    "trigger": "combat.choose",
-    "effect": [
-      {
-        "op": "grantAbility",
-        "ability": "core.a.tough"
-      }
-    ],
-    "scope": {
-      "who": "friendly",
-      "range": 5,
-      "filter": {
-        "test": "keyword",
-        "value": "menoth"
-      }
-    },
-    "duration": "round"
-  },
-  {
-    "id": "men.a.stir-the-blood",
-    "name": "Plan: Stir the Blood",
-    "text": "The chosen model or unit gets +2 on its next melee damage roll this turn.",
-    "kind": "specialAction",
-    "trigger": "combat.choose",
-    "effect": [
-      {
-        "op": "modRoll",
-        "roll": "damage",
-        "value": 2
-      }
-    ],
-    "scope": {
-      "who": "friendly",
-      "range": 5,
-      "filter": {
-        "test": "keyword",
-        "value": "menoth"
-      }
-    },
-    "duration": "turn"
-  },
-  {
-    "id": "men.a.precision-strike",
-    "name": "Plan: Precision Strike",
-    "text": "For a turn, friendly models within 10 inches ignore other friendly models for line of sight and may move through them if they end clear.",
-    "kind": "specialAction",
-    "trigger": "combat.choose",
-    "effect": [
-      {
-        "op": "ignore",
-        "ignore": "friendlyModels"
-      }
-    ],
-    "scope": {
-      "who": "friendly",
-      "range": 10,
-      "filter": {
-        "test": "keyword",
-        "value": "menoth"
-      }
-    },
-    "duration": "turn"
   },
   {
     "id": "men.a.combined-melee-attack",
@@ -345,5 +290,235 @@
       "who": "self"
     },
     "duration": "continuous"
+  },
+  {
+    "id": "men.a.shield-guard",
+    "name": "Shield Guard",
+    "text": "Once per round, when a friendly model within 3 inches is hit directly by a ranged attack that is not a spray, this model may take the hit in its place, suffering every damage roll and effect. Not while knocked down or stationary.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "shieldGuard"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Needs core: redirect a direct ranged hit."
+  },
+  {
+    "id": "men.a.heroic-inspiration",
+    "name": "Heroic Inspiration [Flameguard Defender]",
+    "text": "A friendly Flameguard Defender attacking in melee an enemy that stands in this model's melee range rolls one extra damage die.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "heroicInspiration"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Needs a plugin: extra damage die for Defenders near him."
+  },
+  {
+    "id": "men.a.marshal-defenders",
+    "name": "Marshal [Flameguard Defender]",
+    "text": "Friendly Flameguard Defenders never block this model's line of sight, and it may advance through them when it has the movement to get fully past.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "marshalDefenders"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "men.a.holy-martyrs",
+    "name": "Holy Martyrs [Flameguard Defender]",
+    "text": "When an enemy attack would disable this model, a friendly Flameguard Defender within 5 inches may die in its place; this model then heals 1 box.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "holyMartyrs"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Needs core: substitute death at death.disabled."
+  },
+  {
+    "id": "men.a.cleansing-volley",
+    "name": "Cleansing Volley",
+    "text": "Once per turn in its combat action, after a ranged attack hits a burning enemy directly, it may put that fire out to shoot once more at once.",
+    "kind": "triggered",
+    "trigger": "attack.hit",
+    "when": {
+      "all": [
+        {
+          "test": "attackKind",
+          "value": "ranged"
+        },
+        {
+          "test": "hasCondition",
+          "subject": "target",
+          "value": "fire"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "removeCondition",
+        "condition": "fire"
+      },
+      {
+        "op": "addAttack"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "limit": "oncePerTurn",
+    "verify": "Core does not run removeCondition or addAttack here yet, so the extra shot is not made."
+  },
+  {
+    "id": "men.a.reconnaissance",
+    "name": "Reconnaissance",
+    "text": "Special action: a friendly warrior model within 8 inches gains Pathfinder for one turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "core.a.pathfinder"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 8,
+      "filter": {
+        "not": {
+          "test": "modelType",
+          "value": "warEngine"
+        }
+      }
+    },
+    "duration": "turn",
+    "verify": "The card also allows a whole unit; core grants it to the model picked."
+  },
+  {
+    "id": "men.a.armor-piercing-arrow",
+    "name": "Armor-Piercing Arrow",
+    "text": "Arrow choice: this shot drops to POW 8, but the target's base ARM is halved for its damage.",
+    "kind": "specialAttack",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "code": "armorPiercing"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "verify": "Core keeps the bow at POW 12 for this arrow (no POW override yet)."
+  },
+  {
+    "id": "men.a.featherweight-arrow",
+    "name": "Featherweight Arrow",
+    "text": "Arrow choice: loose two shots at once, each at a different enemy.",
+    "kind": "specialAttack",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "featherweightArrow"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "verify": "Core makes one shot only (needs two simultaneous attacks)."
+  },
+  {
+    "id": "men.a.incendiary-arrow",
+    "name": "Incendiary Arrow",
+    "text": "Arrow choice: the shot bursts as a small blast (AOE 2, POW 12) of fire, and models it hits catch fire.",
+    "kind": "specialAttack",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "blastShot"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "verify": "blastShot gives AOE 2 at POW 12 direct and 6 blast; the card leaves the blast POW blank in our source. Fire damage type not applied."
+  },
+  {
+    "id": "men.a.incendiary-arrow-small",
+    "name": "Incendiary Arrow (fire)",
+    "text": "With the incendiary arrow, the model hit catches fire.",
+    "kind": "specialAttack",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "op": "applyCondition",
+        "condition": "fire"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "men.a.four-gifts",
+    "name": "The Four Gifts of Menoth",
+    "text": "Each Maintenance Phase the Leader takes one Gift for the round: Flame (enemy warriors cannot charge or special attack friendly Faction models in its CTRL), Law (no enemy spells at them), Sheaf (enemy cohorts in its CTRL cannot use focus, essence or be forced) or Wall (no enemy ranged attacks at them); no repeat until all four are used.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "fourGifts"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous",
+    "verify": "Not built: needs a maintenance-phase choice and targeting bans in core."
   }
 ]

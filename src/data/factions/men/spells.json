@@ -1,8 +1,8 @@
 [
   {
-    "id": "men.s.convection",
-    "name": "Convection",
-    "text": "A magical shot. If it destroys a living enemy, a warjack in the caster's CTRL gains a focus.",
+    "id": "men.s.conflagration",
+    "name": "Conflagration",
+    "text": "A bolt of holy fire: the model hit takes fire damage and catches fire.",
     "cost": 2,
     "rng": 10,
     "pow": 12,
@@ -10,100 +10,116 @@
     "offensive": true,
     "effect": [
       {
-        "op": "gainFocus",
-        "value": 1
+        "op": "applyCondition",
+        "condition": "fire"
       }
     ],
     "scope": {
-      "who": "friendly",
-      "range": "CTRL",
-      "filter": {
-        "test": "modelType",
-        "value": "warEngine"
-      }
+      "who": "enemy"
     },
-    "verify": "Stand-in from Feora, Priestess of the Flame (app check pending)."
+    "verify": "Card (S1): COST 2, RNG 10, POW 12, OFF yes. Core rolls the damage as magical only; the fire damage type is not added yet."
   },
   {
-    "id": "men.s.fire-step",
-    "name": "Fire Step",
-    "text": "Enemies within 2 inches of the caster take a fire damage roll, then she is placed within 2 inches. Once per activation.",
-    "cost": 2,
-    "rng": "SELF",
-    "pow": 13,
-    "dur": "TURN",
-    "offensive": false,
+    "id": "men.s.debilitating-heat",
+    "name": "Debilitating Heat",
+    "text": "The enemy model or unit hit wilts in the heat for a round: -2 DEF and -2 on its damage rolls, and friendly Faction melee damage rolls against it get +2.",
+    "cost": 3,
+    "rng": 10,
+    "pow": 0,
+    "dur": "RND",
+    "offensive": true,
     "effect": [
       {
-        "op": "damage",
-        "pow": 13,
-        "damageType": "fire"
+        "op": "modStat",
+        "stat": "DEF",
+        "value": -2
       },
       {
-        "op": "place",
-        "dist": 2
-      },
-      {
-        "code": "fireStep"
-      },
-      {
-        "code": "stokeRefund"
+        "op": "modRoll",
+        "roll": "damage",
+        "value": -2
       }
     ],
     "scope": {
-      "who": "enemy",
-      "range": 2
+      "who": "enemy"
     },
-    "verify": "Duration TURN is a modelling trick so the engine runs the effect code (instant spells run none). Stand-in numbers."
+    "verify": "Card (S1): COST 3, RNG 10, no POW, DUR Rnd, OFF yes. Core does not apply an offensive spell's lasting modifiers without a code hook, so the hit has no effect yet."
   },
   {
-    "id": "men.s.hex-hammer",
-    "name": "Hex Hammer",
-    "text": "An enemy that declares a spell in the caster's CTRL takes d3 damage first; if that destroys it, the spell fails. Lasts a round.",
+    "id": "men.s.lawgivers-judgement",
+    "name": "Lawgiver's Judgement",
+    "text": "While it is up, enemy models inside the caster's CTRL lose Resistance: Fire and cannot gain it. Upkeep.",
     "cost": 2,
     "rng": "SELF",
     "aoe": "CTRL",
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "removeAbility",
+        "ability": "core.a.resist-fire"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "verify": "Card (S1): COST 2, SELF, AOE CTRL, UP, OFF no. The effect sits on the caster as a marker; core does not strip the resistance yet."
+  },
+  {
+    "id": "men.s.sacred-paragon",
+    "name": "Sacred Paragon",
+    "text": "For a round the caster gains +2 SPD, +4 MAT and +4 on melee damage rolls, and cannot be knocked down.",
+    "cost": 2,
+    "rng": "SELF",
     "dur": "RND",
     "offensive": false,
     "effect": [
       {
-        "code": "hexHammer"
-      },
-      {
-        "code": "stokeRefund"
-      }
-    ],
-    "scope": {
-      "who": "enemy",
-      "range": "CTRL"
-    },
-    "verify": "Stand-in numbers. Needs a core call at spell declaration to bite."
-  },
-  {
-    "id": "men.s.incite",
-    "name": "Incite",
-    "text": "Friendly Menoth models get +2 to attack and damage rolls against enemies within 10 inches of the caster. Lasts a turn.",
-    "cost": 4,
-    "rng": "SELF",
-    "dur": "TURN",
-    "offensive": false,
-    "effect": [
-      {
-        "op": "modRoll",
-        "roll": "any",
+        "op": "modStat",
+        "stat": "SPD",
         "value": 2
       },
       {
-        "code": "stokeRefund"
+        "op": "modStat",
+        "stat": "MAT",
+        "value": 4
+      },
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 4
+      },
+      {
+        "op": "forbid",
+        "what": "knockDown"
       }
     ],
     "scope": {
-      "who": "friendly",
-      "filter": {
-        "test": "keyword",
-        "value": "menoth"
-      }
+      "who": "self"
     },
-    "verify": "Stand-in numbers."
+    "verify": "Card (S1): COST 2, SELF, DUR Rnd, OFF no."
+  },
+  {
+    "id": "men.s.teleport",
+    "name": "Teleport",
+    "text": "The caster vanishes and reappears anywhere fully within 6 inches, then her activation ends.",
+    "cost": 2,
+    "rng": "SELF",
+    "dur": "-",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "place",
+        "dist": 6,
+        "direction": "any"
+      },
+      {
+        "op": "endActivation"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "verify": "Card (S1): COST 2, SELF, OFF no. Core runs no plain ops for an instant spell, so the place and end are not made yet."
   }
 ]

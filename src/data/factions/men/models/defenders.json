@@ -7,7 +7,8 @@
     "menoth",
     "flameguard"
   ],
-  "cost": 7,
+  "cost": 8,
+  "fa": 4,
   "composition": {
     "grunts": {
       "profile": "men.defenders-grunt",
@@ -15,8 +16,8 @@
       "max": 5
     },
     "costBySize": {
-      "5": 7
+      "5": 8
     }
   },
-  "verify": "Unit size 5 from the box count; points are a guess (the box totals 30)."
+  "verify": "Unit of 5 for 8 points (S1); the box holds nine models, so five Defenders and no Standard Bearer (S3). The Standard Bearer attachment (2 points) is sold separately and not entered."
 }

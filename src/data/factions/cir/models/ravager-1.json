@@ -3,11 +3,28 @@
   "name": "Ravager 1",
   "faction": "cir",
   "type": "trooper",
-  "keywords": ["circle", "devourers-host", "tharn"],
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "tharn"
+  ],
   "base": 40,
-  "stats": { "SPD": 6, "MAT": 7, "RAT": 0, "DEF": 13, "ARM": 15 },
-  "damage": { "track": "single", "boxes": 8 },
-  "weapons": [{ "weapon": "cir.w.tharn-axe" }],
+  "stats": {
+    "SPD": 6,
+    "MAT": 7,
+    "RAT": 0,
+    "DEF": 13,
+    "ARM": 15
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "cir.w.tharn-axe"
+    }
+  ],
   "abilities": [
     "core.a.pathfinder",
     "core.a.tough",
@@ -20,6 +37,8 @@
     "cir.a.wraithbane-weapons"
   ],
   "cost": 0,
-  "figure": { "archetype": "infantry" },
-  "verify": "RAT 0 (no ranged weapon; the schema wants the stat). Boxes copied from the White Mane solo; base 40 from the product photo label."
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Stats, 8 boxes, 40 mm base and weapon match the app data (S1, S2). RAT 0 stands in for the blank RAT (no ranged weapon; the schema wants the stat)."
 }
