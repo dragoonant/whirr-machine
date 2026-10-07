@@ -16,10 +16,10 @@ export const ENABLED_GLB_SLUGS: ReadonlySet<string> = new Set([
 
 /** Slugs of the M9 models whose GLBs are still to come; they switch on when listed in manifest.json. */
 export const EXPECTED_GLB_SLUGS: ReadonlySet<string> = new Set([
-  'wm-bomber', 'wm-braylen', 'wm-gunnbjorn', 'wm-highwaymen-grunt',
+  'wm-bomber', 'wm-braylen', 'wm-gunnbjorn', 'wm-highwaymen',
   'wm-lord-of-the-feast', 'wm-pureblood', 'wm-ravager-1', 'wm-ravager-2', 'wm-ravager-3', 'wm-tanith',
-  'wm-chatterbane', 'wm-furies-a', 'wm-furies-b', 'wm-furies-c', 'wm-hades', 'wm-nekane',
-  'wm-crusader', 'wm-defenders-grunt', 'wm-feora', 'wm-pyrrhus', 'wm-valeria',
+  'wm-chatterbane', 'wm-furies-1', 'wm-furies-2', 'wm-furies-3', 'wm-hades', 'wm-nekane',
+  'wm-crusader', 'wm-defenders', 'wm-feora', 'wm-pyrrhus', 'wm-valeria',
 ])
 
 /** Profile id -> GLB slug. Every trooper has its own figure (MGSD versions of the real sculpts). */
@@ -36,11 +36,11 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'kha.hounds-skrobala': 'wm-skrobala',
   'kha.hounds-tererya': 'wm-tererya',
   'kha.razor': 'wm-razor',
-  // M9 (slug = the model id's slug; every trooper has its own)
+  // M9 (Highwaymen and Defenders share one sculpt each; Ravagers and Furies have three, one per trooper)
   'trl.bomber': 'wm-bomber',
   'trl.braylen': 'wm-braylen',
   'trl.gunnbjorn': 'wm-gunnbjorn',
-  'trl.highwaymen-grunt': 'wm-highwaymen-grunt',
+  'trl.highwaymen-grunt': 'wm-highwaymen',
   'cir.lord-of-the-feast': 'wm-lord-of-the-feast',
   'cir.pureblood': 'wm-pureblood',
   'cir.ravager-1': 'wm-ravager-1',
@@ -48,13 +48,13 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'cir.ravager-3': 'wm-ravager-3',
   'cir.tanith': 'wm-tanith',
   'cry.chatterbane': 'wm-chatterbane',
-  'cry.furies-a': 'wm-furies-a',
-  'cry.furies-b': 'wm-furies-b',
-  'cry.furies-c': 'wm-furies-c',
+  'cry.furies-a': 'wm-furies-1',
+  'cry.furies-b': 'wm-furies-2',
+  'cry.furies-c': 'wm-furies-3',
   'cry.hades': 'wm-hades',
   'cry.nekane': 'wm-nekane',
   'men.crusader': 'wm-crusader',
-  'men.defenders-grunt': 'wm-defenders-grunt',
+  'men.defenders-grunt': 'wm-defenders',
   'men.feora': 'wm-feora',
   'men.pyrrhus': 'wm-pyrrhus',
   'men.valeria': 'wm-valeria',

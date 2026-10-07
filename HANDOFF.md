@@ -9,8 +9,8 @@ against the bot: roll-off, deployment, focus or fury, activations, attacks, spel
 damage transfer, life spirals (spec `docs/spec/81-warlocks-fury.md`). Cryx and Menoth are warcaster armies with
 soul and corpse tokens, Fire and their own feats. Sides take faction colours. The warlock UI (flame pips, battlegroup
 strip, spiral card, leech/transfer/shed forms, frenzy flash) is in `src/client/ui/fury/`; the bot plays fury
-(`src/ai/fury.ts`). The new figures are procedural until their GLBs are listed in
-`public/assets/models/manifest.json`. See STATUS.md "Factions (M9)" and `e2e-out/m9-*.png`.
+(`src/ai/fury.ts`). The 21 new figures are Hunyuan GLBs (listed in
+`public/assets/models/manifest.json`, contact sheets `art/figure-sheets/m9-*.png`; the procedural fallback still works). See STATUS.md "Factions (M9)" and `e2e-out/m9-*.png`.
 
 **Owner: verify the M9 stats in the app.** No MK4 card for the four new factions could be read from the app, so every
 stat, cost, spell and rule is marked U-cd. Open each starter in the official app and compare: Gunnbjorn, Dire Troll
@@ -43,7 +43,7 @@ The trench and the ash flats are procedural now (no GLB). Ground mats are rebuil
 **Next, in order:**
 1. **Owner check of the M9 stats** (above), the **owner veto of the terrain pieces** (above), then the **owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
    top items before new features. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
-2. **Owner veto of the figure concept picks.** The candidates for each figure are in
+2. **Owner veto of the figure concept picks.** Weakest of the 21 M9 figures: wm-hades, wm-nekane, wm-valeria, wm-pureblood. Tanith is not the real sculpt (a stand-in look). Review at /whirr-machine/?gallery. The candidates for each figure are in
    `C:/Users/antho/Hunyuan3D-2/outputs/wm-<slug>/concepts/` (`s0.png`..`s5.png` plus `sheet.png`). Name any figure
    to redo and which concept to use. Rebuild that GLB, drop it into `public/assets/models/<slug>.glb` (scaled in inches,
    black base) and re-run the art spec.

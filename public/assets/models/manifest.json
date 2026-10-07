@@ -1,0 +1,26 @@
+{
+  "_note": "M9 GLB slugs present in this folder (listed here so the client requests them; a test checks this list against the files).",
+  "slugs": [
+    "wm-gunnbjorn",
+    "wm-bomber",
+    "wm-braylen",
+    "wm-highwaymen",
+    "wm-tanith",
+    "wm-pureblood",
+    "wm-lord-of-the-feast",
+    "wm-ravager-1",
+    "wm-ravager-2",
+    "wm-ravager-3",
+    "wm-nekane",
+    "wm-hades",
+    "wm-chatterbane",
+    "wm-furies-1",
+    "wm-furies-2",
+    "wm-furies-3",
+    "wm-feora",
+    "wm-crusader",
+    "wm-valeria",
+    "wm-pyrrhus",
+    "wm-defenders"
+  ]
+}

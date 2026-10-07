@@ -18,18 +18,20 @@ type Rec = { id: string; recordType: string; type?: string; base?: number }
 const bundle = () => Object.values(loadBundle().byId) as unknown as Rec[]
 const newModels = () => bundle().filter((r) => r.recordType === 'model' && r.type !== 'unit' && NEW_FACTIONS.includes(factionOf(r.id)))
 
+const slugMap = JSON.parse(readFileSync(join(MODELS_DIR, 'm9-slugs.json'), 'utf8')) as Record<string, string>
 afterEach(() => setGlbManifestForTest([]))
 
 describe('M9 GLB mapping', () => {
-  it('every new model maps to its own wm-<id slug>, troopers included', () => {
+  it('every new model maps to a slug from m9-slugs.json (shared for Highwaymen and Defenders, one sculpt per Ravager and Fury)', () => {
     const models = newModels()
     expect(models.length).toBeGreaterThanOrEqual(21)
     for (const m of models) {
       const slug = GLB_SLUG_BY_MODEL[m.id]
-      expect(slug, m.id).toBe('wm-' + m.id.split('.')[1])
+      expect(slug, m.id).toMatch(/^wm-/)
+      expect(slugMap[slug!], slug).toBeDefined()
       expect(EXPECTED_GLB_SLUGS.has(slug!), slug).toBe(true)
     }
-    expect(new Set(models.map((m) => GLB_SLUG_BY_MODEL[m.id])).size).toBe(models.length)
+    expect(new Set(models.map((m) => GLB_SLUG_BY_MODEL[m.id])).size).toBe(21)
   })
   it('stays procedural until the manifest lists the slug, then switches on (no 404 is ever requested)', () => {
     expect(glbSlugFor('cry.hades')).toBeUndefined()

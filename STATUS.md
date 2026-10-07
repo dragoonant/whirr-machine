@@ -74,11 +74,12 @@
 - **AI fury** (`src/ai/fury.ts`): leech plan by frenzy risk and reserve, forcing priced by frenzy cost, transfers,
   shed/rile wrap-up; easy keeps a point of room on each beast. `npm run bench:ai -- --xlist <list> --ylist <list>`
   tallies fury events per side.
-- **Figures:** the 21 new models map to `wm-<slug>` GLBs that switch on when listed in
-  `public/assets/models/manifest.json`; until then they draw as refined procedural archetypes (beasts, warpwolves,
-  bone-jacks, robed crusader jacks, wraith Furies). Placeholders: every M9 figure is procedural today, and every M9
-  stat stays "U-cd" (unverified against the app; see the M9 RULINGs in `docs/needs-rules-check.md`).
-- `tests/e2e/factions.spec.ts`: the picker shot; each new faction bot vs bot (Normal) against a random other faction
+- **Figures:** the 21 new models are now Hunyuan GLBs in `public/assets/models/` (`wm-<slug>.glb`, listed in `manifest.json`;
+  slug to model map in `m9-slugs.json`; contact sheets `art/figure-sheets/m9-*.png`). Highwaymen and Defenders share one sculpt
+  each; Ravagers and Furies have three sculpts, one per trooper. The procedural archetypes remain as the fallback. Every M9
+  stat stays "U-cd" (unverified against the app; see the M9 RULINGs in `docs/needs-rules-check.md`). Weakest figures:
+  hades, nekane, valeria, pureblood; Tanith is not the real sculpt.
+- `tests/e2e/factions.spec.ts`: the picker shot; the M9 gallery (`e2e-out/m9-gallery*.png`); each new faction bot vs bot (Normal) against a random other faction
   to round 2 with no page errors (`e2e-out/m9-<trl|cir|cry|men>.png`); a human Trollbloods game to the leech form.
 
 ## Figures and VFX (M5)

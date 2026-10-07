@@ -37,6 +37,8 @@ for (const f of NEW) {
     test.setTimeout(6 * 60_000)
     await page.setViewportSize({ width: 1280, height: 760 })
     const errors = watchErrors(page)
+    const glb: Record<string, number> = {}
+    page.on('response', (r) => { const u = r.url(); if (u.endsWith('.glb')) glb[u.split('/').pop()!] = r.status() })
     const others = ALL.filter((x) => x !== f)
     const other = others[Math.floor(Math.random() * others.length)]!
     await page.goto(`./?test=1&scenario=scn-ashwall-divide&lists=${f},${other}&control=bot,bot&bot=normal&seed=m9-${f}`)
@@ -53,11 +55,27 @@ for (const f of NEW) {
     await page.screenshot({ path: `${OUT}/m9-${f}.png` })
     const factions = await page.evaluate(() => { const st = window.__game!.state()!; return [st.players.A.faction, st.players.B.faction] })
     console.log('M9', f, 'vs', other, JSON.stringify({ end: s, factions }))
+    console.log('M9 glbs', f, JSON.stringify(glb))
+    expect(Object.values(glb).every((st) => st === 200 || st === 304)).toBe(true)
     expect(factions).toEqual([f, other])
     expect(s.phase === 'ended' || s.round >= 2).toBe(true)
     expect(errors).toEqual([])
   })
 }
+
+test('gallery: the 21 M9 figure GLBs', async ({ page }) => {
+  const errors = watchErrors(page)
+  await page.setViewportSize({ width: 1280, height: 760 })
+  await page.goto('./?gallery')
+  await expect(page.getByTestId('gallery')).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(2500)
+  await page.screenshot({ path: `${OUT}/m9-gallery.png` })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await page.waitForTimeout(1500)
+  await page.screenshot({ path: `${OUT}/m9-gallery-2.png` })
+  expect(errors).toEqual([])
+})
 
 test('warlock fury UI: Trollbloods vs the Normal bot', async ({ page }) => {
   test.setTimeout(8 * 60_000)
