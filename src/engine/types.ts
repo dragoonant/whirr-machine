@@ -96,6 +96,7 @@ export interface ModelState {
   frenzied?: boolean // true only during a frenzy activation
   bondedTo?: ModelId // Spirit Bond source (F9.6)
   tokens?: Partial<Record<TokenKind, number>> // M9 faction specs: soul and corpse tokens held
+  deathHandled?: boolean // M9 core pass: the death.destroyed window has run for this model (00 section 14)
 }
 export interface UnitState {
   id: UnitId

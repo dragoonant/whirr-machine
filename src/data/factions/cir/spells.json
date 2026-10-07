@@ -1,0 +1,84 @@
+[
+  {
+    "id": "cir.s.admonition",
+    "name": "Admonition",
+    "text": "A model of her battlegroup gets a warning ward. The first time an enemy ends a move or is placed within 6 inches of it, the model may advance up to 3 inches at once, then the spell ends. Upkeep.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [{ "code": "cirAdmonition" }],
+    "scope": { "who": "friendly" },
+    "verify": "Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired."
+  },
+  {
+    "id": "cir.s.affliction",
+    "name": "Affliction",
+    "text": "An enemy model gets -2 DEF, and a direct-hit damage roll against it that fails to beat its ARM still deals 1 damage. Upkeep.",
+    "cost": 2,
+    "rng": 8,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      { "op": "modStat", "stat": "DEF", "value": -2 },
+      { "code": "cirAffliction" }
+    ],
+    "scope": { "who": "enemy" },
+    "verify": "RULING: cast as a plain debuff, not an attack (no POW on the card). The 1-damage floor is afflictionFloor() read by the damage roll. Single enemy model only; the unit version is not built."
+  },
+  {
+    "id": "cir.s.rift",
+    "name": "Rift",
+    "text": "An arcane attack on one model. On a direct hit, a 3 inch area around it becomes rough terrain for a round. Nothing else in the area is damaged.",
+    "cost": 3,
+    "rng": 10,
+    "aoe": 3,
+    "pow": 13,
+    "dur": "RND",
+    "offensive": true,
+    "effect": [{ "code": "cirRift" }],
+    "scope": { "who": "enemy" },
+    "verify": "Core: cirRift adds a temporary rough piece (props.tempRound); housekeeping removes it when the round passes."
+  },
+  {
+    "id": "cir.s.scything-touch",
+    "name": "Scything Touch",
+    "text": "A friendly Faction model is wrapped in a dark shroud: enemy models within 2 inches of it get -2 ARM. Upkeep.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [{ "code": "cirScythingTouch" }],
+    "scope": { "who": "friendly" },
+    "verify": "Core: statOf adds scythingTouchArmPenalty() to ARM."
+  },
+  {
+    "id": "cir.s.veil-of-mists",
+    "name": "Veil of Mists",
+    "text": "A 3 inch cloud forms in her CTRL. Friendly Faction models can see through it, and inside it they gain Pathfinder and can pass through obstructions and models they can clear. Upkeep.",
+    "cost": 2,
+    "rng": "CTRL",
+    "aoe": 3,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      { "op": "cloud", "aoe": 3, "placement": "ctrl", "blocksLos": false },
+      { "code": "cirVeilOfMists" }
+    ],
+    "scope": { "who": "friendly", "range": "CTRL" },
+    "verify": "RULING: the cloud is placed toward the nearest enemy (no point choice). Core: friendly-only transparency (cloud.friendlyTransparent) and Pathfinder plus ghostly movement inside."
+  },
+  {
+    "id": "cir.s.wraithbane",
+    "name": "Wraithbane",
+    "text": "Animus. A friendly Faction model's weapons gain Blessed and deal magical damage for a turn.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "TURN",
+    "offensive": false,
+    "animus": true,
+    "effect": [{ "code": "cirWraithbane" }],
+    "scope": { "who": "friendly" },
+    "verify": "Blessed is applied by the Wraithbane Weapons ability on the attacker; core adds the magical damage type while the animus is on the attacker."
+  }
+]

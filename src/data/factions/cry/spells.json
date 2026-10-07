@@ -1,0 +1,109 @@
+[
+  {
+    "id": "cry.s.banishing-ward",
+    "name": "Banishing Ward",
+    "text": "Enemy upkeep spells and animi on the chosen friendly model or unit end, and enemy spells and animi cannot target it. Upkeep.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "forbid",
+        "what": "beTargeted"
+      }
+    ],
+    "scope": {
+      "who": "friendly"
+    }
+  },
+  {
+    "id": "cry.s.crimson-veil",
+    "name": "Crimson Veil",
+    "text": "The melee weapons of a friendly Cryx model gain Blood Shadow. Upkeep.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cry.a.blood-shadow"
+      }
+    ],
+    "scope": {
+      "who": "friendly"
+    }
+  },
+  {
+    "id": "cry.s.crippling-grasp",
+    "name": "Crippling Grasp",
+    "text": "The target model or unit has -2 SPD, DEF and ARM, and -2 on its melee damage rolls. Upkeep.",
+    "cost": 3,
+    "rng": 8,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "SPD",
+        "value": -2
+      },
+      {
+        "op": "modStat",
+        "stat": "DEF",
+        "value": -2
+      },
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": -2
+      },
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": -2
+      }
+    ],
+    "scope": {
+      "who": "enemy"
+    }
+  },
+  {
+    "id": "cry.s.mirage",
+    "name": "Mirage",
+    "text": "The chosen friendly Cryx model or unit gains Apparition. Upkeep.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cry.a.apparition"
+      }
+    ],
+    "scope": {
+      "who": "friendly"
+    }
+  },
+  {
+    "id": "cry.s.venom",
+    "name": "Venom",
+    "text": "A 10 inch spray of corrosive spit: every model hit takes magical damage and suffers the Corrosion continuous effect.",
+    "cost": 2,
+    "rng": "SP10",
+    "pow": 10,
+    "dur": "-",
+    "offensive": true,
+    "effect": [
+      {
+        "op": "applyCondition",
+        "condition": "corrosion"
+      }
+    ],
+    "scope": {
+      "who": "enemy"
+    }
+  }
+]

@@ -1,0 +1,42 @@
+{
+  "id": "men.valeria",
+  "name": "Valeria, the Whisper of Death",
+  "faction": "men",
+  "type": "solo",
+  "character": true,
+  "keywords": [
+    "menoth"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 7,
+    "MAT": 6,
+    "RAT": 8,
+    "DEF": 15,
+    "ARM": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.valeria-bow"
+    },
+    {
+      "weapon": "men.w.valeria-knife"
+    }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.pathfinder",
+    "core.a.stealth",
+    "core.a.reposition"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": {
+    "archetype": "solo"
+  },
+  "verify": "Card not public yet: stats and weapon names are guesses from Nicia and Eiryss."
+}

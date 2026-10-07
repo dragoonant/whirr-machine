@@ -37,6 +37,7 @@ export interface ChooseCombatActionAction extends Base<'chooseCombatAction'> {
   choice: CombatChoice
   abilityId?: Id // specialAttack / specialAction
   powerAttack?: PowerAttackKind
+  targetId?: ModelId // specialAction with a target (Repair, Enliven, Ancillary Attack); additive, 00 section 14 (M9 core pass)
 }
 export interface ChooseAttackAction extends Base<'chooseAttack'> {
   modelId: ModelId

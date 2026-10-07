@@ -12,6 +12,13 @@ import type { GameState, ModelId, ModelState, MovementOption, RejectionCode, Uni
 export interface MoverInfo {
   spd: number
   warEngine?: boolean
+  beast?: boolean // M9: run, charge, slam and trample cost a force (1 fury put on the beast)
+  forceBlock?: string // why the beast cannot be forced right now (fury.forceGate block code)
+  aggressive?: boolean // Aggressive: run and charge cost no focus (cryx.md)
+  blind?: boolean // Blind: no run, charge, slam or trample
+  noAdvance?: boolean // Shadow Bind: cannot advance (no Normal Movement but forfeit and aim)
+  passIds?: ModelId[] // friendly models this mover may pass through (Precision Strike)
+  ghostly?: boolean // Incorporeal / Warp: Ghostly: moves through models and terrain it can clear
   hasMelee?: boolean
   meleeRange?: number // default 1
   pathfinder?: boolean
@@ -55,25 +62,27 @@ export function movementOptions(
   const m = state.models[id]!
   const engaged = isEngaged(state, id, info.rangeOf)
   const blocked = m.conditions.includes('knockedDown') ? 'knocked down' : m.conditions.includes('stationary') ? 'stationary' : undefined
+  const bound = info.noAdvance ? 'cannot advance' : undefined
   const noMove = m.crippled.includes('M')
-  const fc = info.warEngine ? 1 : 0
-  const canPay = !info.warEngine || (m.focus >= 1 && !m.crippled.includes('C'))
-  const standing = !!opts.standingUp
+  const fc = (info.warEngine || info.beast) && !info.aggressive ? 1 : 0
+  const beastWhy = info.forceBlock === 'outOfCtrl' ? 'out of CTRL' : info.forceBlock === 'cap' ? 'at its FURY cap' : info.forceBlock === 'spirit' ? 'Spirit crippled' : 'cannot be forced'
+  const canPay = info.aggressive || (info.beast ? !info.forceBlock : !info.warEngine || (m.focus >= 1 && !m.crippled.includes('C')))
+  const standing = !!opts.standingUp || !!info.blind || !!info.noAdvance // blind: no run, charge, slam or trample; bound: none of them either
   const mk = (option: MovementOption, maxDist: number, focusCost: number, ok: boolean, reason: string): OptionInfo =>
     ({ option, maxDist, focusCost, allowed: ok, reason: ok ? undefined : reason })
   const why = (fallback: string) => blocked ?? (engaged ? 'engaged' : noMove ? 'movement crippled' : fallback)
   return [
     mk('forfeit', 0, 0, true, ''),
     mk('aim', 0, 0, true, ''),
-    mk('advance', info.spd, 0, !blocked, blocked ?? ''),
-    mk('run', info.spd + 5, fc, !blocked && !engaged && !noMove && canPay && !standing, why(!canPay ? 'no focus' : 'standing up')),
+    mk('advance', info.spd, 0, !blocked && !bound, blocked ?? bound ?? ''),
+    mk('run', info.spd + 5, fc, !blocked && !engaged && !noMove && canPay && !standing, why(!canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
     mk('charge', info.spd + 3, fc, !blocked && !engaged && !noMove && canPay && !!info.hasMelee && !opts.combatForfeited && !standing,
-      why(!info.hasMelee ? 'no melee weapon' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
+      why(!info.hasMelee ? 'no melee weapon' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
     // R7.10-R7.14: slam and trample are power attacks that use Normal Movement and the Combat Action; a war-engine pays 1 focus
     mk('slam', info.spd + 3, fc, info.slam !== false && !blocked && !engaged && !noMove && !opts.combatForfeited && !standing && canPay,
-      why(info.slam === false ? 'no Slam power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
+      why(info.slam === false ? 'no Slam power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
     mk('trample', info.spd + 3, fc, info.trample !== false && !blocked && !noMove && !opts.combatForfeited && !standing && canPay,
-      blocked ?? (noMove ? 'movement crippled' : info.trample === false ? 'no Trample power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? 'no focus' : 'standing up')),
+      blocked ?? (noMove ? 'movement crippled' : info.trample === false ? 'no Trample power attack' : opts.combatForfeited ? 'combat action forfeited' : !canPay ? (info.beast ? beastWhy : 'no focus') : 'standing up')),
   ]
 }
 
@@ -109,7 +118,7 @@ export interface AdvanceArgs { modelId: ModelId; waypoints: Vec2[]; kind: 'advan
 export function resolveAdvance(state: GameState, a: AdvanceArgs): MoveOk | Rejected {
   const m = state.models[a.modelId]!
   const maxMove = a.kind === 'run' ? a.info.spd + 5 : a.info.spd
-  const chk = validateAdvancePath(state, a.modelId, a.waypoints, maxMove, { pathfinder: a.info.pathfinder, flying: a.info.flying, ignoreIds: a.ignoreIds })
+  const chk = validateAdvancePath(state, a.modelId, a.waypoints, maxMove, { pathfinder: a.info.pathfinder || a.info.ghostly, flying: a.info.flying || a.info.ghostly, ignoreIds: a.ignoreIds, passModels: a.info.ghostly ? true : a.info.passIds })
   if (!chk.ok) return rej(chk.code ?? 'E_PATH_BLOCKED', chk.message ?? 'illegal path')
   const before = engagedBy(state, a.modelId, a.info.rangeOf)
   const s = relocate(state, a.modelId, chk.end)
@@ -132,10 +141,12 @@ export interface StraightResult extends MoveOk {
   chargeAttack: boolean
   sweep: SweepResult
 }
-function sweepWithRough(state: GameState, m: ModelState, dir: Vec2, max: number, info: MoverInfo, ignoreIds: ModelId[]): SweepResult {
-  const opts = { obstacles: (info.pathfinder ? 'ignore' : 'stop') as 'ignore' | 'stop', ignoreObstructions: info.flying, ignoreIds }
+function sweepWithRough(state: GameState, m: ModelState, dir: Vec2, max: number, info: MoverInfo, ignoreIds: ModelId[], keepId?: ModelId): SweepResult {
+  // a ghostly mover passes through every base except the one it charges
+  const ids = info.ghostly ? [...ignoreIds, ...Object.keys(state.models).filter((x) => x !== m.id && x !== keepId)] : ignoreIds
+  const opts = { obstacles: (info.pathfinder || info.ghostly ? 'ignore' : 'stop') as 'ignore' | 'stop', ignoreObstructions: info.flying || info.ghostly, ignoreIds: ids }
   let sw = sweepFrom(state, m, m.pos, dir, max, opts)
-  if (sw.roughEntered && !info.pathfinder) sw = sweepFrom(state, m, m.pos, dir, Math.max(1, max - 2), opts)
+  if (sw.roughEntered && !info.pathfinder && !info.ghostly) sw = sweepFrom(state, m, m.pos, dir, Math.max(1, max - 2), opts)
   return sw
 }
 export interface ChargeArgs { modelId: ModelId; targetId: ModelId; info: MoverInfo; kind?: 'charge' | 'slam'; range?: number; ignoreIds?: ModelId[] }
@@ -146,7 +157,7 @@ export function resolveCharge(state: GameState, a: ChargeArgs): StraightResult |
   const kind = a.kind ?? 'charge'
   if (isEngaged(state, a.modelId, a.info.rangeOf)) return rej('E_ENGAGED', 'engaged models cannot charge or slam')
   const range = a.range ?? a.info.meleeRange ?? 1
-  const sw = sweepWithRough(state, m, norm(sub(t.pos, m.pos)), a.info.spd + 3, a.info, a.ignoreIds ?? [])
+  const sw = sweepWithRough(state, m, norm(sub(t.pos, m.pos)), a.info.spd + 3, a.info, a.ignoreIds ?? [], a.targetId)
   const success = edgeDistance(sw.end, m.base, t.pos, t.base) <= range + EPS
   const s = relocate(state, a.modelId, sw.end)
   const events: GameEvent[] = [
@@ -179,7 +190,7 @@ export function resolveChargeTo(state: GameState, a: ChargeArgs & { to: Vec2 }):
     const far = { x: m.pos.x + dir.x * 1000, z: m.pos.z + dir.z * 1000 }
     if (segPointDist(m.pos, far, t.pos).d > baseRadius(m.base) + baseRadius(t.base) + range + EPS) return rej('E_NOT_STRAIGHT', 'that line never brings the target into melee range')
   }
-  const sw = sweepWithRough(state, m, dir, max, a.info, a.ignoreIds ?? [])
+  const sw = sweepWithRough(state, m, dir, max, a.info, a.ignoreIds ?? [], a.targetId)
   if (want > sw.travelled + EPS) return rej('E_PATH_BLOCKED', `the charge stops after ${sw.travelled.toFixed(2)}"`)
   const end = want >= sw.travelled - EPS ? sw.end : a.to
   // it may stop short only once the target is in melee range; a blocked charge simply ends where it stopped
@@ -293,6 +304,10 @@ export interface HitLookups {
   tough?: (id: ModelId) => boolean
   /** true when a rule stops the model being knocked down (Shield Wall); it is still moved and damaged */
   noKnockdown?: (id: ModelId) => boolean
+  /** Incorporeal: cannot be pushed, slammed or thrown */
+  immovable?: (id: ModelId) => boolean
+  /** Incorporeal: takes no damage from non-magical sources (collateral, falls, power attacks) */
+  noMundaneDamage?: (id: ModelId) => boolean
 }
 /** Knock a model down unless a rule forbids it. */
 export function knockDownUnless(state: GameState, id: ModelId, look: HitLookups, sourceId?: string): { state: GameState; events: GameEvent[] } {
@@ -305,6 +320,7 @@ export const collateralPow = (sourceMm: number, hitMm: number): 12 | 14 => (sour
 
 /** One unboostable damage roll that is not an attack (collateral, falls). */
 export function plainDamage(state: GameState, id: ModelId, pow: number, dice: number, kind: 'collateral' | 'fall', look: HitLookups): { state: GameState; events: GameEvent[] } {
+  if (look.noMundaneDamage?.(id)) return { state, events: [] }
   const r = rollDamage(state, { pow, armor: look.arm(id), dice: { added: dice - 2 }, ownerId: id })
   const a = applyDamage(r.state, id, r.points, { source: kind, layouts: look.layouts?.(id) })
   let s = a.state
@@ -337,6 +353,7 @@ function checkFall(state: GameState, prev: ModelState, id: ModelId, look: HitLoo
 /** Push X (R5.15): directly away from `from`, stops on contact. No rough penalty, no disengage. */
 export function push(state: GameState, id: ModelId, from: Vec2, x: number, look: HitLookups, opts: { flying?: boolean } = {}): InvoluntaryResult {
   const m = state.models[id]!
+  if (look.immovable?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
   const sw = sweepFrom(state, m, m.pos, norm(sub(m.pos, from)), x, { passThrough: 'none', obstacles: 'stop', ignoreObstructions: opts.flying })
   const s = relocate(state, id, sw.end)
   const events: GameEvent[] = [movedEvent(id, 'push', m.pos, sw.end, [sw.end], s.models[id]!.elev, stopId(sw))]
@@ -350,6 +367,7 @@ export function push(state: GameState, id: ModelId, from: Vec2, x: number, look:
  */
 export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, mode: 'slam' | 'throw', look: HitLookups): InvoluntaryResult {
   const m = state.models[id]!
+  if (look.immovable?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
   const sw = sweepFrom(state, m, m.pos, norm(sub(m.pos, from)), x, { passThrough: 'smaller', obstacles: 'stop' })
   let s = relocate(state, id, sw.end)
   const events: GameEvent[] = [movedEvent(id, mode, m.pos, sw.end, [sw.end], s.models[id]!.elev, stopId(sw))]
@@ -381,4 +399,22 @@ export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, 
   }
   const f = checkFall(s, m, id, look)
   return { state: f.state, events: [...events, ...f.events], travelled: sw.travelled, stoppedAgainst, contacted }
+}
+
+/** Shifter and any place with placeMode 'b2bWithTarget': put the mover base to base with the target at the legal spot nearest where it stood. */
+export function placeBaseToBase(state: GameState, id: ModelId, targetId: ModelId, sourceId?: string): { state: GameState; events: GameEvent[] } | null {
+  const me = state.models[id]
+  const t = state.models[targetId]
+  if (!me || !t || !isOnTable(me) || !isOnTable(t) || me.id === t.id) return null
+  if (edgeDistance(me.pos, me.base, t.pos, t.base) <= 0.01) return { state, events: [] }
+  const R = baseRadius(me.base) + baseRadius(t.base) + 0.001
+  const home = Math.atan2(me.pos.z - t.pos.z, me.pos.x - t.pos.x)
+  for (let i = 0; i < 48; i++) {
+    const off = Math.ceil(i / 2) * (Math.PI / 24) * (i % 2 === 0 ? 1 : -1)
+    const pos = { x: t.pos.x + Math.cos(home + off) * R, z: t.pos.z + Math.sin(home + off) * R }
+    if (!isLegalPlacement(state, me.id, pos, me.base).ok) continue
+    const s2 = relocate(state, me.id, pos)
+    return { state: s2, events: [movedEvent(me.id, 'place', me.pos, pos, [pos], s2.models[me.id]!.elev, sourceId)] }
+  }
+  return null
 }

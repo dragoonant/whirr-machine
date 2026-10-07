@@ -1,0 +1,57 @@
+{
+  "faction": "cry",
+  "id": "cry.nekane",
+  "name": "Wraithbinder Nekane",
+  "type": "leader",
+  "character": true,
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "warcaster"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 7,
+    "AAT": 7,
+    "MAT": 6,
+    "RAT": 7,
+    "DEF": 16,
+    "ARM": 15,
+    "ARC": 6,
+    "CTRL": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 16
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.rune-thrower"
+    },
+    {
+      "weapon": "cry.w.hellspike"
+    }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "cry.a.dodge",
+    "cry.a.grappling-hook",
+    "cry.a.vital-magic",
+    "cry.a.wraithbinder"
+  ],
+  "spells": [
+    "cry.s.banishing-ward",
+    "cry.s.crimson-veil",
+    "cry.s.crippling-grasp",
+    "cry.s.mirage",
+    "cry.s.venom"
+  ],
+  "feat": "cry.f.wrath-of-lyliss",
+  "cost": 0,
+  "figure": {
+    "slug": "wm-nekane",
+    "archetype": "caster"
+  },
+  "verify": "Community card data (U-cd); base size estimated from a product photo; app check pending."
+}

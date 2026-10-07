@@ -50,6 +50,7 @@ function damageStep(
   state: GameState, inp: PowerAttackInput, pow: number, extraDice: number, events: GameEvent[],
 ): GameState {
   const t = inp.targetId
+  if (inp.look.noMundaneDamage?.(t)) return state
   const r = rollDamage(state, { pow, armor: inp.look.arm(t), dice: { added: extraDice, boost: inp.boostDamage }, ownerId: t })
   events.push(...r.events)
   const a = applyDamage(r.state, t, r.points, { source: 'direct', attackId: inp.attackId, layouts: inp.look.layouts?.(t) })
@@ -131,6 +132,7 @@ export function resolveTrampleAttacks(state: GameState, inp: TrampleAttackInput)
     events.push({ type: 'AttackResolved', attackId, rollId: roll.rollId, hit: roll.hit, crit: roll.crit, auto: roll.auto } as GameEvent)
     if (!roll.hit) continue
     hits.push(id)
+    if (inp.look.noMundaneDamage?.(id)) continue
     const d = rollDamage(s, { pow: powerPow(a.base, t.base), armor: inp.look.arm(id), ownerId: id })
     events.push(...d.events)
     const ap = applyDamage(d.state, id, d.points, { source: 'direct', layouts: inp.look.layouts?.(id) })

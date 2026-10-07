@@ -1,0 +1,47 @@
+{
+  "faction": "cry",
+  "id": "cry.chatterbane",
+  "name": "Master Necrotech Chatterbane",
+  "type": "solo",
+  "character": true,
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 6,
+    "MAT": 5,
+    "RAT": 5,
+    "DEF": 13,
+    "ARM": 17
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 10
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.light-spiker"
+    },
+    {
+      "weapon": "cry.w.eviscerator"
+    }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "cry.a.ancillary-attack",
+    "cry.a.enliven",
+    "cry.a.repair",
+    "cry.a.exhaust-fumes"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": {
+    "slug": "wm-chatterbane",
+    "archetype": "solo"
+  },
+  "verify": "Community card data (U-cd); app check pending."
+}

@@ -1,0 +1,36 @@
+{
+  "id": "cir.tanith",
+  "name": "Tanith the Feral Song",
+  "faction": "cir",
+  "type": "leader",
+  "resource": "fury",
+  "character": true,
+  "keywords": ["circle", "blackclad", "devourers-host", "warlock"],
+  "base": 30,
+  "stats": { "SPD": 6, "AAT": 7, "MAT": 6, "RAT": 6, "DEF": 15, "ARM": 15, "ARC": 6, "CTRL": 12 },
+  "damage": { "track": "single", "boxes": 15 },
+  "weapons": [
+    { "weapon": "cir.w.jaws-of-the-earth", "socket": "hand-r" },
+    { "weapon": "cir.w.staff-of-fate", "socket": "hand-l" }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.pathfinder",
+    "cir.a.dark-power",
+    "cir.a.dark-power-damage",
+    "cir.a.field-marshal-prowl",
+    "cir.a.vital-magic",
+    "cir.a.wraithbane-weapons"
+  ],
+  "spells": [
+    "cir.s.admonition",
+    "cir.s.affliction",
+    "cir.s.rift",
+    "cir.s.scything-touch",
+    "cir.s.veil-of-mists"
+  ],
+  "feat": "cir.f.rites-of-the-wurm",
+  "cost": 0,
+  "figure": { "archetype": "caster" },
+  "verify": "Community card data only (no Quick Start coverage); base 30 is a guess; every value awaits the app check."
+}

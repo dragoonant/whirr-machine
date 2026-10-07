@@ -1,10 +1,10 @@
 // R11 and 11-scenarios: army building, roll-off, turn order, edge choice, deployment (zones, unit spread, Advance Deployment).
 // Pure. createInitialState replaces the stub body of index.createGame; answerSetup serves chooseTurnOrder / chooseEdge /
-// deploy / advanceDeploy. Prey and Ambush choices are not offered yet (see issues).
+// deploy / advanceDeploy. Prey and Ambush choices: Ambush models may be held off the table (ambush.ts brings them in).
 import type {
   Action, AdvanceDeployAction, ChooseEdgeAction, ChooseTurnOrderAction, DeployAction, Placement,
 } from './actions'
-import { newGrid } from './damage'
+import { newGrid, spiralDamageState } from './damage'
 import { otherPlayer, profileOf, type Profile } from './effects'
 import type { GameEvent } from './events'
 import { baseRadius, edgeDistance, isLegalPlacement, surfaceElevation } from './geometry'
@@ -14,6 +14,7 @@ import { seedRng } from './rng'
 import { initialScenarioState, scenarioAnchorProblems, scenarioDef, type ScenarioDef } from './scenario'
 import { startGameplay } from './turnflow'
 import { handleActivationAction, raisePrey } from './phases/activation'
+import { ambushGroups } from './ambush'
 import type {
   DamageState, DataBundle, DecisionOption, EdgeId, GameSetup, GameState, ModelId, ModelState, ModelType, PlayerId, PlayerState,
   Rejection, TerrainInstance, UnitState, Vec2,
@@ -53,7 +54,8 @@ const modelId = (p: PlayerId, tag: string): string => `${p}:${tag}`
 export const entryIndexOf = (id: string): number => { const m = /^[AB]:[eu](\d+)/.exec(id); return m ? Number(m[1]) : -1 }
 
 function damageFor(profile: Profile): DamageState {
-  const d = profile.damage as { track: string; boxes?: number; columns?: string[]; grids?: { left: string[]; right: string[] } }
+  const d = profile.damage as { track: string; boxes?: number; columns?: string[]; branches?: string[]; grids?: { left: string[]; right: string[] } }
+  if (d.track === 'spiral') return spiralDamageState(d.branches ?? []) // M9: a warbeast's life spiral (branches 1-6)
   if (d.track === 'grid') return { track: 'grid', grids: [newGrid({ id: 'main', columns: d.columns ?? [] })] }
   if (d.track === 'dualGrid') return { track: 'grid', grids: [newGrid({ id: 'left', columns: d.grids?.left ?? [] }), newGrid({ id: 'right', columns: d.grids?.right ?? [] })] }
   return { track: 'single', filled: 0, boxes: d.boxes ?? 1 }
@@ -62,7 +64,8 @@ function makeModel(id: string, owner: PlayerId, profileId: string, p: Profile, e
   const type = (p.type === 'trooper' || p.type === 'unit' ? 'trooper' : p.type) as ModelType
   return {
     id, profileId, owner, type, pos: { x: 0, z: 0 }, elev: 0, base: p.base ?? 30,
-    focus: type === 'leader' ? (p.stats?.ARC ?? 0) : 0, // R11.7: casters start with focus = ARC
+    focus: type === 'leader' && p.resource !== 'fury' ? (p.stats?.ARC ?? 0) : 0, // R11.7: casters start with focus = ARC
+    ...(type === 'leader' && p.resource === 'fury' ? { fury: p.stats?.ARC ?? 0 } : type === 'beast' ? { fury: 0 } : {}), // M9 F1.4: a warlock starts with fury = ARC, a beast with 0
     damage: damageFor(p), life: 'active', conditions: [], crippled: [], hardpoints: {}, activated: false, offTable: true, ...extra,
   }
 }
@@ -105,9 +108,9 @@ export function buildArmy(player: PlayerId, listId: string, bundle: DataBundle):
       models.push(...troopers)
       units.push({ id: uid, profileId: e.profile, owner: player, troopers: troopers.map((t) => t.id), attachments: [], activated: false })
     } else {
-      const m = makeModel(modelId(player, `e${i}`), player, e.profile, p, p.type === 'warEngine' ? { controllerId: leaderId } : {})
+      const m = makeModel(modelId(player, `e${i}`), player, e.profile, p, p.type === 'warEngine' || p.type === 'beast' ? { controllerId: leaderId } : {})
       models.push(m)
-      if (p.type === 'warEngine' && !p.lesser) cohort = true
+      if ((p.type === 'warEngine' && !p.lesser) || (p.type === 'beast' && p.beastClass !== 'lesser')) cohort = true
     }
   })
   const cap = list.points ?? 30
@@ -219,8 +222,8 @@ const unitGroups = (state: GameState, ids: ModelId[]): ModelId[][] => {
 }
 
 /** A valid placement for every id, built greedily (used for options, the AI and the sim). null if it cannot fit. */
-export function suggestDeployment(state: GameState, bundle: DataBundle, player: PlayerId, kind: DeployKind): Placement[] | null {
-  const ids = modelsToDeploy(state, bundle, player, kind)
+export function suggestDeployment(state: GameState, bundle: DataBundle, player: PlayerId, kind: DeployKind, skip?: Set<ModelId>): Placement[] | null {
+  const ids = modelsToDeploy(state, bundle, player, kind).filter((id) => !skip?.has(id))
   const def = scenarioDef(bundle, state.scenario.id)
   const zone = deploymentZone(state, bundle, player, kind === 'advanceDeploy')
   const edge = state.players[player].edge!
@@ -274,6 +277,12 @@ function raiseDeploy(state: GameState, bundle: DataBundle, step: { player: Playe
   const id = r.pending.id
   const mk = (placements: Placement[]): Action => (step.kind === 'deploy' ? { type: 'deploy', decisionId: id, player: step.player, placements } : { type: 'advanceDeploy', decisionId: id, player: step.player, placements })
   const options: DecisionOption[] = sug ? [{ id: 'auto', label: 'Deploy in a tidy line', action: mk(sug) }] : []
+  // Ambush: models that have it may stay off the table and enter from round 2 (R11.6)
+  const held = ambushGroups(state, bundle, ids).flat()
+  if (held.length) {
+    const sug2 = suggestDeployment(state, bundle, step.player, step.kind, new Set(held))
+    if (sug2) options.push({ id: 'ambush', label: `Deploy, holding ${held.length > 1 ? 'the Ambush models' : 'the Ambush model'} back`, action: mk(sug2) })
+  }
   const pending = { ...r.pending, options }
   return { state: { ...r.state, pending }, events: [{ type: 'PhaseChanged', phase: 'deploy', window: 'turn.start' }], pending }
 }
@@ -297,7 +306,11 @@ export function validateDeployment(state: GameState, bundle: DataBundle, a: Depl
   if (state.pending.kind !== kind) return { code: 'E_WRONG_DECISION', message: `not a ${kind} decision` }
   const need = modelsToDeploy(state, bundle, a.player, kind)
   const got = a.placements.map((p) => p.modelId)
-  if (new Set(got).size !== got.length || got.length !== need.length || !need.every((id) => got.includes(id))) {
+  // models with Ambush may be left off the table, a whole unit at a time (R11.6)
+  const holdable = new Set(ambushGroups(state, bundle, need).flat())
+  const left = need.filter((id) => !got.includes(id))
+  if (new Set(got).size !== got.length || !got.every((id) => need.includes(id)) || !left.every((id) => holdable.has(id))
+    || ambushGroups(state, bundle, need).some((g) => g.some((id) => left.includes(id)) && g.some((id) => got.includes(id)))) {
     return { code: 'E_BAD_PAYLOAD', message: 'place every model of this step exactly once', detail: { need } }
   }
   const def = scenarioDef(bundle, state.scenario.id)
@@ -361,6 +374,11 @@ export function answerSetup(state: GameState, bundle: DataBundle, a: Action): Fl
       const m = s.models[p.modelId]!
       s = { ...s, models: { ...s.models, [m.id]: { ...m, pos: p.pos, elev: surfaceElevation(s, p.pos, m.base), offTable: false } } }
       events.push({ type: 'ModelDeployed', modelId: m.id, pos: p.pos, advance: a.type === 'advanceDeploy' })
+    }
+    const held = modelsToDeploy(state, bundle, a.player, a.type === 'deploy' ? 'deploy' : 'advanceDeploy').filter((id) => !a.placements.some((p) => p.modelId === id))
+    if (held.length) {
+      const ps = s.players[a.player]
+      s = { ...s, players: { ...s.players, [a.player]: { ...ps, ambushIds: [...ps.ambushIds, ...held] } } }
     }
     return enterDeployment(s, bundle, events)
   }

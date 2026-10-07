@@ -1,0 +1,66 @@
+{
+  "faction": "cry",
+  "id": "cry.hades",
+  "name": "Hades",
+  "type": "warEngine",
+  "engineClass": "heavy",
+  "character": true,
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "construct"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 6,
+    "DEF": 13,
+    "ARM": 18
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "--L",
+      "--LLM",
+      "---HMM",
+      "---HCC",
+      "--RRC",
+      "--R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.soul-cannon",
+      "location": "R"
+    },
+    {
+      "weapon": "cry.w.death-claw",
+      "location": "L"
+    },
+    {
+      "weapon": "cry.w.tusks",
+      "location": "H"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "core.a.unstoppable",
+    "cry.a.aggressive",
+    "cry.a.soul-taker-collector",
+    "cry.a.shadow-gate",
+    "cry.a.soul-generator",
+    "cry.a.soul-phase"
+  ],
+  "cost": 16,
+  "fa": "C",
+  "figure": {
+    "slug": "wm-hades",
+    "archetype": "heavyEngine"
+  },
+  "verify": "Community card data (U-cd); grid and base need the app check."
+}

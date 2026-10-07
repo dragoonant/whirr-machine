@@ -22,6 +22,10 @@ export interface LosOptions {
   ignoreModels?: boolean
   /** Stealth callback: stealth models farther than 5" from the viewer are never intervening (R6.4) */
   hasStealth?: (m: ModelState) => boolean
+  /** Incorporeal and similar: this model is never an intervening model (cryx.md) */
+  skipModel?: (m: ModelState) => boolean
+  /** Treewalker: forests never block this viewer's line of sight (circle.md) */
+  ignoreForest?: boolean
   /** viewer is the channelling arc node etc.: use this model as point of origin (default: the first arg) */
 }
 
@@ -94,6 +98,7 @@ interface Ctx {
   pieces: TerrainPiece[]
   clouds: Cloud[]
   interveners: ModelState[]
+  ignoreForest?: boolean
 }
 interface LineResult { reasons: LosReason[]; terrain: Id[]; models: Id[]; clouds: Id[] }
 
@@ -104,13 +109,17 @@ function buildCtx(state: GameState, A: ModelState, B: ModelState, opts: LosOptio
       if (o.id === A.id || o.id === B.id || !isOnTable(o)) continue
       if (o.conditions.includes('knockedDown')) continue
       if (A.unitId && o.unitId === A.unitId) continue
+      if (opts.skipModel?.(o)) continue
+      // Shadow Fire: a model hit by it does not block LOS for a turn
+      if ((state.effects ?? []).some((e) => e.forbid?.includes('blocksLos') && e.targetIds.includes(o.id))) continue
       if (opts.hasStealth?.(o) && modelDistance(A, o) > STEALTH_REACH) continue
       if (o.base < B.base) continue // only bases >= the target's can block
       interveners.push(o)
     }
   }
-  const clouds = opts.ignoreClouds || B.base >= 120 ? [] : state.clouds.filter((c) => cloudBlocks(c) && !inCloud(A, c) && !inCloud(B, c))
-  return { state, A, B, bHuge: B.base >= 120, pieces: terrainPieces(state), clouds, interveners }
+  // Veil of Mists: a cloud that is transparent to its owner's side only (c.friendlyTransparent)
+  const clouds = opts.ignoreClouds || B.base >= 120 ? [] : state.clouds.filter((c) => cloudBlocks(c) && !inCloud(A, c) && !inCloud(B, c) && !((c as Cloud & { friendlyTransparent?: boolean }).friendlyTransparent && c.owner === A.owner))
+  return { state, A, B, bHuge: B.base >= 120, pieces: terrainPieces(state), clouds, interveners, ignoreForest: !!opts.ignoreForest }
 }
 
 function evalLine(ctx: Ctx, l: Line): LineResult {
@@ -118,7 +127,7 @@ function evalLine(ctx: Ctx, l: Line): LineResult {
   let forest = false, terr = false
   for (const p of ctx.pieces) {
     if (p.traits.forest) {
-      if (!ctx.bHuge && forestBlocksLine(p, l)) { forest = true; r.terrain.push(p.t.id) }
+      if (!ctx.bHuge && !ctx.ignoreForest && forestBlocksLine(p, l)) { forest = true; r.terrain.push(p.t.id) }
     } else if (pieceBlocksLine(p, l)) { terr = true; r.terrain.push(p.t.id) }
   }
   if (terr) r.reasons.push('terrain')
@@ -235,6 +244,8 @@ export interface DefModOptions {
   /** Alchemical Mask: cloud concealment ignored; Enhanced Mask: all concealment */
   ignoreCloudConcealment?: boolean
   ignoreAllConcealment?: boolean
+  /** From Beneath, Wraith Shot: the attack ignores cover */
+  ignoreCover?: boolean
 }
 export interface DefModResult {
   baseDef: number // after a "set" (knocked down / stationary)
@@ -298,9 +309,9 @@ export function defModifiers(state: GameState, targetId: Id, o: DefModOptions): 
     if (o.kind !== 'spray') {
       const rB = baseRadius(B.base)
       const inside = insideCoverOf(state, B.pos, rB)
-      if (inside === 'cover') cov = 'cover'
+      if (inside === 'cover' && !o.ignoreCover) cov = 'cover'
       const lines = sampleLines(A, B)
-      if (cov !== 'cover' && featureAlongLine(ctx, B, 'cover', lines)) cov = 'cover'
+      if (cov !== 'cover' && !o.ignoreCover && featureAlongLine(ctx, B, 'cover', lines)) cov = 'cover'
       if (cov !== 'cover') {
         const cloud = state.clouds.some((c) => cloudConceals(c) && circleInsideShape(B.pos, rB, cloudShape(c)))
         let conc = inside === 'concealment' || o.grantedConcealment === true || featureAlongLine(ctx, B, 'concealment', lines)

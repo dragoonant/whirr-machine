@@ -1,0 +1,66 @@
+[
+  {
+    "id": "cir.w.jaws-of-the-earth",
+    "name": "Jaws of the Earth",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 13,
+    "blastPow": 7,
+    "qualities": ["core.q.magical"],
+    "abilities": ["cir.a.from-beneath", "cir.a.critical-consume"]
+  },
+  {
+    "id": "cir.w.staff-of-fate",
+    "name": "Staff of Fate",
+    "type": "melee",
+    "rng": 2,
+    "pow": 11,
+    "qualities": ["core.q.magical"],
+    "abilities": ["cir.a.shadow-bind"]
+  },
+  {
+    "id": "cir.w.death-howler",
+    "name": "Death Howler",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 14,
+    "qualities": ["core.q.magical", "core.q.pistol"]
+  },
+  {
+    "id": "cir.w.claw",
+    "name": "Claw",
+    "type": "melee",
+    "rng": 1,
+    "pow": 14,
+    "qualities": ["core.q.throw"]
+  },
+  {
+    "id": "cir.w.raven",
+    "name": "Raven",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 0,
+    "abilities": ["cir.a.shifter"]
+  },
+  {
+    "id": "cir.w.wurmblade",
+    "name": "Wurmblade",
+    "type": "melee",
+    "rng": 1,
+    "pow": 13,
+    "qualities": ["core.q.magical"],
+    "abilities": ["cir.a.blood-reaper", "cir.a.grievous-wounds"]
+  },
+  {
+    "id": "cir.w.tharn-axe",
+    "name": "Tharn Axe",
+    "type": "melee",
+    "rng": 2,
+    "pow": 15,
+    "abilities": ["cir.a.brutal-charge"]
+  }
+]

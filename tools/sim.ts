@@ -1,5 +1,6 @@
 // Headless bot-vs-bot games on the real starter lists and scenario, with engine invariants checked after every step (60 §2, §3).
-// Run: npm run sim -- --games 50 --seed 1 [--scenario scn-ashwall-divide|scn-qs-demo] [--cap 5000] [--json]
+// Run: npm run sim -- --games 50 --seed 1 [--scenario scn-ashwall-divide|scn-qs-demo] [--cap 5000] [--json] [--lists trl.l.starter-recon,kha.l.qs-recon]
+// --lists A,B plays those two lists (A and B swap sides on odd games); without it the Khador and Cygnar Quick Start lists play.
 import { loadBundle } from '../src/data/index'
 import { pickSensible } from '../src/ai/random'
 import {
@@ -7,12 +8,13 @@ import {
   type Action, type GameSetup, type GameState, type LifeState, type Phase, type PlayerId,
 } from '../src/engine/index'
 
-interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean }
+interface Args { games: number; seed: string; scenario: string; cap: number; json: boolean; stall: number; wallMs: number; quiet: boolean; lists?: [string, string] }
 function parseArgs(argv: string[]): Args {
   const a: Args = { games: 20, seed: '1', scenario: 'scn-ashwall-divide', cap: 5000, json: false, stall: 200, wallMs: 60_000, quiet: false }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!, v = argv[i + 1]
     if (k === '--games' && v) { a.games = Number(v); i++ } else if (k === '--seed' && v) { a.seed = v; i++ } else if (k === '--scenario' && v) { a.scenario = v; i++ } else if (k === '--cap' && v) { a.cap = Number(v); i++ } else if (k === '--stall' && v) { a.stall = Number(v); i++ } else if (k === '--json') a.json = true
+    else if (k === '--lists' && v) { const [x, y] = v.split(','); if (x && y) a.lists = [x, y]; i++ }
     else if (k === '--quiet') a.quiet = true
   }
   return a
@@ -78,9 +80,10 @@ const short = (a: Action): string => {
   return `${a.decisionId} ${a.player} ${a.type} ${extra.join(' ')}`
 }
 
-export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs'>, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
+export function runGame(game: number, args: Pick<Args, 'seed' | 'scenario' | 'cap' | 'stall' | 'wallMs' | 'lists'>, bundle = loadBundle()): { summary: GameSummary; violations: Violation[] } {
   const seed = `${args.seed}:g${game}`
-  const setup: GameSetup = { scenario: args.scenario, lists: game % 2 === 0 ? { A: 'kha.l.qs-recon', B: 'cyg.l.qs-recon' } : { A: 'cyg.l.qs-recon', B: 'kha.l.qs-recon' } }
+  const [la, lb] = args.lists ?? ['kha.l.qs-recon', 'cyg.l.qs-recon']
+  const setup: GameSetup = { scenario: args.scenario, lists: game % 2 === 0 ? { A: la, B: lb } : { A: lb, B: la } }
   const violations: Violation[] = []
   const t0 = Date.now()
   const v = (index: number, kind: string, message: string, log?: Action[]) => violations.push({ game, seed, index, kind, message, lastActions: log?.slice(-20).map(short) })

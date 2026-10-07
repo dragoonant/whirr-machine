@@ -1,0 +1,60 @@
+[
+  {
+    "id": "trl.w.bazooka",
+    "name": "Bazooka",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 14,
+    "blastPow": 8,
+    "qualities": ["core.q.magical"],
+    "abilities": ["trl.a.critical-devastation"]
+  },
+  {
+    "id": "trl.w.axe",
+    "name": "Axe",
+    "type": "melee",
+    "rng": 1,
+    "pow": 11
+  },
+  {
+    "id": "trl.w.powder-bomb",
+    "name": "Powder Bomb",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "aoe": 3,
+    "pow": 16,
+    "blastPow": 8,
+    "abilities": ["trl.a.forced-reload", "core.a.reload-1", "trl.a.guided-fire-die"]
+  },
+  {
+    "id": "trl.w.claw",
+    "name": "Claw",
+    "type": "melee",
+    "rng": 1,
+    "pow": 15,
+    "qualities": ["core.q.throw"]
+  },
+  {
+    "id": "trl.w.heavy-pistol",
+    "name": "Heavy Pistol",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 12,
+    "qualities": ["core.q.pistol"],
+    "abilities": ["trl.a.both-barrels", "trl.a.luck"]
+  },
+  {
+    "id": "trl.w.pistol",
+    "name": "Pistol",
+    "type": "ranged",
+    "rng": 8,
+    "rof": 1,
+    "pow": 10,
+    "qualities": ["core.q.pistol"],
+    "abilities": ["trl.a.both-barrels"]
+  }
+]

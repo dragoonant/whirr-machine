@@ -1,4 +1,4 @@
-// Avenging Force in the Maintenance Phase (kha.s.avenging-force; 00 §5 out-of-activation movement and attacks).
+// Out-of-activation Maintenance effects: Avenging Force (kha.s.avenging-force) and Sentry's Rapid Fire (trl.s.sentry); 00 §5 out-of-activation movement and attacks.
 // When a friendly model of the caster was damaged during the enemy turn, the warjack under the spell advances up to 3"
 // and may make one basic attack, outside any activation (no focus can be spent on it).
 import type { Action } from '../actions'
@@ -6,6 +6,7 @@ import { declareAttack, drive, moverInfo } from './activation'
 import { alive, isMelee, weaponsOf } from '../code-hooks'
 import type { GameEvent } from '../events'
 import { avengingForceReady } from '../factions/khador'
+import { sentryReady } from '../factions/trollbloods'
 import { angleOf, dist, sub } from '../geometry'
 import { resolveAdvance } from '../movement'
 import { raise, reject, type FlowOut, type FlowResult } from '../pending'
@@ -14,8 +15,9 @@ import type { DataBundle, DecisionOption, EffectInstance, GameState, ModelId, Ve
 const CODE = 'avengingForce'
 const ADVANCE = 3
 
+const SENTRY = 'sentry'
 export const isAvengingDecision = (state: GameState): boolean =>
-  state.phase === 'maintenance' && state.pending.context.data?.code === CODE
+  state.phase === 'maintenance' && (state.pending.context.data?.code === CODE || state.pending.context.data?.code === SENTRY)
 
 /** The armed Avenging Force effects whose warjack can act now. */
 function ready(state: GameState): { effectId: string; engineId: ModelId }[] {
@@ -31,12 +33,44 @@ function ready(state: GameState): { effectId: string; engineId: ModelId }[] {
  */
 export function runAvengingForce(state0: GameState, b: DataBundle, events: GameEvent[], next: (s: GameState, ev: GameEvent[]) => FlowOut): FlowOut {
   const r = ready(state0)[0]
+  if (!r && !state0.effects.some((e) => (e as EffectInstance & { triggered?: boolean }).triggered)) return runSentry(state0, b, events, next)
   // disarm every armed copy that cannot act (its warjack is gone), so nothing lingers
   let state: GameState = { ...state0, effects: state0.effects.map((e) => ((e as EffectInstance & { triggered?: boolean }).triggered && (r ? e.id === r.effectId : e.owner === state0.activePlayer) ? ({ ...e, triggered: false } as EffectInstance) : e)) }
-  if (!r) return next(state, events)
+  if (!r) return runSentry(state, b, events, next)
   events.push({ type: 'WindowOpened', window: 'maintenance.effects', subjectId: r.engineId })
   state = { ...state, window: 'maintenance.effects' }
   return raiseMove(state, b, events, r.engineId)
+}
+
+// ---------- Sentry: Rapid Fire ----------
+/** Sentry effects whose model owes its basic ranged attack this Maintenance Phase (not yet taken this turn). */
+function sentryDue(state: GameState): { effectId: string; modelId: ModelId }[] {
+  return sentryReady(state).filter((r) => {
+    const m = state.models[r.modelId]
+    const e = state.effects.find((x) => x.id === r.effectId) as (EffectInstance & { sentryTurn?: number }) | undefined
+    return alive(m) && m!.owner === state.activePlayer && !m!.inert && m!.life === 'active' && !!e && e.sentryTurn !== state.turn
+  })
+}
+
+/** After Avenging Force: the next Sentry model takes its one basic ranged attack (a decision it may pass), then the Control Phase. */
+function runSentry(state0: GameState, b: DataBundle, events: GameEvent[], next: (s: GameState, ev: GameEvent[]) => FlowOut): FlowOut {
+  let state = state0
+  for (const r of sentryDue(state)) {
+    // one attack per Sentry per turn: mark it, then offer the shots the model can make
+    state = { ...state, effects: state.effects.map((e) => (e.id === r.effectId ? ({ ...e, sentryTurn: state.turn } as EffectInstance) : e)) }
+    const m = state.models[r.modelId]!
+    const did = `d:${state.decisionSeq + 1}`
+    const options = attackOptions(state, b, r.modelId, did, true)
+    if (!options.length) continue
+    events.push({ type: 'WindowOpened', window: 'maintenance.effects', subjectId: r.modelId })
+    state = { ...state, window: 'maintenance.effects' }
+    const p = raise(state, {
+      player: m.owner, kind: 'chooseAttack', window: 'maintenance.effects', context: { modelId: r.modelId, data: { code: SENTRY, step: 'attack' } },
+      options: [...options, { id: 'skip', label: 'Hold fire', action: { type: 'pass', decisionId: did, player: m.owner } as Action }], canPass: true,
+    })
+    return { state: p.state, events, pending: p.pending }
+  }
+  return next(state, events)
 }
 
 function moveSamples(state: GameState, b: DataBundle, id: ModelId): Vec2[] {
@@ -70,11 +104,12 @@ function raiseMove(state: GameState, b: DataBundle, events: GameEvent[], id: Mod
   return { state: r.state, events, pending: r.pending }
 }
 
-function attackOptions(state: GameState, b: DataBundle, id: ModelId, did: string): DecisionOption[] {
+function attackOptions(state: GameState, b: DataBundle, id: ModelId, did: string, rangedOnly = false): DecisionOption[] {
   const m = state.models[id]!
   const out: DecisionOption[] = []
   const seen = new Set<string>()
   for (const w of weaponsOf(b, m)) {
+    if (rangedOnly && isMelee(w.w)) continue
     if (seen.has(w.weaponId)) continue
     seen.add(w.weaponId)
     for (const t of Object.values(state.models)) {

@@ -1,0 +1,21 @@
+{
+  "id": "cry.l.necro-recon",
+  "name": "Necrofactorium Command",
+  "faction": "cry",
+  "level": "recon",
+  "points": 30,
+  "leader": "cry.nekane",
+  "entries": [
+    {
+      "profile": "cry.hades"
+    },
+    {
+      "profile": "cry.chatterbane"
+    },
+    {
+      "profile": "cry.furies",
+      "size": 3
+    }
+  ],
+  "source": "Necrofactorium Command Starter"
+}

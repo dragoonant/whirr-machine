@@ -1,0 +1,18 @@
+[
+  {
+    "id": "men.f.blessing-of-the-first-gift",
+    "name": "Blessing of the First Gift",
+    "text": "Every enemy model in the caster's CTRL takes a POW 12 fire damage roll and then catches fire.",
+    "effect": [
+      {
+        "code": "blessingOfTheFirstGift"
+      }
+    ],
+    "scope": {
+      "who": "enemy",
+      "range": "CTRL"
+    },
+    "duration": "instant",
+    "verify": "Press preview gives only the gist; numbers are ours."
+  }
+]

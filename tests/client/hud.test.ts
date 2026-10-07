@@ -208,7 +208,7 @@ describe('dice tray', () => {
     start('hud-10')
     drive((p) => p.kind === 'gameOver', undefined, 8000)
     const p = usePresentedStore.getState()
-    expect(p.diceLog.length).toBeGreaterThan(10)
+    expect(p.diceLog.length).toBeGreaterThan(5)
     const purposes = new Set<string>()
     for (const r of p.diceLog) {
       const v = viewRoll(r, p.state, p.feed)

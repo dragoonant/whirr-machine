@@ -84,6 +84,25 @@ export function sumDistribution(n: number): number[] {
   return dist
 }
 
+/** pAttackHit when the lowest die is set aside after rolling n dice (Dark Power): the kept n-1 dice decide hit, crit and the sum. */
+export function pAttackHitDropLowest(n: number, bonus: number, target: number): { pHit: number; pCrit: number } {
+  if (n <= 1) return pAttackHit(n, bonus, target)
+  const total = 6 ** n
+  let hit = 0, crit = 0
+  for (let i = 0; i < total; i++) {
+    const d: number[] = []
+    let x = i
+    for (let k = 0; k < n; k++) { d.push((x % 6) + 1); x = Math.floor(x / 6) }
+    d.sort((a, c) => a - c)
+    const kept = d.slice(1)
+    const all1 = kept.every(v => v === 1)
+    const all6 = kept.length > 1 && kept.every(v => v === 6)
+    if (all1) continue
+    if (all6 || sum(kept) + bonus >= target) { hit++; if (hasDouble(kept)) crit++ }
+  }
+  return { pHit: hit / total, pCrit: crit / total }
+}
+
 export function pAttackHit(n: number, bonus: number, target: number): { pHit: number; pCrit: number } {
   if (n <= 0) return { pHit: 0, pCrit: 0 }
   const { total, outcomes: o } = outcomes(n)

@@ -1,0 +1,134 @@
+[
+  {
+    "id": "cry.w.rune-thrower",
+    "name": "Rune Thrower",
+    "type": "ranged",
+    "rng": 10,
+    "rof": "d3+1",
+    "pow": 10,
+    "qualities": [
+      "core.q.magical",
+      "core.q.pistol",
+      "cry.a.blessed"
+    ],
+    "abilities": [
+      "cry.a.banish"
+    ]
+  },
+  {
+    "id": "cry.w.hellspike",
+    "name": "Hellspike",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ],
+    "abilities": [
+      "cry.a.blood-shadow"
+    ]
+  },
+  {
+    "id": "cry.w.soul-cannon",
+    "name": "Soul Cannon",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "aoe": 2,
+    "pow": 15,
+    "blastPow": 8,
+    "location": "R",
+    "qualities": [
+      "core.q.magical"
+    ],
+    "abilities": [
+      "cry.a.wraith-shot",
+      "cry.a.wraith-shot-damage",
+      "cry.a.shadow-fire",
+      "cry.a.devour-soul"
+    ]
+  },
+  {
+    "id": "cry.w.death-claw",
+    "name": "Death Claw",
+    "type": "melee",
+    "rng": 1,
+    "pow": 17,
+    "location": "L",
+    "qualities": [
+      "core.q.shield",
+      "core.q.throw"
+    ]
+  },
+  {
+    "id": "cry.w.tusks",
+    "name": "Tusks",
+    "type": "melee",
+    "rng": 1,
+    "pow": 14,
+    "location": "H",
+    "abilities": [
+      "cry.a.critical-knockdown"
+    ]
+  },
+  {
+    "id": "cry.w.light-spiker",
+    "name": "Light Spiker",
+    "type": "ranged",
+    "rng": 11,
+    "rof": "d3",
+    "pow": 11,
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "cry.a.critical-corrosion",
+      "cry.a.volume-fire",
+      "cry.a.volume-fire-large",
+      "cry.a.volume-fire-damage",
+      "cry.a.volume-fire-damage-large"
+    ]
+  },
+  {
+    "id": "cry.w.eviscerator",
+    "name": "Eviscerator",
+    "type": "melee",
+    "rng": 2,
+    "pow": 13,
+    "abilities": [
+      "core.a.critical-shred"
+    ]
+  },
+  {
+    "id": "cry.w.wraith-strike",
+    "name": "Wraith Strike",
+    "type": "melee",
+    "rng": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ]
+  },
+  {
+    "id": "cry.w.stygian-abyss",
+    "name": "Stygian Abyss",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical"
+    ]
+  },
+  {
+    "id": "cry.w.marionette",
+    "name": "Marionette",
+    "type": "ranged",
+    "rng": 10,
+    "rof": 1,
+    "pow": 0,
+    "qualities": [
+      "core.q.magical"
+    ]
+  }
+]

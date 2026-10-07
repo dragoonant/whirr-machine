@@ -1,0 +1,16 @@
+[
+  {
+    "id": "cry.f.wrath-of-lyliss",
+    "name": "Wrath of Lyliss",
+    "text": "For a round, Nekane may take 1 damage point instead of paying a spell's focus cost (each spell once), and may take 1 damage point instead of spending a focus to boost an attack or damage roll.",
+    "effect": [
+      {
+        "code": "wrathOfLyliss"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round"
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "id": "men.feora",
+  "name": "Feora, Marshal of the Flameguard",
+  "faction": "men",
+  "type": "leader",
+  "character": true,
+  "keywords": [
+    "menoth",
+    "flameguard",
+    "warcaster"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "AAT": 6,
+    "MAT": 7,
+    "RAT": 6,
+    "DEF": 15,
+    "ARM": 17,
+    "ARC": 6,
+    "CTRL": 12
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 16
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.truth-consequence-flame",
+      "count": 2
+    },
+    {
+      "weapon": "men.w.truth-consequence-blade",
+      "count": 2
+    }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.resist-fire",
+    "men.a.stoke-the-pyre",
+    "men.a.incite-link"
+  ],
+  "spells": [
+    "kha.s.avenging-force",
+    "men.s.convection",
+    "men.s.fire-step",
+    "men.s.hex-hammer",
+    "men.s.incite"
+  ],
+  "feat": "men.f.blessing-of-the-first-gift",
+  "cost": 0,
+  "figure": {
+    "archetype": "caster"
+  },
+  "verify": "Box card not public yet: every number is a guess built from Feora, Priestess of the Flame (app check pending)."
+}

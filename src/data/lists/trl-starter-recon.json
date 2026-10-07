@@ -1,0 +1,14 @@
+{
+  "id": "trl.l.starter-recon",
+  "name": "Trollbloods Starter",
+  "faction": "trl",
+  "level": "recon",
+  "points": 28,
+  "leader": "trl.gunnbjorn",
+  "entries": [
+    { "profile": "trl.bomber" },
+    { "profile": "trl.braylen", "advanceDeploy": true },
+    { "profile": "trl.highwaymen", "size": 3, "advanceDeploy": true }
+  ],
+  "source": "Community card data, trimmed Army Box"
+}

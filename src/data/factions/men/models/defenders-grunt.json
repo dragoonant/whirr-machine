@@ -1,0 +1,40 @@
+{
+  "id": "men.defenders-grunt",
+  "name": "Flameguard Defender",
+  "faction": "men",
+  "type": "trooper",
+  "keywords": [
+    "menoth",
+    "flameguard"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 6,
+    "RAT": 5,
+    "DEF": 13,
+    "ARM": 13
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 1
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.flame-spear"
+    },
+    {
+      "weapon": "men.w.flameguard-shield"
+    }
+  ],
+  "abilities": [
+    "men.a.combined-melee-attack",
+    "men.a.set-defense",
+    "kha.a.shield-wall"
+  ],
+  "cost": 0,
+  "figure": {
+    "archetype": "infantry"
+  },
+  "verify": "Card not public yet: guesses from Temple Flameguard."
+}

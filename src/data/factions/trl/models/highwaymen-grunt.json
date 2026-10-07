@@ -1,0 +1,24 @@
+{
+  "id": "trl.highwaymen-grunt",
+  "name": "Highwayman",
+  "faction": "trl",
+  "type": "trooper",
+  "keywords": ["trollblood", "united-kriels", "trollkin", "highwaymen"],
+  "base": 40,
+  "stats": { "SPD": 6, "MAT": 0, "RAT": 6, "DEF": 12, "ARM": 14 },
+  "damage": { "track": "single", "boxes": 1 },
+  "weapons": [
+    { "weapon": "trl.w.pistol", "count": 2 }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.ambush",
+    "core.a.pathfinder",
+    "core.a.tough",
+    "core.a.prowl",
+    "trl.a.swift-hunter"
+  ],
+  "cost": 0,
+  "figure": { "archetype": "infantry" },
+  "verify": "Community data; the card lists no health, so 1 box with Tough. MAT 0: no melee weapon. Trollkin keyword assumed."
+}

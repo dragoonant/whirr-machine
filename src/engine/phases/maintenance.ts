@@ -5,6 +5,7 @@ import { expireEffects, gridLayoutsOf, hasAbility, immuneToContinuous, modelStat
 import type { GameEvent } from '../events'
 import { maintenanceFocus } from '../focus'
 import { afterDeaths } from '../scenario'
+import { isIncorporeal } from '../code-hooks'
 import type { DataBundle, GameState } from '../types'
 
 export interface PhaseOut { state: GameState; events: GameEvent[]; ended: boolean }
@@ -45,7 +46,7 @@ export function runMaintenance(state: GameState, bundle: DataBundle): PhaseOut {
     for (const cond of CONTINUOUS) {
       const m = s.models[id]!
       if (m.life !== 'active' || !m.conditions.includes(cond)) continue
-      if (immuneToContinuous(bundle, m, cond)) { const r = removeCondition(s, id, cond, 'effect'); s = r.state; events.push(...r.events); continue }
+      if (immuneToContinuous(bundle, m, cond) || isIncorporeal(s, bundle, id)) { const r = removeCondition(s, id, cond, 'effect'); s = r.state; events.push(...r.events); continue }
       const roll = rollNd6(s, 1, 'continuous', { ownerId: id })
       s = roll.state
       const expires = roll.dice[0]! <= 2 // 1-2 expires, 3-6 resolves (R4.2)

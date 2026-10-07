@@ -8,9 +8,11 @@ import type {
 import { EngineInvariantError } from './types'
 import type { DiceRolled, GameEvent } from './events'
 import { loadBundle } from '../data/index'
-import { abilitiesOf, meleeReach, prof, statOf, weaponRange, weaponsOf, isMelee } from './code-hooks'
-import { damageDistribution, expectedDamage as expDamage, pKill as pKillOf } from './damage'
-import { pAttackHit } from './dice'
+import { abilitiesOf, meleeReach, prof, statOf, weaponRange, rangeBonusOf, weaponsOf, isMelee } from './code-hooks'
+import { damageDistribution, expectedDamage as expDamage, pKill as pKillOf, spiralView, transferPreview as transferPreviewRows } from './damage'
+import { battlegroupInfo, furyInfo, leechPreviewInfo, thresholdInfo } from './fury'
+import { frenzyTarget as frenzyTargetInfo } from './phases/frenzy'
+import { pAttackHit, pAttackHitDropLowest } from './dice'
 import { effectsOn } from './effects'
 import { dist, isOnTable } from './geometry'
 import { defModifiers, losReport } from './los'
@@ -20,6 +22,7 @@ import { raiseGameOver, type FlowResult } from './pending'
 import { activationLegalActions, activeStar, declareAttack, handleActivationAction, isChargeAttack, moverInfo, previewDamage, type DamagePreview } from './phases/activation'
 import { controlReport } from './scenario'
 import { answerSetup, createInitialState, isSetupDecision, setupLegalActions } from './setup'
+import { housekeeping } from './housekeeping'
 import { answerControlDecision, answerMaintenanceDecision, endTurn, flowLegalActions, isControlDecision, isMaintenanceDecision } from './turnflow'
 
 export * from './types'
@@ -102,7 +105,7 @@ export function step(state: GameState, action: Action): StepResult {
   const r = guarded(state, action)
   if ('rejection' in r) return rejectedResult(state, action, r.rejection)
   if (r.state === state) return { state, events: r.events, pending: state.pending } // gameOver ack: nothing changes
-  return finish({ ...r.state, log: [...state.log, action] }, r.events)
+  return finish(housekeeping({ ...r.state, log: [...state.log, action] }), r.events)
 }
 
 export function validate(state: GameState, action: Action): Rejection | null {
@@ -227,7 +230,6 @@ export interface TransferPreviewRow {
 export interface FrenzyTargetInfo { tiedIds: ModelId[]; distance: number; friendly: boolean; canCharge: boolean; reason?: 'noTarget' | 'cannotCharge' | 'cannotActivate' }
 export interface LeechPlan { from: Record<ModelId, number>; self: number }
 export interface LeechPreview { gained: number; selfDamage: number; after: number; pFrenzyAfter: Record<ModelId, number> }
-const notImplementedM9 = (name: string): never => { throw new Error(`query.${name}: not implemented (M9)`) }
 export interface ControlReport {
   elements: Record<Id, ElementControl>
   vpNow: Record<PlayerId, number>
@@ -293,11 +295,11 @@ export const query = {
     if ('rejection' in dec) return emptyPreview(dec.rejection)
     const atk = dec.state.attack as AttackContext
     const at = dec.state.models[attackerId]!
-    const statName: Stat = atk.kind === 'melee' || atk.kind === 'power' ? 'MAT' : atk.kind === 'arcane' ? 'AAT' : 'RAT'
+    const statName: Stat = atk.kind === 'melee' || atk.kind === 'power' ? 'MAT' : atk.kind === 'arcane' || atk.spellId ? 'AAT' : 'RAT'
     const statv = statOf(dec.state, b, attackerId, statName, { atk: { kind: atk.kind } })
     const bonus = statv + sumMods(atk.mods)
     const diceN = atk.dice + (opts.boostAttack ? 1 : 0)
-    const roll = atk.autoMiss ? { pHit: 0, pCrit: 0 } : atk.autoHit ? { pHit: 1, pCrit: 0 } : pAttackHit(diceN, bonus, atk.hitTarget)
+    const roll = atk.autoMiss ? { pHit: 0, pCrit: 0 } : atk.autoHit ? { pHit: 1, pCrit: 0 } : (atk as { x?: { flags?: Record<string, unknown> } }).x?.flags?.dropLowestAtk ? pAttackHitDropLowest(diceN, bonus, atk.hitTarget) : pAttackHit(diceN, bonus, atk.hitTarget)
     // damage: the same damage.beforeRoll step the attack runs (additional dice, flat bonuses, Armor-Piercing, Resistance)
     const boostDmg = !!opts.boostDamage || chargeAttack
     const distOf = (d: DamagePreview, boost: boolean) => damageDistribution({
@@ -330,7 +332,7 @@ export const query = {
     const spd = statOf(state, b, modelId, 'SPD')
     const reach = meleeReach(state, b, modelId)
     const ws = weaponsOf(b, m)
-    const ranged = ws.filter((w) => !isMelee(w.w) && !m.crippled.includes(w.loc)).map((w) => weaponRange(w.w))
+    const ranged = ws.filter((w) => !isMelee(w.w) && !m.crippled.includes(w.loc)).map((w) => weaponRange(w.w, rangeBonusOf(state, modelId)))
     const hasMelee = ws.some((w) => isMelee(w.w))
     return {
       advance: spd, run: spd + 5, charge: hasMelee ? spd + 3 + reach : spd + 3,
@@ -382,25 +384,21 @@ export const query = {
   /** Power-attack collateral/slam POW: 12 when the attacker's base is not larger than the target's, else 14. */
   powerAttackPow(attackerBase: BaseMm, targetBase: BaseMm): number { return attackerBase <= targetBase ? 12 : 14 },
 
-  // ---------- M9 fury queries (81 D.2). Stubs until E7: focus models answer kind null; fury models throw. ----------
+  // ---------- M9 fury queries (81 D.2): bodies in fury.ts, damage.ts and phases/frenzy.ts ----------
   /** Fury pool, cap and whether a beast can be forced right now. */
-  fury(state: GameState, modelId: ModelId): FuryInfo {
-    const m = state.models[modelId]
-    if (!m || m.fury === undefined) return { kind: null, fury: 0, cap: 0, capStat: 'ARC', forceable: false, room: 0 }
-    return notImplementedM9('fury')
-  },
+  fury(state: GameState, modelId: ModelId): FuryInfo { return furyInfo(state, bundleFor(state), modelId) },
   /** A warlock's battlegroup for the HUD fury bars. */
-  battlegroup(_state: GameState, _warlockId: ModelId): BattlegroupInfo { return notImplementedM9('battlegroup') },
+  battlegroup(state: GameState, warlockId: ModelId): BattlegroupInfo { return battlegroupInfo(state, bundleFor(state), warlockId) },
   /** Threshold odds: pFrenzy = P(2d6 > THR - fury - extraFury). */
-  threshold(_state: GameState, _beastId: ModelId, _extraFury = 0): ThresholdInfo { return notImplementedM9('threshold') },
+  threshold(state: GameState, beastId: ModelId, extraFury = 0): ThresholdInfo { return thresholdInfo(state, bundleFor(state), beastId, extraFury) },
   /** The life spiral as the spiral view draws it. */
-  spiral(_state: GameState, _modelId: ModelId): SpiralView { return notImplementedM9('spiral') },
+  spiral(state: GameState, modelId: ModelId): SpiralView { return spiralView(state, bundleFor(state), modelId) },
   /** One row per battlegroup beast: what a transfer of `points` would do. */
-  transferPreview(_state: GameState, _warlockId: ModelId, _points: number): TransferPreviewRow[] { return notImplementedM9('transferPreview') },
+  transferPreview(state: GameState, warlockId: ModelId, points: number): TransferPreviewRow[] { return transferPreviewRows(state, bundleFor(state), warlockId, points) },
   /** Who a frenzying beast would charge (prediction for the AI and UI). */
-  frenzyTarget(_state: GameState, _beastId: ModelId): FrenzyTargetInfo { return notImplementedM9('frenzyTarget') },
+  frenzyTarget(state: GameState, beastId: ModelId): FrenzyTargetInfo { return frenzyTargetInfo(state, bundleFor(state), beastId) },
   /** Result of a leech plan before it is answered. */
-  leechPreview(_state: GameState, _warlockId: ModelId, _plan: LeechPlan): LeechPreview { return notImplementedM9('leechPreview') },
+  leechPreview(state: GameState, warlockId: ModelId, plan: LeechPlan): LeechPreview { return leechPreviewInfo(state, bundleFor(state), warlockId, plan) },
 }
 
 // ---------- describe-numbers helpers (format engine numbers for prompts; no rules arithmetic) ----------
@@ -445,15 +443,16 @@ function decisionTitle(state: GameState, pd: PendingDecision): string {
     case 'chooseMovement': return 'pick a Normal Movement option'
     case 'moveModel':
       if (data.code === 'avengingForce') return 'Avenging Force advance'
+      if ((data.trigger as { ctx?: string } | undefined)?.ctx === 'ward') return 'answer the ward with an advance'
       if (data.trigger) return 'optional move'
       if (mode === 'slam') return `slam toward ${target || 'the target'}`
       if (mode === 'trample') return 'trample in a straight line'
       if (pd.constraints?.toward) return `charge toward ${target || 'the target'}`
       return 'move'
     case 'chargeTarget': return mode === 'slam' ? 'pick a slam target' : 'pick a charge target'
-    case 'placeTroopers': return 'place the rest of the unit'
+    case 'placeTroopers': return data.code === 'ambush' ? 'bring in the Ambush models' : 'place the rest of the unit'
     case 'chooseCombatAction': return 'pick a Combat Action'
-    case 'chooseAttack': return data.code === 'avengingForce' ? 'Avenging Force attack' : 'pick an attack'
+    case 'chooseAttack': return data.code === 'avengingForce' ? 'Avenging Force attack' : data.code === 'sentry' ? 'Sentry: take the Rapid Fire shot' : 'pick an attack'
     case 'combinedAttack': return 'set up a combined attack'
     case 'channel': return 'cast directly or through a channeller'
     case 'castSpell': return 'cast a spell'
@@ -473,6 +472,8 @@ function decisionTitle(state: GameState, pd: PendingDecision): string {
     case 'abilityChoice':
       if (data.code === 'powerfulAttack') return 'use Powerful Attack?'
       if (data.code === 'prey') return 'pick the prey'
+      if (data.code === 'startTrigger') return 'use an ability before moving?'
+      if (data.code === 'declOpt') return 'use the shot ability?'
       return 'make a choice'
     case 'gameOver': return 'game over'
     case 'leech': return 'leech fury'

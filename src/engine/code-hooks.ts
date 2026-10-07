@@ -3,19 +3,21 @@
 import type { GameEvent } from './events'
 import type { CodeHookRegistry, ConditionNode, EffectNode, HookContext, HookResult } from './hooks'
 import { computeStat } from './dice'
-import { effectsOn, hasCondition } from './effects'
+import { effectsOn, hasCondition, type EffectExtras } from './effects'
 import { baseRadius, dist, isOnTable } from './geometry'
 import { modelDistance, within } from './measure'
 import { insideCoverOf, terrainResistance } from './terrain'
+import type { LosOptions } from './los'
 import type { GridLayout } from './damage'
 import type { HitLookups } from './movement'
 import type {
   AttackContext, DamageType, DataBundle, EffectInstance, GameState, Id, ModelId, ModelState, Mod, Stat, StatMod, Vec2,
 } from './types'
+import { ASPECT_LETTER } from './types'
 import { cygnarHooks, cygnarPlugins } from './factions/cygnar'
 import { khadorHooks, khadorPlugins } from './factions/khador'
 import { trollbloodsHooks, trollbloodsPlugins } from './factions/trollbloods'
-import { circleHooks, circlePlugins } from './factions/circle'
+import { circleHooks, circlePlugins, deathPoweredArm, scythingTouchArmPenalty, treewalkerDefBonus } from './factions/circle'
 import { cryxHooks, cryxPlugins } from './factions/cryx'
 import { menothHooks, menothPlugins } from './factions/menoth'
 
@@ -27,7 +29,7 @@ export const prof = (b: DataBundle, m: Pick<ModelState, 'profileId'>): Rec => re
 // ---------- runtime attack scratch (lives in state.attack.x; JSON-safe) ----------
 export interface DmgJob { id: string; targetId: ModelId; kind: 'direct' | 'blast'; pow: number; types: DamageType[]; autoBoost?: boolean; unboostable?: boolean }
 export interface AtkX {
-  stage: 'start' | 'powerfulWait' | 'boostWait' | 'roll' | 'dmgNext' | 'dmgBoostWait' | 'dmgRoll' | 'pfWait' | 'applyDmg' | 'boxWait' | 'resolved' | 'trigWait' | 'moveWait' | 'done'
+  stage: 'start' | 'declOptWait' | 'powerfulWait' | 'boostWait' | 'roll' | 'dmgNext' | 'dmgBoostWait' | 'dmgRoll' | 'pfWait' | 'applyDmg' | 'xferWait' | 'boxWait' | 'resolved' | 'trigWait' | 'moveWait' | 'done'
   weaponId?: Id // weapon or spell record id
   wloc?: string // location letter of the weapon instance used
   group?: string // chosen Attack Type
@@ -77,10 +79,21 @@ export function weaponsOf(b: DataBundle, m: Pick<ModelState, 'profileId'>): Weap
 }
 export const isMelee = (w: Rec): boolean => w.type === 'melee'
 export const isSpray = (w: Rec): boolean => typeof w.rng === 'string' && /^SP/i.test(w.rng)
-export const weaponRange = (w: Rec): number => (typeof w.rng === 'number' ? w.rng : isSpray(w) ? Number(String(w.rng).slice(2)) : 0)
+export const weaponRange = (w: Rec, bonus = 0): number =>
+  (typeof w.rng === 'number' ? w.rng : isSpray(w) ? Number(String(w.rng).slice(2)) : 0) + (w.type === 'melee' || w.rng === undefined ? 0 : bonus)
+/** Extra RNG a model's ranged weapons get from live effects (Snipe, Far Strike): the RNG mods on its effects. */
+export function rangeBonusOf(state: GameState, id: ModelId): number {
+  let n = 0
+  for (const e of effectsOn(state, id)) for (const m of e.mods) if (m.stat === 'RNG' && m.mode === 'add') n += m.value
+  return n
+}
+/** The attack range of a ranged weapon for this attacker, live RNG effects included (spells never get it). */
+export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec): number =>
+  weaponRange(w, w.recordType === 'spell' || w.kind === 'spell' ? 0 : rangeBonusOf(state, attackerId))
 export const weaponCrippled = (m: ModelState, loc: string): boolean => loc !== '-' && m.crippled.includes(loc)
 export const layoutsOf = (b: DataBundle, m: ModelState): GridLayout[] | undefined => {
   const d = prof(b, m).damage
+  if (d && d.track === 'spiral') return [{ id: 'main', columns: (d.branches as string[]).map((x) => x.toLowerCase()), spiral: true }] // M9: aspects as lowercase letters
   return d && d.track === 'grid' ? [{ id: 'main', columns: d.columns as string[] }] : undefined
 }
 /** Melee reach of a model (0 when it has no melee weapon or cannot engage). */
@@ -100,16 +113,24 @@ export function touching(a: ModelState, c: ModelState): boolean { return modelDi
 // ---------- scopes, passives, auras ----------
 function abilityList(b: DataBundle, m: ModelState): Id[] { return (prof(b, m).abilities ?? []) as Id[] }
 
+/** CTRL for scope tests: profile value plus effect mods only. Never reads auras, so an aura scope cannot recurse into statOf. */
+function ctrlForScope(state: GameState, b: DataBundle, src: ModelState): number {
+  const base = ((prof(b, src).stats ?? {}) as Record<string, number>).CTRL ?? 0
+  return computeStat('CTRL', base, effectsOn(state, src.id).flatMap((e) => e.mods.filter((x) => x.stat === 'CTRL')))
+}
+
 function scopeMatch(state: GameState, b: DataBundle, src: ModelState, cand: ModelState, scope: Rec | undefined): boolean {
   const who = scope?.who ?? 'self'
   if (who === 'self') return src.id === cand.id
   if (who === 'unit') return !!src.unitId && src.unitId === cand.unitId
   if (who === 'warEngines') return cand.type === 'warEngine' && cand.owner === src.owner
-  if (who === 'friendly') {
+  if (who === 'friendly' || who === 'warbeasts') {
     if (cand.owner !== src.owner) return false
+    // 'warbeasts': the beasts of the carrier's own battlegroup (81 E7)
+    if (who === 'warbeasts' && (cand.type !== 'beast' || cand.controllerId !== src.id || cand.wild)) return false
     const r = scope?.range
     if (r !== undefined && r !== null) {
-      const lim = r === 'CTRL' ? statOf(state, b, src.id, 'CTRL') : (r as number)
+      const lim = r === 'CTRL' ? ctrlForScope(state, b, src) : r === 'melee' ? 1 : (r as number)
       if (!within(src, cand, lim)) return false
     }
     if (scope?.filter && !evalCond(state, b, scope.filter, { selfId: cand.id, srcId: src.id })) return false
@@ -151,6 +172,8 @@ export function abilitiesOf(state: GameState, b: DataBundle, id: ModelId): Id[] 
   const me = state.models[id]
   if (!me) return []
   const out = new Set<Id>(abilityList(b, me))
+  // abilities an effect granted for a while (Soul Phase, Blood Shadow, Fight to the Last): the effect carries `grants`
+  for (const e of effectsOn(state, id)) for (const g of ((e as EffectInstance & { grants?: Id[] }).grants ?? [])) out.add(g)
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as EffectNode[]) {
       if ('op' in n && n.op === 'grantAbility' && n.ability) out.add(n.ability)
@@ -165,7 +188,38 @@ export function flagsOf(state: GameState, b: DataBundle, id: ModelId): Set<strin
   for (const a of abilitiesOf(state, b, id)) {
     for (const n of (rec(b, a).effect ?? []) as Rec[]) if (n.code === 'coreFlag' && n.params?.flag) f.add(n.params.flag)
   }
+  // Incorporeal is lost until the model's next activation once it makes a melee or ranged attack (cryx.md)
+  if (f.has('incorporeal') && effectsOn(state, id).some((e) => e.sourceId === INCORPOREAL_LOST)) f.delete('incorporeal')
+  // an effect that forbids Tough (Grievous Wounds) removes it
+  if (f.has('tough') && effectsOn(state, id).some((e) => e.forbid?.includes('tough'))) f.delete('tough')
   return f
+}
+export const INCORPOREAL_LOST = 'core.incorporeal-lost'
+/** A coreFlag from the model's own profile abilities or an effect's grants; never reads auras, so scope filters may call it. */
+export function ownFlag(state: GameState, b: DataBundle, id: ModelId, flag: string): boolean {
+  const m = state.models[id]
+  if (!m) return false
+  const ids = [...abilityList(b, m), ...effectsOn(state, id).flatMap((e) => (e as EffectInstance & { grants?: Id[] }).grants ?? [])]
+  return ids.some((a) => ((rec(b, a).effect ?? []) as Rec[]).some((n) => n.code === 'coreFlag' && n.params?.flag === flag))
+}
+/** Cheap Incorporeal test (profile abilities plus effect grants; auras never grant it), used inside LOS and damage loops. */
+export function isIncorporeal(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!m) return false
+  const es = effectsOn(state, id)
+  const ids = [...abilityList(b, m), ...es.flatMap((e) => (e as EffectInstance & { grants?: Id[] }).grants ?? [])]
+  const has = ids.some((a) => ((rec(b, a).effect ?? []) as Rec[]).some((n) => n.code === 'coreFlag' && n.params?.flag === 'incorporeal'))
+  return has && !es.some((e) => e.sourceId === INCORPOREAL_LOST)
+}
+/** LOS options every call site shares: Incorporeal models never intervene, Treewalker sees through forests. */
+export function losOptsFor(state: GameState, b: DataBundle, viewerId: ModelId, extra: LosOptions = {}): LosOptions {
+  const v = state.models[viewerId]
+  // Precision Strike: friendly models never block this viewer's LOS
+  const seeThroughFriends = !!v && effectsOn(state, viewerId).some((e) => (e as EffectInstance & EffectExtras).ignoreFriendly)
+  return {
+    skipModel: (m) => isIncorporeal(state, b, m.id) || (seeThroughFriends && !!v && m.owner === v.owner),
+    ignoreForest: hasIgnore(state, b, viewerId, 'forest'), ...extra,
+  }
 }
 export const hasFlag = (state: GameState, b: DataBundle, id: ModelId, flag: string): boolean => flagsOf(state, b, id).has(flag)
 
@@ -196,6 +250,19 @@ export function statOf(state: GameState, b: DataBundle, id: ModelId, stat: Stat,
       if (n.op === 'modStat' && n.stat === stat) mods.push({ stat, value: n.value ?? 0, mode: n.mode ?? 'add' })
     }
   }
+  // conditions and rule seams the data cannot say (circle.md, cryx.md)
+  if (stat === 'DEF' && hasCondition(state, m, 'shadowBind')) mods.push({ stat, value: -3, mode: 'add' })
+  if ((stat === 'DEF' || stat === 'MAT') && hasCondition(state, m, 'blind')) mods.push({ stat, value: -4, mode: 'add' })
+  if (stat === 'ARM') {
+    const dp = deathPoweredArm(state, b, id)
+    if (dp) mods.push({ stat, value: dp, mode: 'add' })
+    const st = o.skipSpells ? 0 : scythingTouchArmPenalty(state, id)
+    if (st) mods.push({ stat, value: st, mode: 'add' })
+  }
+  if (stat === 'DEF' && o.atk) {
+    const tw = treewalkerDefBonus(state, b, id, o.atk.kind)
+    if (tw) mods.push({ stat, value: tw, mode: 'add' })
+  }
   if (stat === 'DEF' && (m.crippled.includes('M') || m.inert)) mods.push({ stat, value: 5, mode: 'set' })
   if (stat === 'ARM' && m.inert) {
     // inert war-engines lose Shield / Buckler bonuses (R8.9)
@@ -221,6 +288,8 @@ export function resistsDamageType(state: GameState, b: DataBundle, id: ModelId, 
   for (const p of appliedPassives(state, b, id)) {
     for (const n of (p.ability.effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
   }
+  // resistance an effect carries (Fortification: Resistance: Blast) in its `resist` list
+  for (const e of effectsOn(state, id)) if (((e as EffectInstance & { resist?: DamageType[] }).resist ?? []).some((t) => types.includes(t))) return true
   for (const a of abilityList(b, me)) for (const n of (rec(b, a).effect ?? []) as Rec[]) if (n.op === 'grantResistance' && types.includes(n.damageType)) return true
   return false
 }
@@ -238,8 +307,10 @@ export function lookups(state: GameState, b: DataBundle): HitLookups {
   return {
     arm: (id) => armOf(state, b, id),
     layouts: (id) => (state.models[id] ? layoutsOf(b, state.models[id]!) : undefined),
-    tough: (id) => hasFlag(state, b, id, 'tough'),
+    tough: (id) => hasFlag(state, b, id, 'tough') && !effectsOn(state, id).some((e) => e.forbid?.includes('tough')),
     noKnockdown: (id) => cannotKnockDown(state, b, id),
+    immovable: (id) => isIncorporeal(state, b, id),
+    noMundaneDamage: (id) => isIncorporeal(state, b, id),
   }
 }
 
@@ -286,7 +357,7 @@ export function evalCond(state: GameState, b: DataBundle, node: ConditionNode | 
     case 'isEnemy': return !!sm && !!state.models[env.selfId] && sm.owner !== state.models[env.selfId]!.owner
     case 'isFriendly': return !!sm && !!state.models[env.selfId] && sm.owner === state.models[env.selfId]!.owner
     case 'modelType': return !!sm && sm.type === n.value
-    case 'keyword': return !!sm && ((prof(b, sm).keywords ?? []) as string[]).includes(n.value) || (!!sm && n.value === 'construct' && hasFlag(state, b, sm.id, 'construct'))
+    case 'keyword': return !!sm && (((prof(b, sm).keywords ?? []) as string[]).includes(n.value) || (n.value === 'construct' && ownFlag(state, b, sm.id, 'construct')) || (n.value === 'incorporeal' && isIncorporeal(state, b, sm.id)))
     case 'baseAtLeast': return !!sm && sm.base >= n.value
     case 'baseAtMost': return !!sm && sm.base <= n.value
     case 'hasCondition': return !!sm && hasCondition(state, sm, n.value)
@@ -307,11 +378,28 @@ export function evalCond(state: GameState, b: DataBundle, node: ConditionNode | 
     case 'weaponLocation': return env.atk?.x.wloc === n.value
     case 'inCtrl': { const c = state.models[env.srcId ?? env.selfId]; return !!c && !!sm && within(c, sm, statOf(state, b, c.id, 'CTRL')) }
     case 'engaged': return false
+    case 'living': return !!sm && isLivingModel(state, b, sm.id)
+    case 'undead': return !!sm && ((prof(b, sm).keywords ?? []) as string[]).includes('undead')
+    case 'hasAbility': return !!sm && abilitiesOf(state, b, sm.id).includes(n.value)
+    case 'hasEffect': return !!sm && effectsOn(state, sm.id).some((e) => e.sourceId === n.value || e.name === n.value)
+    case 'tokensAtLeast': { const t = sm?.tokens ?? {}; const have = n.token ? (t as Record<string, number>)[n.token] ?? 0 : Object.values(t).reduce((a, v) => a + (v ?? 0), 0); return have >= (n.value ?? 1) }
+    case 'furyAtLeast': return !!sm && (sm.fury ?? 0) >= (n.value ?? 1)
+    case 'aspectCrippled': return !!sm && sm.crippled.includes(ASPECT_LETTER[n.value as keyof typeof ASPECT_LETTER] ?? '')
+    case 'frenzied': return !!sm && !!sm.frenzied
+    case 'inBattlegroup': { const w = state.models[env.srcId ?? env.selfId]; return !!sm && !!w && sm.type === 'beast' && sm.controllerId === w.id }
     case 'inLos': return true
     case 'isCharacter': return !!sm && !!prof(b, sm).character
     case 'elevatedOver': return !!sm && !!env.targetId && sm.elev - (state.models[env.targetId]?.elev ?? 0) >= 1
     default: return false
   }
+}
+
+/** Living = neither a construct nor undead (RB token rule). */
+export function isLivingModel(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!m) return false
+  const k = (prof(b, m).keywords ?? []) as string[]
+  return !ownFlag(state, b, id, 'construct') && !k.includes('construct') && !k.includes('undead')
 }
 
 export function concealedNow(state: GameState, m: ModelState): boolean {
@@ -385,7 +473,7 @@ export function setModel(s: GameState, m: ModelState): GameState { return { ...s
 export function setAtk(s: GameState, a: AtkCtx): GameState { return { ...s, attack: a as AttackContext } }
 
 // ---------- activation scratch (lives in state.activation.x; JSON-safe) ----------
-export interface MoveReq { modelId: ModelId; dist: number; mode: 'advance' | 'place'; toward?: ModelId; abilityId: Id; endsActivation?: boolean; owner: 'A' | 'B'; optional?: boolean }
+export interface MoveReq { modelId: ModelId; dist: number; mode: 'advance' | 'place'; toward?: ModelId; abilityId: Id; endsActivation?: boolean; owner: 'A' | 'B'; optional?: boolean; cost?: { focus: number } }
 export interface ActX {
   stage: 'start' | 'movement' | 'move' | 'chargeTarget' | 'chargeMove' | 'slamTarget' | 'slamMove' | 'trampleMove' | 'place' | 'combat' | 'endMove' | 'done'
   queue: ModelId[] // troopers still to take their Combat Action
@@ -409,6 +497,9 @@ export interface ActX {
   powerKind?: import('./types').PowerAttackKind
   slam?: { targetId: ModelId; moved: number } // R7.12: the declared slam target and the inches moved toward it
   endMoved: ModelId[]
+  startQueue?: string[] // optional activation.start abilities still to be offered ("<modelId>|<abilityId>")
+  extraMelee?: Record<ModelId, number> // Blood Rage: extra melee attacks bought with corpse tokens
+  ward?: { cont: unknown; unitForfeit: ModelId[]; queue: { effectId: string; modelId: ModelId }[] } // Admonition wards still to answer after a move
 }
 export type ActCtx = import('./types').ActivationContext & { x: ActX }
 export const actOf = (s: GameState): ActCtx | null => (s.activation as ActCtx | null)

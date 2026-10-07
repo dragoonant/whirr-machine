@@ -362,7 +362,7 @@ export interface PathCheck {
  */
 export function validateAdvancePath(
   state: GameState, modelId: Id, waypoints: Vec2[], maxMove: number,
-  opts: { pathfinder?: boolean; flying?: boolean; ignoreIds?: Id[] } = {},
+  opts: { pathfinder?: boolean; flying?: boolean; ignoreIds?: Id[]; passModels?: boolean | Id[] } = {},
 ): PathCheck {
   const m = state.models[modelId]!
   const r = baseRadius(m.base)
@@ -393,7 +393,9 @@ export function validateAdvancePath(
     if (l < 1e-9) continue
     const d = norm(sub(b, a))
     if (!baseOnTable(state, b, r)) return fail('E_PLACEMENT', 'path leaves the table')
-    const sw = sweepFrom(state, m, a, d, l, { passThrough: 'none', obstacles: 'ignore', ignoreObstructions: opts.flying, ignoreIds: [...ignore], clampTable: false })
+    // ghostly movers pass through every base on the way (the end point is still checked below)
+    const sweepIgnore = opts.passModels === true ? [...ignore, ...Object.keys(state.models)] : Array.isArray(opts.passModels) ? [...ignore, ...opts.passModels] : [...ignore]
+    const sw = sweepFrom(state, m, a, d, l, { passThrough: 'none', obstacles: 'ignore', ignoreObstructions: opts.flying, ignoreIds: sweepIgnore, clampTable: false })
     if (sw.stoppedBy.kind === 'model') return fail('E_PATH_BLOCKED', `blocked by ${sw.stoppedBy.id}`)
     if (sw.stoppedBy.kind === 'obstruction') return fail('E_PATH_BLOCKED', `blocked by ${sw.stoppedBy.id}`)
     if (!opts.pathfinder) {

@@ -1,0 +1,152 @@
+[
+  {
+    "id": "trl.a.field-marshal-run-and-gun",
+    "name": "Field Marshal [Run & Gun]",
+    "text": "Warbeasts in this model's battlegroup have Run & Gun.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [{ "op": "grantAbility", "ability": "trl.a.run-and-gun" }],
+    "scope": { "who": "warbeasts" },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.run-and-gun",
+    "name": "Run & Gun",
+    "text": "After destroying an enemy with a ranged attack, this model may advance its full speed at the end of its activation.",
+    "kind": "triggered",
+    "trigger": "activation.end",
+    "effect": [{ "code": "runAndGun" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "trl.a.resourceful",
+    "name": "Resourceful",
+    "text": "Upkeep spells this model has running on its own battlegroup cost no fury to keep up.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "code": "coreFlag", "params": { "flag": "resourceful" } }],
+    "scope": { "who": "self" },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.regeneration",
+    "name": "Regeneration [d3]",
+    "text": "Once per activation, unless it ran this turn, this model may be forced to heal d3 damage.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "effect": [{ "code": "regenerate" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "optional": true,
+    "limit": "oncePerActivation",
+    "cost": { "focus": 0, "forced": 1 }
+  },
+  {
+    "id": "trl.a.snacking",
+    "name": "Snacking",
+    "text": "When this model boxes a living model with a melee attack, it may remove that model from play and heal d3 damage.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "code": "coreFlag", "params": { "flag": "snacking" } }],
+    "scope": { "who": "self" },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.dodge",
+    "name": "Dodge",
+    "text": "When an enemy attack misses this model, it may advance 2 inches after the attack resolves.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        { "not": { "test": "hit" } },
+        { "test": "isEnemy", "subject": "attacker" }
+      ]
+    },
+    "effect": [{ "op": "advance", "dist": 2, "direction": "any" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "trl.a.leadership-highwaymen",
+    "name": "Leadership [Trollkin Highwaymen]",
+    "text": "Friendly Trollkin Highwaymen within 10 inches have Dodge.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [{ "op": "grantAbility", "ability": "trl.a.dodge" }],
+    "scope": {
+      "who": "friendly",
+      "range": 10,
+      "filter": { "test": "keyword", "value": "highwaymen" }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.swift-hunter",
+    "name": "Swift Hunter",
+    "text": "After a basic ranged attack destroys an enemy, this model may advance 2 inches.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": { "code": "destroyedEnemyWithBasicRanged" },
+    "effect": [{ "op": "advance", "dist": 2, "direction": "any" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "trl.a.critical-devastation",
+    "name": "Critical Devastation",
+    "text": "On a critical hit, roll one d6 and throw every model hit that many inches directly away from the attacker, farthest first. Other models in the blast take a POW 8 damage roll.",
+    "kind": "specialAttack",
+    "trigger": "attack.crit",
+    "effect": [{ "code": "criticalDevastation" }],
+    "scope": { "who": "target" },
+    "duration": "instant"
+  },
+  {
+    "id": "trl.a.forced-reload",
+    "name": "Forced Reload [1]",
+    "text": "Force this model once to make one more shot with this weapon during the combat action.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "code": "coreFlag", "params": { "flag": "forcedReload" } }],
+    "scope": { "who": "self" },
+    "duration": "continuous"
+  },
+  {
+    "id": "trl.a.guided-fire-die",
+    "name": "Guided Fire (extra die)",
+    "text": "While Guided Fire covers this model, its ranged attack rolls with this weapon use one extra die.",
+    "kind": "specialAttack",
+    "trigger": "attack.beforeRoll",
+    "effect": [{ "code": "guidedFireDie" }],
+    "scope": { "who": "self" },
+    "duration": "instant"
+  },
+  {
+    "id": "trl.a.both-barrels",
+    "name": "Both Barrels",
+    "text": "Replaces the initial attacks with one attack that adds 4 to its damage roll.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      { "op": "modRoll", "roll": "damage", "value": 4 },
+      { "op": "forbid", "what": "weaponAttacks" }
+    ],
+    "scope": { "who": "self" },
+    "duration": "instant"
+  },
+  {
+    "id": "trl.a.luck",
+    "name": "Luck",
+    "text": "Once per attack roll, a missed roll with this weapon is rolled again.",
+    "kind": "specialAttack",
+    "trigger": "attack.miss",
+    "effect": [{ "code": "luck" }],
+    "scope": { "who": "self" },
+    "duration": "instant"
+  }
+]

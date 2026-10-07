@@ -1,0 +1,64 @@
+[
+  {
+    "id": "trl.s.guided-fire",
+    "name": "Guided Fire",
+    "text": "This turn, warbeasts of Gunnbjorn's battlegroup inside his CTRL roll one extra die on their ranged attack rolls.",
+    "cost": 3,
+    "rng": "SELF",
+    "aoe": "CTRL",
+    "dur": "TURN",
+    "offensive": false,
+    "effect": [{ "code": "guidedFire" }],
+    "scope": { "who": "warbeasts", "range": "CTRL" },
+    "verify": "Community data; open app check."
+  },
+  {
+    "id": "trl.s.rock-wall",
+    "name": "Rock Wall",
+    "text": "Raise a straight stone wall completely inside Gunnbjorn's CTRL, clear of bases and terrain. It is an obstacle that gives cover; a large base touching it tears it down.",
+    "cost": 2,
+    "rng": "CTRL",
+    "dur": "UP",
+    "offensive": false,
+    "effect": [{ "code": "rockWall" }],
+    "scope": { "who": "point" },
+    "verify": "Duration Up as the data says (older cards: one turn); wall size 4 by 1 inch is a guess."
+  },
+  {
+    "id": "trl.s.sentry",
+    "name": "Sentry",
+    "text": "A friendly Faction model gains Rapid Fire: it makes one basic ranged attack in your Maintenance Phase.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [{ "code": "sentry" }],
+    "scope": { "who": "friendly", "count": 1 },
+    "verify": "Community data; open app check."
+  },
+  {
+    "id": "trl.s.snipe",
+    "name": "Snipe",
+    "text": "A friendly Faction model or unit has its ranged weapons reach 3 inches further.",
+    "cost": 2,
+    "rng": 6,
+    "dur": "UP",
+    "offensive": false,
+    "effect": [{ "op": "modStat", "stat": "RNG", "value": 3 }],
+    "scope": { "who": "friendly", "count": 1 },
+    "verify": "Community data; open app check."
+  },
+  {
+    "id": "trl.s.far-strike",
+    "name": "Far Strike",
+    "text": "This turn the caster's ranged weapons reach 3 inches further.",
+    "cost": 1,
+    "rng": "SELF",
+    "dur": "TURN",
+    "offensive": false,
+    "animus": true,
+    "effect": [{ "op": "modStat", "stat": "RNG", "value": 3 }],
+    "scope": { "who": "self" },
+    "verify": "Community data; open app check."
+  }
+]

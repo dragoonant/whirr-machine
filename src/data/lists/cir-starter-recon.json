@@ -1,0 +1,14 @@
+{
+  "id": "cir.l.starter-recon",
+  "name": "Circle Orboros Starter",
+  "faction": "cir",
+  "level": "recon",
+  "points": 29,
+  "leader": "cir.tanith",
+  "entries": [
+    { "profile": "cir.pureblood" },
+    { "profile": "cir.lord-of-the-feast", "advanceDeploy": true },
+    { "profile": "cir.ravagers", "size": 3 }
+  ],
+  "source": "Devourer's Host starter (community data); 29 points, no official 30-point box"
+}

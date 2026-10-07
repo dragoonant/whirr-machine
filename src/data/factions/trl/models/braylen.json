@@ -1,0 +1,28 @@
+{
+  "id": "trl.braylen",
+  "name": "Braylen Wanderheart",
+  "faction": "trl",
+  "type": "solo",
+  "character": true,
+  "keywords": ["trollblood", "united-kriels", "trollkin", "outlaw"],
+  "base": 40,
+  "stats": { "SPD": 6, "MAT": 0, "RAT": 7, "DEF": 14, "ARM": 15 },
+  "damage": { "track": "single", "boxes": 8 },
+  "weapons": [
+    { "weapon": "trl.w.heavy-pistol", "count": 2 }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.ambush",
+    "core.a.pathfinder",
+    "core.a.tough",
+    "core.a.prowl",
+    "trl.a.dodge",
+    "trl.a.leadership-highwaymen",
+    "trl.a.run-and-gun"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": { "archetype": "solo" },
+  "verify": "Community data; MAT 0 because the card lists no melee weapon. Base 40 read from a product label."
+}

@@ -1,0 +1,726 @@
+[
+  {
+    "id": "cry.a.dodge",
+    "name": "Dodge",
+    "text": "When an enemy attack misses this model, it may advance up to 2 inches once the attack is resolved.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "not": {
+            "test": "hit"
+          }
+        },
+        {
+          "test": "isEnemy",
+          "subject": "attacker"
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cry.a.grappling-hook",
+    "name": "Grappling Hook",
+    "text": "At the end of its activation this model may pay 1 focus to be placed anywhere completely within 5 inches of where it stands.",
+    "kind": "triggered",
+    "trigger": "activation.end",
+    "effect": [
+      {
+        "code": "grapplingHook"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true,
+    "cost": {
+      "focus": 1
+    }
+  },
+  {
+    "id": "cry.a.vital-magic",
+    "name": "Vital Magic",
+    "text": "When an effect would end one of this model's upkeep spells, it may keep that spell by taking d3 damage for each one kept.",
+    "kind": "triggered",
+    "trigger": "spell.expire",
+    "effect": [
+      {
+        "code": "vitalMagic"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cry.a.wraithbinder",
+    "name": "Wraithbinder",
+    "text": "Friendly Incorporeal models within 10 inches of this model have +3 ARM.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modStat",
+        "stat": "ARM",
+        "value": 3
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 10,
+      "filter": {
+        "test": "keyword",
+        "value": "incorporeal"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.aggressive",
+    "name": "Aggressive",
+    "text": "This model runs and charges without paying focus.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "aggressive"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.soul-taker-collector",
+    "name": "Soul Taker: Collector",
+    "text": "This model can hold up to 3 soul tokens. When a living enemy model is destroyed within 10 inches, the nearest friendly Soul Taker with room takes one soul token.",
+    "kind": "triggered",
+    "trigger": "death.destroyed",
+    "effect": [
+      {
+        "code": "soulTaker"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.shadow-gate",
+    "name": "Shadow Gate",
+    "text": "Once per turn, after this model hits an enemy with a melee attack during its activation, it may spend one soul or corpse token to be placed completely within 2 inches of where it stands.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "test": "attackKind",
+          "value": "melee"
+        },
+        {
+          "test": "isEnemy",
+          "subject": "target"
+        },
+        {
+          "test": "tokensAtLeast",
+          "subject": "self",
+          "value": 1
+        }
+      ]
+    },
+    "effect": [
+      {
+        "code": "shadowGate"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true,
+    "limit": "oncePerTurn",
+    "cost": {
+      "soul": 1
+    }
+  },
+  {
+    "id": "cry.a.soul-generator",
+    "name": "Soul Generator",
+    "text": "At the start of its activation this model may spend soul tokens to gain 1 focus each, up to its focus limit.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "effect": [
+      {
+        "code": "soulGenerator"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cry.a.soul-phase",
+    "name": "Soul Phase",
+    "text": "During its activation this model may spend one soul token to become Incorporeal for the turn.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cry.a.incorporeal"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "turn",
+    "optional": true,
+    "cost": {
+      "soul": 1
+    }
+  },
+  {
+    "id": "cry.a.ancillary-attack",
+    "name": "Ancillary Attack",
+    "text": "Special action, range 3: a friendly Cryx cohort model in range immediately makes one basic melee or ranged attack. Each model can be given this only once per turn.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "makeAttack",
+        "target": "target",
+        "weaponFilter": "any",
+        "basic": true
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3,
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "duration": "instant",
+    "limit": "oncePerTurn"
+  },
+  {
+    "id": "cry.a.enliven",
+    "name": "Enliven",
+    "text": "Special action, range 3: for a round, the next time the chosen friendly Cryx cohort model is damaged by an enemy attack it may make a full advance after that attack resolves, then Enliven ends.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "advance",
+        "dist": 6,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3,
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "duration": "round"
+  },
+  {
+    "id": "cry.a.repair",
+    "name": "Repair [d3+3]",
+    "text": "Special action, range 1: remove d3+3 damage points from a friendly Cryx construct.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "code": "repair",
+        "params": {
+          "dice": "d3",
+          "flat": 3
+        }
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 1,
+      "filter": {
+        "test": "keyword",
+        "value": "construct"
+      }
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.exhaust-fumes",
+    "name": "Exhaust Fumes",
+    "text": "When this model advances in its Normal Movement, other friendly models within 3 inches of it gain concealment for a round.",
+    "kind": "triggered",
+    "trigger": "movement.end",
+    "effect": [
+      {
+        "code": "exhaustFumes"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 3
+    },
+    "duration": "round"
+  },
+  {
+    "id": "cry.a.incorporeal",
+    "name": "Incorporeal",
+    "text": "Ghostly: this model is not an intervening model, ignores obstructions, terrain and models when moving, and takes no damage from non-magical sources or continuous effects. It cannot be pushed, slammed or thrown. It loses this rule until its next activation when it makes a melee or ranged attack.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "incorporeal"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.magic-ability",
+    "name": "Magic Ability",
+    "text": "Special attacks and actions of this model count as casting a spell.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      {
+        "code": "coreFlag",
+        "params": {
+          "flag": "magicAbility"
+        }
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.marionette",
+    "name": "Marionette",
+    "text": "Arcane special attack, range 10, no damage. For a round, the owner may have one model that attacks the affected model or unit reroll one attack or damage roll, after which Marionette ends. Only one model in the unit may use it per activation.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "reroll",
+        "roll": "any",
+        "limit": 1
+      }
+    ],
+    "scope": {
+      "who": "enemy"
+    },
+    "duration": "round",
+    "attack": "cry.w.marionette"
+  },
+  {
+    "id": "cry.a.power-of-death",
+    "name": "Power of Death",
+    "text": "Special action: for a turn, friendly undead models within 10 inches of this model add 2 to their melee damage rolls. Only one model in the unit may use it per activation.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": 10,
+      "filter": {
+        "test": "keyword",
+        "value": "undead"
+      }
+    },
+    "duration": "turn"
+  },
+  {
+    "id": "cry.a.stygian-abyss",
+    "name": "Stygian Abyss",
+    "text": "Arcane special attack, range 10, POW 12. A critical hit blinds the target for a round. Only one model in the unit may use it per activation.",
+    "kind": "specialAttack",
+    "trigger": "combat.choose",
+    "effect": [
+      {
+        "op": "applyCondition",
+        "condition": "blind"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "round",
+    "attack": "cry.w.stygian-abyss"
+  },
+  {
+    "id": "cry.a.mortal-fear",
+    "name": "Mortal Fear",
+    "text": "Living enemy models within 8 inches of this model take -2 on their damage rolls. Copies of the same effect do not stack.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": -2
+      }
+    ],
+    "scope": {
+      "who": "enemy",
+      "range": 8,
+      "filter": {
+        "test": "living"
+      }
+    },
+    "duration": "continuous"
+  },
+  {
+    "id": "cry.a.apparition",
+    "name": "Apparition",
+    "text": "In your Control Phase this model may be placed completely within 2 inches of where it stands.",
+    "kind": "triggered",
+    "trigger": "control.upkeep",
+    "effect": [
+      {
+        "op": "place",
+        "dist": 2,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant",
+    "optional": true
+  },
+  {
+    "id": "cry.a.wraith-shot",
+    "name": "Wraith Shot",
+    "text": "This model may spend a soul token on a Soul Cannon attack: the shot needs no line of sight and ignores cover and concealment, and its attack and damage rolls are boosted for free.",
+    "kind": "triggered",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "wraithShot"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack",
+    "optional": true,
+    "cost": {
+      "soul": 1
+    },
+    "when": {
+      "test": "tokensAtLeast",
+      "subject": "self",
+      "value": 1
+    }
+  },
+  {
+    "id": "cry.a.wraith-shot-damage",
+    "name": "Wraith Shot (damage)",
+    "text": "The damage roll of a shot made with Wraith Shot gains one extra die.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "effect": [
+      {
+        "code": "wraithShotDamage"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.shadow-fire",
+    "name": "Shadow Fire",
+    "text": "A model hit by this attack does not block line of sight for a turn.",
+    "kind": "triggered",
+    "trigger": "attack.hit",
+    "effect": [
+      {
+        "code": "cryShadowFire"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.devour-soul",
+    "name": "Devour Soul",
+    "text": "When this weapon destroys a living enemy model, its soul goes to a friendly Soul Taker chosen by its owner, anywhere on the table. Enemies never gain these souls.",
+    "kind": "triggered",
+    "trigger": "death.destroyed",
+    "effect": [
+      {
+        "code": "devourSoul"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.critical-corrosion",
+    "name": "Critical Corrosion",
+    "text": "A critical hit with this weapon makes the target suffer the Corrosion continuous effect.",
+    "kind": "triggered",
+    "trigger": "attack.crit",
+    "effect": [
+      {
+        "op": "applyCondition",
+        "condition": "corrosion"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.volume-fire",
+    "name": "Volume Fire",
+    "text": "Attack rolls with this weapon get +1 against 40 mm bases and +2 against bases of 50 mm or more.",
+    "kind": "triggered",
+    "trigger": "attack.beforeRoll",
+    "when": {
+      "all": [
+        {
+          "test": "baseAtLeast",
+          "subject": "target",
+          "value": 40
+        },
+        {
+          "test": "baseAtMost",
+          "subject": "target",
+          "value": 40
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "attack",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.volume-fire-large",
+    "name": "Volume Fire (large)",
+    "text": "Attack rolls with this weapon get +2 against bases of 50 mm or more.",
+    "kind": "triggered",
+    "trigger": "attack.beforeRoll",
+    "when": {
+      "test": "baseAtLeast",
+      "subject": "target",
+      "value": 50
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "attack",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.volume-fire-damage",
+    "name": "Volume Fire (damage)",
+    "text": "Damage rolls with this weapon get +1 against 40 mm bases.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "when": {
+      "all": [
+        {
+          "test": "baseAtLeast",
+          "subject": "target",
+          "value": 40
+        },
+        {
+          "test": "baseAtMost",
+          "subject": "target",
+          "value": 40
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.volume-fire-damage-large",
+    "name": "Volume Fire (damage, large)",
+    "text": "Damage rolls with this weapon get +2 against bases of 50 mm or more.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "when": {
+      "test": "baseAtLeast",
+      "subject": "target",
+      "value": 50
+    },
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "damage",
+        "value": 2
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.banish",
+    "name": "Banish",
+    "text": "After this weapon damages a non-Leader enemy, that model is moved anywhere completely within 1 inch of where it stood.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": {
+      "all": [
+        {
+          "test": "hit"
+        },
+        {
+          "not": {
+            "test": "modelType",
+            "subject": "target",
+            "value": "leader"
+          }
+        }
+      ]
+    },
+    "effect": [
+      {
+        "op": "place",
+        "dist": 1,
+        "direction": "any"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  },
+  {
+    "id": "cry.a.blood-shadow",
+    "name": "Blood Shadow",
+    "text": "When this weapon boxes a living or undead model, its bearer may become Incorporeal for a round.",
+    "kind": "triggered",
+    "trigger": "death.boxed",
+    "when": {
+      "not": {
+        "test": "keyword",
+        "subject": "target",
+        "value": "construct"
+      }
+    },
+    "effect": [
+      {
+        "op": "grantAbility",
+        "ability": "cry.a.incorporeal"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "round",
+    "optional": true
+  },
+  {
+    "id": "cry.a.blessed",
+    "name": "Blessed",
+    "text": "Attacks with this weapon ignore the ARM and DEF bonuses given by spells and animi.",
+    "kind": "weaponQuality",
+    "trigger": "attack.declared",
+    "effect": [
+      {
+        "code": "cryBlessed"
+      }
+    ],
+    "scope": {
+      "who": "self"
+    },
+    "duration": "attack"
+  },
+  {
+    "id": "cry.a.critical-knockdown",
+    "name": "Critical Knockdown",
+    "text": "A critical hit with this weapon also knocks the target down before damage is rolled.",
+    "kind": "triggered",
+    "trigger": "attack.crit",
+    "effect": [
+      {
+        "op": "knockDown"
+      }
+    ],
+    "scope": {
+      "who": "target"
+    },
+    "duration": "instant"
+  }
+]

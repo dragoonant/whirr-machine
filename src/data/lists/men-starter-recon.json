@@ -1,0 +1,25 @@
+{
+  "id": "men.l.starter-recon",
+  "name": "Defenders of the Flame Starter",
+  "faction": "men",
+  "level": "recon",
+  "points": 30,
+  "leader": "men.feora",
+  "entries": [
+    {
+      "profile": "men.crusader"
+    },
+    {
+      "profile": "men.valeria",
+      "advanceDeploy": true
+    },
+    {
+      "profile": "men.pyrrhus"
+    },
+    {
+      "profile": "men.defenders",
+      "size": 5
+    }
+  ],
+  "source": "Defenders of the Flame Command Set (30 points)"
+}

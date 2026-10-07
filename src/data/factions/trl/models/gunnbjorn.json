@@ -1,0 +1,27 @@
+{
+  "id": "trl.gunnbjorn",
+  "name": "Captain Gunnbjorn",
+  "faction": "trl",
+  "type": "leader",
+  "resource": "fury",
+  "character": true,
+  "keywords": ["trollblood", "united-kriels", "trollkin", "scout", "warlock"],
+  "base": 40,
+  "stats": { "SPD": 6, "MAT": 6, "RAT": 7, "DEF": 15, "ARM": 16, "ARC": 6, "CTRL": 12 },
+  "damage": { "track": "single", "boxes": 17 },
+  "weapons": [
+    { "weapon": "trl.w.bazooka" },
+    { "weapon": "trl.w.axe" }
+  ],
+  "abilities": [
+    "core.a.tough",
+    "trl.a.field-marshal-run-and-gun",
+    "trl.a.resourceful"
+  ],
+  "spells": ["trl.s.guided-fire", "trl.s.rock-wall", "trl.s.sentry", "trl.s.snipe"],
+  "feat": "trl.f.fortification",
+  "cost": 0,
+  "fa": "C",
+  "figure": { "archetype": "caster" },
+  "verify": "Community data; no AAT in the data (no offensive spell). Base 40 read from a product label. Open app check."
+}

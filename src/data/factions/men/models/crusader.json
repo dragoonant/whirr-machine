@@ -1,0 +1,51 @@
+{
+  "id": "men.crusader",
+  "name": "Crusader",
+  "faction": "men",
+  "type": "warEngine",
+  "engineClass": "heavy",
+  "keywords": [
+    "menoth",
+    "construct"
+  ],
+  "base": 50,
+  "stats": {
+    "SPD": 4,
+    "MAT": 6,
+    "RAT": 5,
+    "DEF": 10,
+    "ARM": 19
+  },
+  "damage": {
+    "track": "grid",
+    "columns": [
+      "---L",
+      "---LLM",
+      "----MM",
+      "----CC",
+      "---RRC",
+      "---R"
+    ]
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.blazing-star",
+      "location": "L"
+    },
+    {
+      "weapon": "men.w.flame-belcher",
+      "location": "R"
+    }
+  ],
+  "abilities": [
+    "core.a.construct",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample"
+  ],
+  "cost": 15,
+  "figure": {
+    "archetype": "heavyEngine"
+  },
+  "verify": "Grid and chassis stats from community data; RAT, points and the head option rule (none given) are guesses."
+}

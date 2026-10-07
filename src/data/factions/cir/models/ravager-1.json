@@ -1,0 +1,25 @@
+{
+  "id": "cir.ravager-1",
+  "name": "Ravager 1",
+  "faction": "cir",
+  "type": "trooper",
+  "keywords": ["circle", "devourers-host", "tharn"],
+  "base": 40,
+  "stats": { "SPD": 6, "MAT": 7, "RAT": 0, "DEF": 13, "ARM": 15 },
+  "damage": { "track": "single", "boxes": 8 },
+  "weapons": [{ "weapon": "cir.w.tharn-axe" }],
+  "abilities": [
+    "core.a.pathfinder",
+    "core.a.tough",
+    "cir.a.body-snatcher",
+    "cir.a.blood-rage",
+    "cir.a.meat-for-the-beast",
+    "cir.a.meat-for-the-beast-damage",
+    "cir.a.rapid-healing",
+    "cir.a.treewalker",
+    "cir.a.wraithbane-weapons"
+  ],
+  "cost": 0,
+  "figure": { "archetype": "infantry" },
+  "verify": "RAT 0 (no ranged weapon; the schema wants the stat). Boxes copied from the White Mane solo; base 40 from the product photo label."
+}

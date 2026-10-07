@@ -1,0 +1,122 @@
+[
+  {
+    "id": "men.w.truth-consequence-flame",
+    "name": "Truth & Consequence (flame)",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 12,
+    "damageTypes": [
+      "fire"
+    ],
+    "qualities": [
+      "core.q.pistol"
+    ],
+    "abilities": [
+      "men.a.continuous-fire"
+    ]
+  },
+  {
+    "id": "men.w.truth-consequence-blade",
+    "name": "Truth & Consequence (blade)",
+    "type": "melee",
+    "rng": 1,
+    "pow": 13,
+    "qualities": [
+      "core.q.magical"
+    ],
+    "abilities": [
+      "men.a.critical-fire"
+    ]
+  },
+  {
+    "id": "men.w.blazing-star",
+    "name": "Blazing Star",
+    "type": "melee",
+    "rng": 2,
+    "pow": 17,
+    "location": "L",
+    "abilities": [
+      "men.a.critical-fire",
+      "men.a.chain-weapon"
+    ]
+  },
+  {
+    "id": "men.w.flame-belcher",
+    "name": "Flame Belcher",
+    "type": "ranged",
+    "rng": "SP8",
+    "rof": 1,
+    "pow": 12,
+    "location": "R",
+    "damageTypes": [
+      "fire"
+    ],
+    "abilities": [
+      "men.a.continuous-fire"
+    ]
+  },
+  {
+    "id": "men.w.valeria-bow",
+    "name": "Valeria Bow",
+    "type": "ranged",
+    "rng": 12,
+    "rof": 1,
+    "pow": 12,
+    "qualities": [
+      "core.q.magical",
+      "core.q.weapon-master"
+    ]
+  },
+  {
+    "id": "men.w.valeria-knife",
+    "name": "Valeria Knife",
+    "type": "melee",
+    "rng": 1,
+    "pow": 8
+  },
+  {
+    "id": "men.w.pyrrhus-spear",
+    "name": "Flame Spear (Pyrrhus)",
+    "type": "melee",
+    "rng": 2,
+    "pow": 10,
+    "qualities": [
+      "core.q.weapon-master"
+    ],
+    "abilities": [
+      "men.a.critical-fire"
+    ]
+  },
+  {
+    "id": "men.w.pyrrhus-shield",
+    "name": "Shield (Pyrrhus)",
+    "type": "melee",
+    "rng": 1,
+    "pow": 9,
+    "qualities": [
+      "core.q.shield",
+      "core.q.weapon-master"
+    ],
+    "abilities": [
+      "core.a.beat-back"
+    ]
+  },
+  {
+    "id": "men.w.flame-spear",
+    "name": "Flame Spear",
+    "type": "melee",
+    "rng": 2,
+    "pow": 10,
+    "abilities": [
+      "men.a.critical-fire"
+    ]
+  },
+  {
+    "id": "men.w.flameguard-shield",
+    "name": "Flameguard Shield",
+    "type": "melee",
+    "rng": 1,
+    "pow": 8
+  }
+]

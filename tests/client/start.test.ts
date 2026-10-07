@@ -7,10 +7,10 @@ import { newGame, resetGameStore } from '../../src/client/store/gameStore'
 import { setDirectorClock } from '../../src/client/presentation/director'
 
 describe('start screen options', () => {
-  it('offers both starter sides with four entries each', () => {
+  it('offers every starter side with at least four entries each', () => {
     const sides = sideChoices()
     expect(sides.length).toBeGreaterThanOrEqual(2)
-    for (const s of sides) expect(s.models).toHaveLength(4)
+    for (const s of sides) expect(s.models.length).toBeGreaterThanOrEqual(4)
   })
   it('lists scenarios', () => {
     expect(scenarioChoices().map((s) => s.id)).toContain('scn-qs-demo')

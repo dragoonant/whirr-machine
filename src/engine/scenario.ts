@@ -1,5 +1,7 @@
 // 11-scenarios: element control, scoring, Kill Box, assassination, lead-by-3, round limit, tiebreakers. Pure.
 import { expireCasterEffects, markInertCohorts, otherPlayer, profileOf, type Profile } from './effects'
+import { markWildBeasts, onBeastLeavesPlay } from './fury'
+import { awardSoul } from './factions/cryx'
 import type { GameEvent } from './events'
 import { baseRadius, isOnTable } from './geometry'
 import { modelToPoint } from './measure'
@@ -112,7 +114,7 @@ function eligibleToHold(token: string, m: ModelState): boolean {
   switch (token) {
     case 'any': return true
     case 'leader': return m.type === 'leader'
-    case 'warEngine': return m.type === 'warEngine'
+    case 'warEngine': return m.type === 'warEngine' || m.type === 'beast' // M9 F13.3: warbeasts are Cohort models like war-engines
     case 'battleEngine': return m.type === 'battleEngine'
     case 'solo': return m.type === 'solo'
     default: return false
@@ -276,11 +278,27 @@ const leaderInPlay = (state: GameState, p: PlayerId): boolean => {
 export function afterDeaths(state: GameState, bundle: DataBundle): EndOfTurnResult {
   let s = state
   const events: GameEvent[] = []
+  // M9 (81 F9): warbeasts that left play this step record Spirit Bond and get reaved (not by a friendly attack)
+  const actor = s.attack?.attackerId ?? s.activation?.activeId
+  const actorOwner = actor ? (s.models[actor]?.owner ?? s.units[actor]?.owner) : undefined
+  for (const m of Object.values(s.models)) {
+    if (m.type !== 'beast' || (m.life !== 'destroyed' && m.life !== 'boxed') || m.bondedTo !== undefined || m.controllerId === undefined || m.wild) continue
+    const r = onBeastLeavesPlay(s, bundle, m.id, { friendlyAttack: actorOwner !== undefined && actorOwner === m.owner }); s = r.state; events.push(...r.events)
+  }
+  // death.destroyed window, once per model: a living model destroyed by something no attack accounted for (fire, a hazard, collateral,
+  // a power attack) still gives a Soul Taker its soul. Attack kills were credited by the attack's own plugin before this runs.
+  const credited = new Set<string>(((s.attack as { x?: { destroyed?: string[] } } | null)?.x?.destroyed) ?? [])
+  for (const m of Object.values(s.models)) {
+    if ((m.life !== 'destroyed' && m.life !== 'boxed') || m.deathHandled) continue
+    s = { ...s, models: { ...s.models, [m.id]: { ...m, deathHandled: true } } }
+    if (m.life === 'destroyed' && !credited.has(m.id)) { const r = awardSoul(s, bundle, m.id); s = r.state; events.push(...r.events) }
+  }
   for (const p of ['A', 'B'] as PlayerId[]) {
     const lid = s.players[p].leaderId
     if (!leaderInPlay(s, p)) {
       const a = expireCasterEffects(s, lid); s = a.state; events.push(...a.events)
       const b = markInertCohorts(s, lid); s = b.state; events.push(...b.events)
+      const w = markWildBeasts(s, lid); s = w.state; events.push(...w.events) // M9 F11.1
     }
   }
   if (s.phase === 'ended') return { state: s, events, ended: true }

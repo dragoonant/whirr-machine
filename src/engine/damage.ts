@@ -1,7 +1,9 @@
 // R1.7, R3: damage rolls, single-row and grid damage, crippling, disabled -> boxed -> destroyed with Tough. Pure.
 import { diceCount, rollMaybeZero, rollNd6, sum, sumDistribution, type DiceCount } from './dice'
 import type { GameEvent } from './events'
-import type { BoxRef, DamageInstance, DamageState, DamageType, GameState, GridState, Id, LifeState, ModelId, ModelState, SystemLetter } from './types'
+import { effectsOn } from './effects'
+import { battlegroupOf, capOf, inCtrlOf, isBeast, isWarlock, spendFury, unmarkedBoxes } from './fury'
+import { ASPECT_LETTER, type Aspect, type BoxRef, type DamageInstance, type DamageState, type DamageType, type DataBundle, type GameState, type GridState, type Id, type LifeState, type ModelId, type ModelState, type SystemLetter } from './types'
 
 // ---------- damage roll ----------
 export interface DamageRollInput {
@@ -53,7 +55,7 @@ export const pKill = (d: number[], boxes: number): number => d.reduce((a, p, k) 
 
 // ---------- grid layouts ----------
 /** Static layout from card data: columns[c] is a top-first string, '-' blank, letter = system box (20 §3). */
-export interface GridLayout { id: GridState['id']; columns: string[] }
+export interface GridLayout { id: GridState['id']; columns: string[]; spiral?: boolean } // spiral (M9): branches 1-6, outermost box first, lowercase m/b/s aspect letters
 export const newGrid = (l: GridLayout): GridState => ({ id: l.id, cols: l.columns.map(c => new Array<boolean>(c.length).fill(false)) })
 export const gridBoxCount = (g: GridState): number => sum(g.cols.map(c => c.length))
 export const gridFilled = (g: GridState): number => sum(g.cols.map(c => c.filter(Boolean).length))
@@ -123,6 +125,7 @@ export interface ApplyDamageOpts {
   instanceId?: string
   source?: DamageInstance['kind']
   damageTypes?: DamageType[]
+  aspect?: Aspect // M9 F10.3: the damage names an aspect of a spiral
 }
 const setModel = (s: GameState, m: ModelState): GameState => ({ ...s, models: { ...s.models, [m.id]: m } })
 
@@ -143,30 +146,44 @@ export function applyDamage(state: GameState, modelId: ModelId, points: number, 
     damage = { ...damage, filled: r.filled }
     boxes = r.boxes; overflow = r.overflow
   } else if (points > 0) {
-    column = opts.column
-    if (column === undefined) {
-      const c = rollNd6(s, 1, 'column', { ownerId: modelId })
-      s = c.state; events.push(c.event)
-      column = c.dice[0]!; columnRollId = c.event.rollId
+    let left = points
+    // M9 F10.3: damage to an aspect marks that aspect's boxes first (lowest branch, outermost), then continues from that branch
+    if (opts.aspect && opts.layouts?.[0]?.spiral) {
+      const ar = fillAspect(damage.grids[0]!, opts.layouts[0], ASPECT_LETTER[opts.aspect], points)
+      damage = { track: 'grid', grids: [ar.grid] }
+      boxes = [...ar.boxes]; left = points - ar.boxes.length
+      if (ar.boxes.length > 0) column = ar.lastBranch
     }
-    gridId = opts.gridId
-    if (!gridId) {
-      if (damage.grids.length > 1) {
-        const g = rollNd6(s, 1, 'column', { ownerId: modelId })
-        s = g.state; events.push(g.event)
-        gridId = g.dice[0]! <= 3 ? 'left' : 'right'
-      } else gridId = damage.grids[0]!.id
-    }
-    const r = fillGrid(damage.grids, gridId, column, points)
-    damage = { track: 'grid', grids: r.grids }
-    boxes = r.boxes; overflow = r.overflow
+    if (left > 0) {
+      if (column === undefined) column = opts.column
+      if (column === undefined) {
+        const c = rollNd6(s, 1, 'column', { ownerId: modelId })
+        s = c.state; events.push(c.event)
+        column = c.dice[0]!; columnRollId = c.event.rollId
+      }
+      gridId = opts.gridId
+      if (!gridId) {
+        if (damage.grids.length > 1) {
+          const g = rollNd6(s, 1, 'column', { ownerId: modelId })
+          s = g.state; events.push(g.event)
+          gridId = g.dice[0]! <= 3 ? 'left' : 'right'
+        } else gridId = damage.grids[0]!.id
+      }
+      const r = fillGrid(damage.grids, gridId, column, left)
+      damage = { track: 'grid', grids: r.grids }
+      boxes = [...boxes, ...r.boxes]; overflow = r.overflow
+    } else gridId = damage.grids[0]!.id
   }
   const prevCrip = m.crippled
   const crip = damage.track === 'grid' && opts.layouts ? crippledSystems(opts.layouts, damage.grids) : prevCrip
   const newly = crip.filter(x => !prevCrip.includes(x))
   let nm: ModelState = { ...m, damage, crippled: crip }
   events.push({ type: 'DamageApplied', targetId: modelId, attackId: opts.attackId, instanceId: opts.instanceId, source: opts.source ?? 'direct', points, damageTypes: opts.damageTypes ?? [], grid: gridId, column, columnRollId, boxes, crippled: newly, overflow } as GameEvent)
-  for (const x of newly) events.push({ type: 'SystemCrippled', modelId, system: x } as GameEvent)
+  for (const x of newly) {
+    events.push({ type: 'SystemCrippled', modelId, system: x } as GameEvent)
+    const asp = ASPECT_OF_LETTER[x]
+    if (asp) events.push({ type: 'AspectCrippled', modelId, aspect: asp } as GameEvent)
+  }
   // R8 crippled Cortex: the war-engine loses all its focus at once
   if (newly.includes('C') && m.type === 'warEngine' && nm.focus > 0) {
     events.push({ type: 'FocusChanged', modelId, delta: -nm.focus, after: 0, reason: 'lose' } as GameEvent)
@@ -180,15 +197,22 @@ export function applyDamage(state: GameState, modelId: ModelId, points: number, 
 }
 
 /** Remove `points` damage from the end of the fill (single: last boxes; grid: bottom-most boxes of the rightmost columns). */
-export function healDamage(state: GameState, modelId: ModelId, points: number, layouts?: GridLayout[]): { state: GameState; events: GameEvent[]; boxes: BoxRef[] } {
+export function healDamage(state: GameState, modelId: ModelId, points: number, layouts?: GridLayout[], pick?: BoxRef[]): { state: GameState; events: GameEvent[]; boxes: BoxRef[] } {
   const m = state.models[modelId]
   if (!m) return { state, events: [], boxes: [] }
+  // Grievous Wounds and the like: no healing at all while an effect forbids it (circle.md)
+  if (effectsOn(state, modelId).some(e => e.forbid?.includes('heal'))) return { state, events: [], boxes: [] }
   const boxes: BoxRef[] = []
   let damage = m.damage
   if (damage.track === 'single') {
     const take = Math.min(points, damage.filled)
     for (let i = 0; i < take; i++) boxes.push({ col: 0, row: damage.filled - 1 - i })
     damage = { ...damage, filled: damage.filled - take }
+  } else if (layouts?.[0]?.spiral) {
+    // M9 F10.7: the healer's picks first, then crippled aspects (Spirit, Mind, Body), then the innermost box of the highest branch
+    const grid = { ...damage.grids[0]!, cols: damage.grids[0]!.cols.map(c => [...c]) }
+    for (const bx of spiralHealBoxes(grid, layouts[0], m.crippled, points, pick)) { grid.cols[bx.col]![bx.row] = false; boxes.push(bx) }
+    damage = { track: 'grid', grids: [grid] }
   } else {
     const grids = damage.grids.map(g => ({ ...g, cols: g.cols.map(c => [...c]) }))
     let left = points
@@ -204,7 +228,11 @@ export function healDamage(state: GameState, modelId: ModelId, points: number, l
   }
   const crip = damage.track === 'grid' && layouts ? crippledSystems(layouts, damage.grids) : m.crippled
   const events: GameEvent[] = [{ type: 'Healed', modelId, points: boxes.length, boxes } as GameEvent]
-  for (const x of m.crippled.filter(x => !crip.includes(x))) events.push({ type: 'SystemRestored', modelId, system: x } as GameEvent)
+  for (const x of m.crippled.filter(x => !crip.includes(x))) {
+    events.push({ type: 'SystemRestored', modelId, system: x } as GameEvent)
+    const asp = ASPECT_OF_LETTER[x]
+    if (asp) events.push({ type: 'AspectRestored', modelId, aspect: asp } as GameEvent)
+  }
   let nm: ModelState = { ...m, damage, crippled: crip }
   if (m.life === 'disabled' && !isFull(damage)) {
     nm = { ...nm, life: 'active' }
@@ -231,7 +259,7 @@ export const isKnockedDown = (m: ModelState): boolean => m.conditions.includes('
 export function rollTough(state: GameState, modelId: ModelId, layouts?: GridLayout[]): { state: GameState; events: GameEvent[]; survived: boolean } {
   const r = rollNd6(state, 1, 'tough', { ownerId: modelId })
   const events: GameEvent[] = [r.event]
-  if (r.dice[0]! < 5) return { state: r.state, events, survived: false }
+  if (r.dice[0]! < 5 || effectsOn(state, modelId).some(e => e.forbid?.includes('heal') || e.forbid?.includes('tough'))) return { state: r.state, events, survived: false }
   const h = healDamage(r.state, modelId, 1, layouts)
   events.push(...h.events)
   const m = h.state.models[modelId]!
@@ -264,4 +292,157 @@ export function resolveDeath(state: GameState, modelId: ModelId, opts: DeathOpts
   s = c.state; events.push(c.ev)
   events.push({ type: 'ModelRemoved', modelId, reason: 'destroyed' } as GameEvent)
   return { state: s, events, outcome: 'destroyed' }
+}
+
+// ---------- spirals and aspects (M9, 81 F10) ----------
+const ASPECT_OF_LETTER: Record<string, Aspect | undefined> = { m: 'mind', b: 'body', s: 'spirit' }
+export const aspectOfLetter = (l: string): Aspect | undefined => ASPECT_OF_LETTER[l]
+/** Card data: six branches, outermost box first, letters M B S or '-'. Lowercased so the war-engine grid code runs unchanged. */
+export const spiralLayout = (branches: readonly string[]): GridLayout => ({ id: 'main', columns: branches.map(b => b.toLowerCase()), spiral: true })
+export const spiralDamageState = (branches: readonly string[]): DamageState => ({ track: 'grid', grids: [newGrid(spiralLayout(branches))] })
+/** Layouts for any profile: grid, dualGrid or spiral (undefined for a single row). */
+export function layoutsFor(profile: Record<string, any>): GridLayout[] | undefined { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const d = profile.damage as { track: string; columns?: string[]; branches?: string[]; grids?: { left: string[]; right: string[] } } | undefined
+  if (!d) return undefined
+  if (d.track === 'spiral' && d.branches) return [spiralLayout(d.branches)]
+  if (d.track === 'grid' && d.columns) return [{ id: 'main', columns: d.columns }]
+  if (d.track === 'dualGrid' && d.grids) return [{ id: 'left', columns: d.grids.left }, { id: 'right', columns: d.grids.right }]
+  return undefined
+}
+
+/** F10.3: mark the aspect's boxes: lowest-numbered branch with an unmarked box of that letter, its outermost one; per point. */
+export function fillAspect(grid: GridState, layout: GridLayout, letter: string, points: number): { grid: GridState; boxes: BoxRef[]; lastBranch: number } {
+  const next: GridState = { ...grid, cols: grid.cols.map(c => [...c]) }
+  const boxes: BoxRef[] = []
+  let lastBranch = 1
+  for (let k = 0; k < points; k++) {
+    let hit = false
+    for (let c = 0; c < next.cols.length && !hit; c++) {
+      const i = [...(layout.columns[c] ?? '')].findIndex((ch, idx) => ch === letter && !next.cols[c]![idx])
+      if (i >= 0) { next.cols[c]![i] = true; boxes.push({ grid: grid.id, col: c, row: i }); lastBranch = c + 1; hit = true }
+    }
+    if (!hit) break
+  }
+  return { grid: next, boxes, lastBranch }
+}
+
+/** F10.7: boxes to unmark. Picks first (must be marked), then one box of each crippled aspect (Spirit, Mind, Body), then innermost of the highest branch. */
+export function spiralHealBoxes(grid: GridState, layout: GridLayout, crippled: readonly string[], points: number, pick?: BoxRef[]): BoxRef[] {
+  const cols = grid.cols.map(c => [...c])
+  const out: BoxRef[] = []
+  const take = (c: number, i: number): void => { cols[c]![i] = false; out.push({ grid: grid.id, col: c, row: i }) }
+  for (const bx of pick ?? []) {
+    if (out.length >= points) break
+    if (cols[bx.col]?.[bx.row]) take(bx.col, bx.row)
+  }
+  const wanted = ['s', 'm', 'b'].filter(l => crippled.includes(l))
+  while (out.length < points) {
+    const letter = wanted.shift()
+    let found = false
+    for (let c = cols.length - 1; c >= 0 && !found; c--) {
+      for (let i = cols[c]!.length - 1; i >= 0 && !found; i--) {
+        if (cols[c]![i] && (!letter || layout.columns[c]?.[i] === letter)) { take(c, i); found = true }
+      }
+    }
+    if (!found && !letter) break
+  }
+  return out
+}
+
+/** F10.1 view for the UI and queries. */
+export function spiralView(state: GameState, bundle: DataBundle, id: ModelId): {
+  branches: { branch: number; boxes: { aspect: Aspect | null; filled: boolean }[] }[]
+  unmarked: number
+  aspects: Record<Aspect, { total: number; filled: number; crippled: boolean }>
+} {
+  const m = state.models[id]
+  const layout = m ? layoutsFor((bundle.byId[m.profileId] ?? {}) as Record<string, unknown>)?.[0] : undefined
+  const aspects: Record<Aspect, { total: number; filled: number; crippled: boolean }> = {
+    mind: { total: 0, filled: 0, crippled: false }, body: { total: 0, filled: 0, crippled: false }, spirit: { total: 0, filled: 0, crippled: false },
+  }
+  if (!m || !layout || m.damage.track !== 'grid') return { branches: [], unmarked: 0, aspects }
+  const grid = m.damage.grids[0]!
+  const branches = layout.columns.map((col, c) => ({
+    branch: c + 1,
+    boxes: [...col].map((ch, i) => {
+      const aspect = ASPECT_OF_LETTER[ch] ?? null
+      const filled = !!grid.cols[c]?.[i]
+      if (aspect) { aspects[aspect].total++; if (filled) aspects[aspect].filled++ }
+      return { aspect, filled }
+    }),
+  }))
+  for (const a of Object.keys(aspects) as Aspect[]) aspects[a].crippled = aspects[a].total > 0 && aspects[a].filled === aspects[a].total
+  return { branches, unmarked: unmarkedBoxes(m.damage), aspects }
+}
+
+// ---------- damage transfer (M9, 81 F8) ----------
+type TransferBad = { code: 'E_TARGET_INVALID' | 'E_OUT_OF_CTRL' | 'E_FURY_CAP' | 'E_INSUFFICIENT_FURY'; message: string }
+/** T2: beasts of the warlock's battlegroup that could take a transfer right now. */
+export function transferCandidates(state: GameState, b: DataBundle, warlockId: ModelId): ModelState[] {
+  const w = state.models[warlockId]
+  if (!w || !isWarlock(w) || w.life !== 'active' || w.offTable) return []
+  return battlegroupOf(state, w).filter(m => !m.frenzied && inCtrlOf(state, b, w, m) && (m.fury ?? 0) < capOf(state, b, m) && !effectsOn(state, m.id).some(e => e.forbid?.includes('beTransferred')))
+}
+/** T1 + T2: should the transfer prompt be raised for this instance? */
+export function transferAvailable(state: GameState, b: DataBundle, warlockId: ModelId, points: number): boolean {
+  const w = state.models[warlockId]
+  return !!w && isWarlock(w) && w.life === 'active' && (w.fury ?? 0) >= 1 && points >= 1 && transferCandidates(state, b, warlockId).length > 0
+}
+export function validateTransfer(state: GameState, b: DataBundle, warlockId: ModelId, beastId: ModelId): TransferBad | null {
+  const w = state.models[warlockId]
+  const m = state.models[beastId]
+  if (!w || !isWarlock(w) || !m || !isBeast(m) || m.controllerId !== warlockId || m.wild || m.life !== 'active' || m.offTable || m.frenzied) return { code: 'E_TARGET_INVALID', message: `${beastId} is not in ${warlockId}'s battlegroup` }
+  if (!inCtrlOf(state, b, w, m)) return { code: 'E_OUT_OF_CTRL', message: `${beastId} is outside CTRL` }
+  if ((m.fury ?? 0) >= capOf(state, b, m)) return { code: 'E_FURY_CAP', message: `${beastId} holds all the fury it can` }
+  if (effectsOn(state, beastId).some(e => e.forbid?.includes('beTransferred'))) return { code: 'E_TARGET_INVALID', message: 'an effect stops this beast taking transferred damage' }
+  if ((w.fury ?? 0) < 1) return { code: 'E_INSUFFICIENT_FURY', message: 'a transfer costs 1 fury' }
+  return null
+}
+/** T4-T5: pay 1 fury, mark the absorbed part on the beast (branch rolled). The overflow (T6) is returned for the caller to apply with noTransfer. */
+export function applyTransfer(
+  state: GameState, b: DataBundle, warlockId: ModelId, beastId: ModelId, points: number,
+  opts: { attackId?: string; instanceId?: string; layouts?: GridLayout[] } = {},
+): { state: GameState; events: GameEvent[]; absorbed: number; overflow: number } | { rejection: TransferBad } {
+  const bad = validateTransfer(state, b, warlockId, beastId)
+  if (bad) return { rejection: bad }
+  const sp = spendFury(state, warlockId, 1, 'transfer')
+  if ('rejection' in sp) return { rejection: { code: 'E_INSUFFICIENT_FURY', message: sp.rejection.message } }
+  let s = sp.state
+  const events: GameEvent[] = [...sp.events]
+  const beast = s.models[beastId]!
+  const absorbed = Math.min(points, unmarkedBoxes(beast.damage))
+  const overflow = points - absorbed
+  events.push({ type: 'DamageTransferred', warlockId, beastId, points, absorbed, overflow, attackId: opts.attackId, instanceId: opts.instanceId })
+  if (absorbed > 0) {
+    const a = applyDamage(s, beastId, absorbed, { layouts: opts.layouts, source: 'transfer', attackId: opts.attackId, instanceId: opts.instanceId })
+    s = a.state; events.push(...a.events)
+  }
+  return { state: s, events, absorbed, overflow }
+}
+
+/** Exact preview per battlegroup beast (81 D.2): absorbed, overflow, chance the beast is disabled and that each aspect is crippled afterwards. */
+export function transferPreview(state: GameState, b: DataBundle, warlockId: ModelId, points: number): {
+  beastId: ModelId; eligible: boolean; reason?: string; unmarked: number; fury: number; cap: number; absorbed: number; overflow: number
+  pDisabled: number; pCripple: Record<Aspect, number>
+}[] {
+  const w = state.models[warlockId]
+  if (!w || !isWarlock(w)) return []
+  return battlegroupOf(state, w).map(m => {
+    const bad = validateTransfer(state, b, warlockId, m.id)
+    const unmarked = unmarkedBoxes(m.damage)
+    const absorbed = Math.min(points, unmarked)
+    const pC: Record<Aspect, number> = { mind: 0, body: 0, spirit: 0 }
+    const layouts = layoutsFor((b.byId[m.profileId] ?? {}) as Record<string, unknown>)
+    if (layouts && m.damage.track === 'grid' && absorbed > 0) {
+      for (let branch = 1; branch <= 6; branch++) {
+        const r = fillGrid(m.damage.grids, 'main', branch, absorbed)
+        const crip = crippledSystems(layouts, r.grids)
+        for (const a of Object.keys(pC) as Aspect[]) if (crip.includes(ASPECT_LETTER[a])) pC[a] += 1 / 6
+      }
+    } else if (layouts) for (const a of Object.keys(pC) as Aspect[]) pC[a] = m.crippled.includes(ASPECT_LETTER[a]) ? 1 : 0
+    return {
+      beastId: m.id, eligible: !bad, reason: bad?.message, unmarked, fury: m.fury ?? 0, cap: capOf(state, b, m),
+      absorbed, overflow: points - absorbed, pDisabled: absorbed >= unmarked && unmarked > 0 ? 1 : 0, pCripple: pC,
+    }
+  })
 }

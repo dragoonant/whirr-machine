@@ -3,7 +3,7 @@ import { computeStat } from './dice'
 import type { GridLayout } from './damage'
 import type { GameEvent } from './events'
 import type {
-  DataBundle, EffectDuration, EffectInstance, GameState, Id, ModelId, ModelState, PlayerId, Stat, StoredConditionId,
+  DamageType, DataBundle, EffectDuration, EffectInstance, GameState, Id, ModelId, ModelState, PlayerId, Stat, StoredConditionId,
 } from './types'
 
 // ---------- data helpers ----------
@@ -16,7 +16,7 @@ export const otherPlayer = (p: PlayerId): PlayerId => (p === 'A' ? 'B' : 'A')
 const setModel = (s: GameState, m: ModelState): GameState => ({ ...s, models: { ...s.models, [m.id]: m } })
 
 // ---------- effects ----------
-export const effectsOn = (state: GameState, targetId: Id): EffectInstance[] => state.effects.filter((e) => e.targetIds.includes(targetId))
+export const effectsOn = (state: GameState, targetId: Id): EffectInstance[] => (state.effects ?? []).filter((e) => e.targetIds.includes(targetId))
 
 /** When an effect created now with this duration ends (R12.3). Turn numbers are global player turns. */
 export function expiryFor(state: GameState, duration: EffectDuration): EffectInstance['expires'] {
@@ -27,9 +27,26 @@ export function expiryFor(state: GameState, duration: EffectDuration): EffectIns
 const later = (a: EffectInstance['expires'], b: EffectInstance['expires']): EffectInstance['expires'] =>
   a === null || b === null ? null : a.turn >= b.turn ? a : b
 
+/**
+ * Extra, optional parts of an effect that the frozen EffectInstance does not name (engine-internal, JSON-safe, read through casts):
+ *  grants: ability ids the targets have while it lasts (Soul Phase, Fight to the Last); resist: damage types the targets resist
+ *  (Fortification); condMods: DEF/ARM mods that apply only to some attack kinds; ignoreFriendly: friendly models never block
+ *  the targets' LOS and can be moved through (Precision Strike); noAdvance: the targets cannot advance (Shadow Bind).
+ */
+export interface EffectExtras {
+  grants?: Id[]
+  resist?: DamageType[]
+  condMods?: { stat: Stat; value: number; mode?: 'add' | 'set' | 'double' | 'half'; kinds: string[] }[]
+  ignoreFriendly?: boolean
+  noAdvance?: boolean
+  /** flat attack or damage roll modifiers of the models the effect is on (Crippling Grasp); `kinds` limits them to those attack kinds */
+  rollMods?: { roll: 'attack' | 'damage' | 'any'; value: number; kinds?: string[] }[]
+  /** Enliven: after an enemy attack damages the model it may advance this far at once, then the effect ends */
+  afterDamageAdvance?: number
+}
 /** Apply an effect. A same-named effect on the same targets never stacks: keep one instance with the later expiry (R9.10). */
 export function applyEffect(
-  state: GameState, spec: Omit<EffectInstance, 'id' | 'expires'> & { expires?: EffectInstance['expires'] },
+  state: GameState, spec: Omit<EffectInstance, 'id' | 'expires'> & { expires?: EffectInstance['expires'] } & EffectExtras,
 ): { state: GameState; events: GameEvent[]; effect: EffectInstance } {
   const expires = spec.expires === undefined ? expiryFor(state, spec.duration) : spec.expires
   const dup = state.effects.find((e) => e.name === spec.name && e.targetIds.some((t) => spec.targetIds.includes(t)))
@@ -137,8 +154,9 @@ export function immuneToContinuous(bundle: DataBundle, m: ModelState, cond: 'fir
 // ---------- profile damage layouts and inert cohorts ----------
 /** Grid layouts for a profile's damage track (undefined for single-row models). */
 export function gridLayoutsOf(profile: Profile): GridLayout[] | undefined {
-  const d = profile.damage as { track: string; columns?: string[]; grids?: { left: string[]; right: string[] } } | undefined
+  const d = profile.damage as { track: string; columns?: string[]; branches?: string[]; grids?: { left: string[]; right: string[] } } | undefined
   if (!d) return undefined
+  if (d.track === 'spiral' && d.branches) return [{ id: 'main', columns: d.branches.map((x) => x.toLowerCase()), spiral: true }] // M9
   if (d.track === 'grid' && d.columns) return [{ id: 'main', columns: d.columns }]
   if (d.track === 'dualGrid' && d.grids) return [{ id: 'left', columns: d.grids.left }, { id: 'right', columns: d.grids.right }]
   return undefined

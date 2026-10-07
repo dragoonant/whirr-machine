@@ -1,0 +1,22 @@
+{
+  "id": "men.defenders",
+  "name": "Flameguard Defenders",
+  "faction": "men",
+  "type": "unit",
+  "keywords": [
+    "menoth",
+    "flameguard"
+  ],
+  "cost": 7,
+  "composition": {
+    "grunts": {
+      "profile": "men.defenders-grunt",
+      "min": 5,
+      "max": 5
+    },
+    "costBySize": {
+      "5": 7
+    }
+  },
+  "verify": "Unit size 5 from the box count; points are a guess (the box totals 30)."
+}

@@ -56,5 +56,8 @@ export function terrainInfo(t: TerrainInstance): TerrainInfo {
       lines.push('Open ground.')
   }
   if (t.rulesType === 'scenarioTerrain') lines.push('Scenario terrain: the scenario gives it a job too.')
+  // pieces a spell made (they live in state.terrain like any other piece; the engine removes them)
+  if (t.props['rockWall']) lines.push('Raised by a Rock Wall spell: it stays while the caster keeps the upkeep, and a very large base touching it tears it down.')
+  if (t.props['rift']) lines.push('Broken ground opened by a Rift: rough until the end of the round.')
   return { kind: KIND[tr.type] ?? 'Terrain', lines }
 }

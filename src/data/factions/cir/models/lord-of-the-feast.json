@@ -1,0 +1,32 @@
+{
+  "id": "cir.lord-of-the-feast",
+  "name": "Lord of the Feast",
+  "faction": "cir",
+  "type": "solo",
+  "character": true,
+  "keywords": ["circle", "devourers-host"],
+  "base": 30,
+  "stats": { "SPD": 6, "MAT": 7, "RAT": 6, "DEF": 12, "ARM": 16 },
+  "damage": { "track": "single", "boxes": 8 },
+  "weapons": [
+    { "weapon": "cir.w.raven", "socket": "hand-l" },
+    { "weapon": "cir.w.wurmblade", "socket": "hand-r" }
+  ],
+  "abilities": [
+    "core.a.advance-deployment",
+    "core.a.pathfinder",
+    "core.a.stealth",
+    "core.a.dual-attack",
+    "cir.a.body-snatcher",
+    "cir.a.blood-rage",
+    "cir.a.meat-for-the-beast",
+    "cir.a.meat-for-the-beast-damage",
+    "cir.a.death-feast",
+    "cir.a.death-powered",
+    "cir.a.wraithbane-weapons"
+  ],
+  "cost": 5,
+  "fa": "C",
+  "figure": { "archetype": "solo" },
+  "verify": "Community card data only; base 30 and 8 boxes are unconfirmed."
+}

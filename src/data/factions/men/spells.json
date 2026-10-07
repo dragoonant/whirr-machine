@@ -1,0 +1,109 @@
+[
+  {
+    "id": "men.s.convection",
+    "name": "Convection",
+    "text": "A magical shot. If it destroys a living enemy, a warjack in the caster's CTRL gains a focus.",
+    "cost": 2,
+    "rng": 10,
+    "pow": 12,
+    "dur": "-",
+    "offensive": true,
+    "effect": [
+      {
+        "op": "gainFocus",
+        "value": 1
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "range": "CTRL",
+      "filter": {
+        "test": "modelType",
+        "value": "warEngine"
+      }
+    },
+    "verify": "Stand-in from Feora, Priestess of the Flame (app check pending)."
+  },
+  {
+    "id": "men.s.fire-step",
+    "name": "Fire Step",
+    "text": "Enemies within 2 inches of the caster take a fire damage roll, then she is placed within 2 inches. Once per activation.",
+    "cost": 2,
+    "rng": "SELF",
+    "pow": 13,
+    "dur": "TURN",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "damage",
+        "pow": 13,
+        "damageType": "fire"
+      },
+      {
+        "op": "place",
+        "dist": 2
+      },
+      {
+        "code": "fireStep"
+      },
+      {
+        "code": "stokeRefund"
+      }
+    ],
+    "scope": {
+      "who": "enemy",
+      "range": 2
+    },
+    "verify": "Duration TURN is a modelling trick so the engine runs the effect code (instant spells run none). Stand-in numbers."
+  },
+  {
+    "id": "men.s.hex-hammer",
+    "name": "Hex Hammer",
+    "text": "An enemy that declares a spell in the caster's CTRL takes d3 damage first; if that destroys it, the spell fails. Lasts a round.",
+    "cost": 2,
+    "rng": "SELF",
+    "aoe": "CTRL",
+    "dur": "RND",
+    "offensive": false,
+    "effect": [
+      {
+        "code": "hexHammer"
+      },
+      {
+        "code": "stokeRefund"
+      }
+    ],
+    "scope": {
+      "who": "enemy",
+      "range": "CTRL"
+    },
+    "verify": "Stand-in numbers. Needs a core call at spell declaration to bite."
+  },
+  {
+    "id": "men.s.incite",
+    "name": "Incite",
+    "text": "Friendly Menoth models get +2 to attack and damage rolls against enemies within 10 inches of the caster. Lasts a turn.",
+    "cost": 4,
+    "rng": "SELF",
+    "dur": "TURN",
+    "offensive": false,
+    "effect": [
+      {
+        "op": "modRoll",
+        "roll": "any",
+        "value": 2
+      },
+      {
+        "code": "stokeRefund"
+      }
+    ],
+    "scope": {
+      "who": "friendly",
+      "filter": {
+        "test": "keyword",
+        "value": "menoth"
+      }
+    },
+    "verify": "Stand-in numbers."
+  }
+]

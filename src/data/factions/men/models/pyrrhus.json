@@ -1,0 +1,45 @@
+{
+  "id": "men.pyrrhus",
+  "name": "Pyrrhus, Flameguard Commander",
+  "faction": "men",
+  "type": "solo",
+  "character": true,
+  "keywords": [
+    "menoth",
+    "flameguard"
+  ],
+  "base": 30,
+  "stats": {
+    "SPD": 6,
+    "MAT": 7,
+    "RAT": 5,
+    "DEF": 15,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 8
+  },
+  "weapons": [
+    {
+      "weapon": "men.w.pyrrhus-spear"
+    },
+    {
+      "weapon": "men.w.pyrrhus-shield"
+    }
+  ],
+  "abilities": [
+    "core.a.tough",
+    "men.a.set-defense",
+    "men.a.steady",
+    "men.a.relentless-charge",
+    "men.a.impenetrable-shield",
+    "men.a.battle-plan"
+  ],
+  "cost": 4,
+  "fa": "C",
+  "figure": {
+    "archetype": "solo"
+  },
+  "verify": "Card not public yet: all numbers and rules are guesses from Pyrrhus, Flameguard Hero."
+}

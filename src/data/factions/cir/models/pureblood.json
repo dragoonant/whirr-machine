@@ -1,0 +1,29 @@
+{
+  "id": "cir.pureblood",
+  "name": "Pureblood Warpwolf",
+  "faction": "cir",
+  "type": "beast",
+  "beastClass": "heavy",
+  "keywords": ["circle", "devourers-host", "warpwolf"],
+  "base": 50,
+  "stats": { "SPD": 6, "MAT": 6, "RAT": 5, "DEF": 14, "ARM": 17, "FURY": 4, "THR": 10 },
+  "damage": { "track": "spiral", "branches": ["MMMMM", "MMM", "BBBBB", "BBB", "SSSSSSS", "SSSSS"] },
+  "weapons": [
+    { "weapon": "cir.w.death-howler", "socket": "mouth" },
+    { "weapon": "cir.w.claw", "count": 2, "socket": "hand-l" }
+  ],
+  "abilities": [
+    "core.a.dual-attack",
+    "core.a.headbutt",
+    "core.a.slam",
+    "core.a.trample",
+    "core.a.pathfinder",
+    "cir.a.controlled-warping",
+    "cir.a.regeneration",
+    "cir.a.wraithbane-weapons"
+  ],
+  "animus": "cir.s.wraithbane",
+  "cost": 15,
+  "figure": { "archetype": "beast" },
+  "verify": "Spiral aspect assignment is assumed (whole branches: two Mind, two Body, two Spirit); the community data gives box counts only. Base 50 from the product photo label."
+}

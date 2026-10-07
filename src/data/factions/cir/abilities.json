@@ -1,0 +1,303 @@
+[
+  {
+    "id": "cir.a.dark-power",
+    "name": "Dark Power",
+    "text": "On an arcane attack roll this model rolls one extra die, then sets aside its lowest die.",
+    "kind": "triggered",
+    "trigger": "attack.beforeRoll",
+    "when": { "test": "attackKind", "value": "arcane" },
+    "effect": [
+      { "op": "addDie", "roll": "attack" },
+      { "op": "discardLowest", "roll": "attack" }
+    ],
+    "scope": { "who": "self" },
+    "duration": "attack",
+    "verify": "Core: the attack roll sets its lowest die aside (flags.dropLowestAtk)."
+  },
+  {
+    "id": "cir.a.dark-power-damage",
+    "name": "Dark Power (damage)",
+    "text": "On an arcane damage roll this model rolls one extra die, then sets aside its lowest die.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "when": { "test": "attackKind", "value": "arcane" },
+    "effect": [
+      { "op": "addDie", "roll": "damage" },
+      { "op": "discardLowest", "roll": "damage" }
+    ],
+    "scope": { "who": "self" },
+    "duration": "attack"
+  },
+  {
+    "id": "cir.a.field-marshal-prowl",
+    "name": "Field Marshal [Prowl]",
+    "text": "Warbeasts of this model's battlegroup have Prowl.",
+    "kind": "aura",
+    "trigger": "passive",
+    "effect": [{ "op": "grantAbility", "ability": "core.a.prowl" }],
+    "scope": { "who": "warbeasts" },
+    "duration": "continuous"
+  },
+  {
+    "id": "cir.a.vital-magic",
+    "name": "Vital Magic",
+    "text": "When a rule would end one of this model's upkeep spells, she may keep it alive by taking d3 damage for that spell.",
+    "kind": "triggered",
+    "trigger": "spell.expire",
+    "optional": true,
+    "effect": [{ "code": "cirVitalMagic" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "verify": "Core: spells.forceExpire keeps an upkeep a forced expiry (Banishing Ward) would end, for d3 damage, while the caster has more than 6 boxes left."
+  },
+  {
+    "id": "cir.a.wraithbane-weapons",
+    "name": "Wraithbane Weapons",
+    "text": "While the Wraithbane animus is on this model, its attacks ignore bonuses that spells give to the target's DEF and ARM.",
+    "kind": "triggered",
+    "trigger": "attack.declared",
+    "effect": [{ "code": "cirWraithbaneWeapons" }],
+    "scope": { "who": "self" },
+    "duration": "attack"
+  },
+  {
+    "id": "cir.a.controlled-warping",
+    "name": "Controlled Warping",
+    "text": "At the start of its activation this model picks one warp for the round: Ghostly, Spell Ward or Warp Strength. A frenzied model must take Warp Strength.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "effect": [{ "code": "cirControlledWarping" }],
+    "scope": { "who": "self" },
+    "duration": "round",
+    "verify": "RULING: the pick is automatic (Warp Strength) at activation.start; there is no choice decision for it yet."
+  },
+  {
+    "id": "cir.a.warp-ghostly",
+    "name": "Warp: Ghostly",
+    "text": "This round the model moves through terrain, obstructions and models it can clear completely, with no penalty.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "code": "cirWarpGhostly" }],
+    "scope": { "who": "self" },
+    "duration": "round",
+    "verify": "Core: MoverInfo.ghostly passes through bases, obstructions and rough ground (same as Incorporeal)."
+  },
+  {
+    "id": "cir.a.warp-spell-ward",
+    "name": "Warp: Spell Ward",
+    "text": "This round spells cannot target the model.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "op": "forbid", "what": "beTargeted" }],
+    "scope": { "who": "self" },
+    "duration": "round",
+    "verify": "Core: castSpell and the spell attack refuse targets an effect wards (forbid beTargetedBySpell; Banishing Ward uses beTargeted against enemy casters)."
+  },
+  {
+    "id": "cir.a.warp-strength",
+    "name": "Warp: Strength",
+    "text": "This round the model's melee damage rolls get +2.",
+    "kind": "passive",
+    "trigger": "passive",
+    "when": { "test": "attackKind", "value": "melee" },
+    "effect": [{ "op": "modRoll", "roll": "damage", "value": 2 }],
+    "scope": { "who": "self" },
+    "duration": "round"
+  },
+  {
+    "id": "cir.a.regeneration",
+    "name": "Regeneration [d3]",
+    "text": "Once per activation, unless it ran, this model can be forced to heal d3 damage.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "limit": "oncePerActivation",
+    "cost": { "forced": 1 },
+    "effect": [{ "code": "cirRegeneration" }],
+    "scope": { "who": "self" },
+    "duration": "instant"
+  },
+  {
+    "id": "cir.a.body-snatcher",
+    "name": "Body Snatcher: Heart Eater",
+    "text": "When this model destroys a living or undead enemy model with a melee attack, it takes that model's corpse token, up to three.",
+    "kind": "triggered",
+    "trigger": "death.destroyed",
+    "effect": [{ "op": "gainToken", "token": "corpse", "value": 1 }],
+    "scope": { "who": "self" },
+    "duration": "game",
+    "verify": "Implemented as an attack plugin (cir.body-snatcher): death.destroyed is not dispatched to data yet."
+  },
+  {
+    "id": "cir.a.blood-rage",
+    "name": "Blood Rage",
+    "text": "In its Combat Action this model may spend corpse tokens; each one buys one extra melee attack.",
+    "kind": "specialAction",
+    "trigger": "combat.choose",
+    "cost": { "corpse": 1 },
+    "effect": [{ "code": "cirBloodRage" }],
+    "scope": { "who": "self" },
+    "duration": "activation",
+    "verify": "Core: x.extraMelee adds the bought attacks to the melee weapon when melee is chosen or while attacking."
+  },
+  {
+    "id": "cir.a.meat-for-the-beast",
+    "name": "Meat for the Beast",
+    "text": "This model may spend a corpse token to boost an attack roll.",
+    "kind": "triggered",
+    "trigger": "attack.beforeRoll",
+    "cost": { "corpse": 1 },
+    "effect": [{ "code": "cirMeatForTheBeast", "params": { "roll": "attack" } }],
+    "scope": { "who": "self" },
+    "duration": "attack",
+    "verify": "RULING: spent automatically when the unboosted hit chance is under 70 percent, because mandatory windows cannot ask the player."
+  },
+  {
+    "id": "cir.a.meat-for-the-beast-damage",
+    "name": "Meat for the Beast (damage)",
+    "text": "This model may spend a corpse token to boost a damage roll.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "cost": { "corpse": 1 },
+    "effect": [{ "code": "cirMeatForTheBeast", "params": { "roll": "damage" } }],
+    "scope": { "who": "self" },
+    "duration": "attack",
+    "verify": "RULING: spent automatically on a direct damage roll when a token is held."
+  },
+  {
+    "id": "cir.a.death-feast",
+    "name": "Death Feast",
+    "text": "At the start of its activation this model may spend corpse tokens; each heals d3 damage.",
+    "kind": "triggered",
+    "trigger": "activation.start",
+    "cost": { "corpse": 1 },
+    "effect": [{ "code": "cirDeathFeast" }],
+    "scope": { "who": "self" },
+    "duration": "activation",
+    "verify": "RULING: tokens are spent automatically while the model is damaged, one per d3."
+  },
+  {
+    "id": "cir.a.death-powered",
+    "name": "Death-Powered",
+    "text": "For each corpse token this model holds it has +1 ARM and +1 melee damage.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [{ "code": "cirDeathPowered" }],
+    "scope": { "who": "self" },
+    "duration": "continuous",
+    "verify": "Damage is a plugin; statOf adds deathPoweredArm() to ARM."
+  },
+  {
+    "id": "cir.a.rapid-healing",
+    "name": "Rapid Healing",
+    "text": "Right after an enemy attack damages this model, it heals d3.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": { "all": [{ "test": "hit" }, { "test": "isEnemy", "subject": "attacker" }] },
+    "effect": [{ "code": "cirRapidHealing" }],
+    "scope": { "who": "self" },
+    "duration": "instant",
+    "verify": "RULING: a hit counts as damage only when the model has damage marked afterwards."
+  },
+  {
+    "id": "cir.a.treewalker",
+    "name": "Treewalker",
+    "text": "Forests do not block this model's line of sight, and while it is completely inside a forest it gets +2 DEF against melee attacks.",
+    "kind": "passive",
+    "trigger": "passive",
+    "effect": [
+      { "op": "ignore", "ignore": "forest" },
+      { "code": "cirTreewalkerDef" }
+    ],
+    "scope": { "who": "self" },
+    "duration": "continuous",
+    "verify": "Core: los options ignoreForest and statOf adds treewalkerDefBonus()."
+  },
+  {
+    "id": "cir.a.from-beneath",
+    "name": "From Beneath",
+    "text": "This attack ignores cover and concealment.",
+    "kind": "triggered",
+    "trigger": "attack.declared",
+    "effect": [
+      { "op": "ignore", "ignore": "cover" },
+      { "op": "ignore", "ignore": "concealment" }
+    ],
+    "scope": { "who": "self" },
+    "duration": "attack",
+    "verify": "Core: measure() reads ignore cover and concealment from the weapon abilities."
+  },
+  {
+    "id": "cir.a.critical-consume",
+    "name": "Critical Consume",
+    "text": "A critical hit on a small-based model that is not a Leader removes it from play.",
+    "kind": "triggered",
+    "trigger": "attack.crit",
+    "when": {
+      "all": [
+        { "test": "baseAtMost", "subject": "target", "value": 30 },
+        { "not": { "test": "modelType", "subject": "target", "value": "leader" } }
+      ]
+    },
+    "effect": [{ "code": "cirCriticalConsume" }],
+    "scope": { "who": "target" },
+    "duration": "instant"
+  },
+  {
+    "id": "cir.a.shadow-bind",
+    "name": "Shadow Bind",
+    "text": "A model hit by this attack gets -3 DEF and cannot advance for a round. It can shake the effect.",
+    "kind": "triggered",
+    "trigger": "attack.hit",
+    "effect": [{ "op": "applyCondition", "condition": "shadowBind" }],
+    "scope": { "who": "target" },
+    "duration": "round",
+    "verify": "Core: applyCondition shadowBind makes a one-round shakeable effect; statOf gives -3 DEF and MoverInfo.noAdvance blocks Normal Movement."
+  },
+  {
+    "id": "cir.a.brutal-charge",
+    "name": "Brutal Charge",
+    "text": "Damage rolls of a charge attack with this weapon get +2.",
+    "kind": "triggered",
+    "trigger": "damage.beforeRoll",
+    "when": { "test": "charged" },
+    "effect": [{ "op": "modRoll", "roll": "damage", "value": 2 }],
+    "scope": { "who": "self" },
+    "duration": "attack"
+  },
+  {
+    "id": "cir.a.shifter",
+    "name": "Shifter",
+    "text": "When this attack hits, the attacker is placed base to base with the model it hit.",
+    "kind": "triggered",
+    "trigger": "attack.resolved",
+    "when": { "test": "hit" },
+    "effect": [{ "code": "cirShifter" }],
+    "scope": { "who": "self" },
+    "duration": "instant"
+  },
+  {
+    "id": "cir.a.blood-reaper",
+    "name": "Blood Reaper",
+    "text": "This model's initial attack with this weapon hits every model in its melee range and line of sight at once.",
+    "kind": "triggered",
+    "trigger": "combat.chooseAttack",
+    "effect": [{ "code": "cirBloodReaper" }],
+    "scope": { "who": "self" },
+    "duration": "attack",
+    "verify": "Core: declareAttack sets flags.multi for the initial attack; measure rolls against every model in reach and LOS."
+  },
+  {
+    "id": "cir.a.grievous-wounds",
+    "name": "Grievous Wounds",
+    "text": "A direct hit takes away Tough and stops all healing on the model for a round.",
+    "kind": "triggered",
+    "trigger": "attack.hit",
+    "effect": [
+      { "op": "forbid", "what": "tough" },
+      { "code": "cirGrievousWounds" }
+    ],
+    "scope": { "who": "target" },
+    "duration": "round",
+    "verify": "Core: healDamage and rollTough honour effects that forbid heal or tough."
+  }
+]

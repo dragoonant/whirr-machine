@@ -1,0 +1,46 @@
+{
+  "faction": "cry",
+  "id": "cry.furies-b",
+  "name": "Fury II (The Furies)",
+  "type": "trooper",
+  "character": true,
+  "keywords": [
+    "cryx",
+    "necrofactorium",
+    "undead",
+    "wraith",
+    "incorporeal"
+  ],
+  "base": 40,
+  "stats": {
+    "SPD": 6,
+    "AAT": 7,
+    "MAT": 6,
+    "RAT": 0,
+    "DEF": 14,
+    "ARM": 14
+  },
+  "damage": {
+    "track": "single",
+    "boxes": 5
+  },
+  "weapons": [
+    {
+      "weapon": "cry.w.wraith-strike"
+    }
+  ],
+  "abilities": [
+    "cry.a.incorporeal",
+    "cry.a.magic-ability",
+    "cry.a.marionette",
+    "cry.a.power-of-death",
+    "cry.a.stygian-abyss",
+    "cry.a.mortal-fear"
+  ],
+  "cost": 0,
+  "figure": {
+    "slug": "wm-furies",
+    "archetype": "infantry"
+  },
+  "verify": "Community card data (U-cd); boxes and trooper names assumed."
+}
