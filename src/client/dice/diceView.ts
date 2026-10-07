@@ -42,6 +42,8 @@ export const PURPOSE_RENDERERS: Record<RollPurpose, (c: RollCtx) => Verdict> = {
   maintenance: passFail,
   scenario: passFail,
   other: passFail,
+  threshold: passFail, // M9 contract stub; U1 refines
+  frenzyTie: total, // M9 contract stub; U1 refines
 }
 
 export const TARGET_WORD: Partial<Record<RollPurpose, string>> = { attack: 'DEF', damage: 'ARM', collateral: 'ARM', fall: 'ARM' }

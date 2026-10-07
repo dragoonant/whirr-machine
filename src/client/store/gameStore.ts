@@ -116,6 +116,10 @@ const REJECTION_TEXT: Record<RejectionCode, string> = {
   E_UPKEEP_LIMIT: 'Too many upkeep effects.',
   E_POWER_ATTACK: 'That power attack is not possible.',
   E_NO_DUAL_ATTACK: 'This model cannot make both kinds of attack.',
+  E_INSUFFICIENT_FURY: 'Not enough fury.', // M9
+  E_FURY_CAP: 'That model cannot hold any more fury.',
+  E_CANNOT_FORCE: 'That warbeast cannot be forced right now.',
+  E_INSUFFICIENT_TOKENS: 'Not enough tokens to pay for that.',
 }
 export function rejectionText(code: RejectionCode | 'E_CLIENT'): string {
   return code === 'E_CLIENT' ? 'That is not possible right now.' : REJECTION_TEXT[code] ?? 'That is not allowed.'

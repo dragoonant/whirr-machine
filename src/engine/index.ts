@@ -2,7 +2,7 @@
 // Additive since M2 (00 §14): registerBundle(), the bundle registry step() reads by state.dataVersion.
 import type { Action } from './actions'
 import type {
-  AttackContext, BaseMm, DataBundle, ElementControl, GameSetup, GameState, Id, LosReason, ModelId, Mod, PendingDecision,
+  Aspect, AttackContext, BaseMm, DataBundle, ElementControl, GameSetup, GameState, Id, LosReason, ModelId, Mod, PendingDecision,
   PlayerId, PlayerView, Rejection, SaveFile, Stat, StatMod, StepResult, Vec2,
 } from './types'
 import { EngineInvariantError } from './types'
@@ -189,7 +189,45 @@ export interface AttackPreview {
   autoHit: boolean
   autoMiss: boolean
 }
-export interface ThreatRanges { advance: number; run: number; charge: number; slam: number | null; ranged: number | null; meleeRange: number }
+// needsForce (M9): a beast's run/charge/slam ranges assume it can be forced (query.fury(...).forceable)
+export interface ThreatRanges { advance: number; run: number; charge: number; slam: number | null; ranged: number | null; meleeRange: number; needsForce?: boolean }
+
+// ---------- M9 fury query shapes (81 D.2); bodies land with E7 ----------
+export type FuryBlock = 'wild' | 'frenzied' | 'spirit' | 'outOfCtrl' | 'cap' | 'noController'
+export interface FuryInfo {
+  kind: 'warlock' | 'beast' | null
+  fury: number
+  cap: number
+  capStat: 'ARC' | 'FURY'
+  controllerId?: ModelId
+  inCtrl?: boolean
+  forceable: boolean
+  block?: FuryBlock
+  room: number
+}
+export interface BattlegroupInfo { ctrl: number; leechRoom: number; spiritBond: number; beasts: (FuryInfo & { modelId: ModelId; pFrenzyNow: number })[] }
+export interface ThresholdInfo { thr: number; fury: number; need: number; pFrenzy: number; construct: boolean }
+export interface SpiralView {
+  branches: { branch: number; boxes: { aspect: Aspect | null; filled: boolean }[] }[]
+  unmarked: number
+  aspects: Record<Aspect, { total: number; filled: number; crippled: boolean }>
+}
+export interface TransferPreviewRow {
+  beastId: ModelId
+  eligible: boolean
+  reason?: string
+  unmarked: number
+  fury: number
+  cap: number
+  absorbed: number
+  overflow: number
+  pDisabled: number
+  pCripple: Record<Aspect, number>
+}
+export interface FrenzyTargetInfo { tiedIds: ModelId[]; distance: number; friendly: boolean; canCharge: boolean; reason?: 'noTarget' | 'cannotCharge' | 'cannotActivate' }
+export interface LeechPlan { from: Record<ModelId, number>; self: number }
+export interface LeechPreview { gained: number; selfDamage: number; after: number; pFrenzyAfter: Record<ModelId, number> }
+const notImplementedM9 = (name: string): never => { throw new Error(`query.${name}: not implemented (M9)`) }
 export interface ControlReport {
   elements: Record<Id, ElementControl>
   vpNow: Record<PlayerId, number>
@@ -343,6 +381,26 @@ export const query = {
 
   /** Power-attack collateral/slam POW: 12 when the attacker's base is not larger than the target's, else 14. */
   powerAttackPow(attackerBase: BaseMm, targetBase: BaseMm): number { return attackerBase <= targetBase ? 12 : 14 },
+
+  // ---------- M9 fury queries (81 D.2). Stubs until E7: focus models answer kind null; fury models throw. ----------
+  /** Fury pool, cap and whether a beast can be forced right now. */
+  fury(state: GameState, modelId: ModelId): FuryInfo {
+    const m = state.models[modelId]
+    if (!m || m.fury === undefined) return { kind: null, fury: 0, cap: 0, capStat: 'ARC', forceable: false, room: 0 }
+    return notImplementedM9('fury')
+  },
+  /** A warlock's battlegroup for the HUD fury bars. */
+  battlegroup(_state: GameState, _warlockId: ModelId): BattlegroupInfo { return notImplementedM9('battlegroup') },
+  /** Threshold odds: pFrenzy = P(2d6 > THR - fury - extraFury). */
+  threshold(_state: GameState, _beastId: ModelId, _extraFury = 0): ThresholdInfo { return notImplementedM9('threshold') },
+  /** The life spiral as the spiral view draws it. */
+  spiral(_state: GameState, _modelId: ModelId): SpiralView { return notImplementedM9('spiral') },
+  /** One row per battlegroup beast: what a transfer of `points` would do. */
+  transferPreview(_state: GameState, _warlockId: ModelId, _points: number): TransferPreviewRow[] { return notImplementedM9('transferPreview') },
+  /** Who a frenzying beast would charge (prediction for the AI and UI). */
+  frenzyTarget(_state: GameState, _beastId: ModelId): FrenzyTargetInfo { return notImplementedM9('frenzyTarget') },
+  /** Result of a leech plan before it is answered. */
+  leechPreview(_state: GameState, _warlockId: ModelId, _plan: LeechPlan): LeechPreview { return notImplementedM9('leechPreview') },
 }
 
 // ---------- describe-numbers helpers (format engine numbers for prompts; no rules arithmetic) ----------
@@ -354,6 +412,15 @@ const nameOf = (state: GameState, id: Id | undefined): string => {
   if (!m) return id
   const p = (bundleFor(state).byId[m.profileId] ?? {}) as { name?: string }
   return p.name ?? id
+}
+
+/** Option cost in our words: focus, fury spent by a warlock, fury a beast gains when forced (M9). */
+function costText(c: NonNullable<PendingDecision['options']>[number]['cost'] & object): string {
+  const parts: string[] = []
+  if (c.focus) parts.push(`${c.focus} focus`)
+  if (c.fury) parts.push(`${c.fury} fury`)
+  if (c.forced) parts.push(`force ${c.forced}`)
+  return parts.length ? parts.join(', ') : '0 focus'
 }
 
 /** Decision kinds whose short title already names the target. */
@@ -408,6 +475,10 @@ function decisionTitle(state: GameState, pd: PendingDecision): string {
       if (data.code === 'prey') return 'pick the prey'
       return 'make a choice'
     case 'gameOver': return 'game over'
+    case 'leech': return 'leech fury'
+    case 'transferDamage': return 'transfer the damage?'
+    case 'adjustFury': return 'remove fury from the warbeast'
+    case 'reave': return 'pick who reaves the fury'
     default: return String(pd.kind)
   }
 }
@@ -437,7 +508,7 @@ export const describe = {
     const who = pending.context.modelId ? nameOf(state, pending.context.modelId) : `Player ${pending.player}`
     const lines: DescribedLine[] = (pending.options ?? []).map((o) => ({
       label: o.label,
-      value: o.cost ? `${o.cost.focus} focus` : '',
+      value: o.cost ? costText(o.cost) : '',
       detail: o.odds?.pHit !== undefined ? `hit ${describe.percent(o.odds.pHit)}` : o.odds?.expectedDamage !== undefined ? `avg ${o.odds.expectedDamage.toFixed(1)}` : undefined,
     }))
     if (state.attack && ['boostAttack', 'boostDamage', 'powerField', 'rollAnyway', 'reroll'].includes(pending.kind)) lines.push(...describe.attack(state.attack))
@@ -454,6 +525,20 @@ export const describe = {
       case 'DamageApplied': return `${n('targetId')} takes ${ev.points} damage`
       case 'TurnStarted': return `Round ${ev.round}, player ${ev.player}'s turn`
       case 'GameEnded': return ev.winner ? `Player ${ev.winner} wins (${ev.reason})` : `Draw (${ev.reason})`
+      case 'FuryChanged': return `${n('modelId')} ${ev.delta >= 0 ? 'gains' : 'loses'} ${Math.abs(ev.delta)} fury (now ${ev.after})`
+      case 'FuryLeeched': return `${n('warlockId')} leeches fury (now ${ev.after})`
+      case 'FuryReaved': return `${n('reaverId')} reaves ${ev.points} fury from ${n('beastId')}`
+      case 'BeastForced': return `${n('beastId')} is forced (${ev.purpose}), fury ${ev.after}`
+      case 'ThresholdChecked': return `${n('beastId')} threshold check: ${ev.frenzied ? 'frenzy!' : 'holds'}`
+      case 'Frenzied': return ev.targetId ? `Frenzy: ${n('beastId')} charges ${n('targetId')}` : `Frenzy: ${n('beastId')} has nothing to charge`
+      case 'FrenzyEnded': return `${n('beastId')} calms down`
+      case 'DamageTransferred': return `${n('warlockId')} moves ${ev.points} damage onto ${n('beastId')}`
+      case 'AspectCrippled': return `${n('modelId')}: ${ev.aspect} crippled`
+      case 'AspectRestored': return `${n('modelId')}: ${ev.aspect} restored`
+      case 'BeastWild': return `${n('modelId')} runs wild`
+      case 'BeastControlTaken': return `${n('warlockId')} takes control of ${n('modelId')}`
+      case 'TokenGained': return `${n('modelId')} gains ${ev.count} ${ev.token} token${ev.count === 1 ? '' : 's'}`
+      case 'TokenSpent': return `${n('modelId')} spends ${ev.count} ${ev.token} token${ev.count === 1 ? '' : 's'}`
       default: return ev.type
     }
   },

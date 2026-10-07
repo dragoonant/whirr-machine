@@ -1,0 +1,23 @@
+{
+  "id": "men",
+  "name": "Protectorate of Menoth",
+  "short": "Menoth",
+  "appVersion": "community",
+  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/menoth.md.",
+  "keywords": [
+    "covenant-of-the-flame",
+    "flameguard"
+  ],
+  "palette": {
+    "primary": "#e6d6b0",
+    "secondary": "#5c2350",
+    "metal": "#b08d3e",
+    "base": "#4b3e2c",
+    "ui": "#8c3c7a"
+  },
+  "sourceHues": [
+    43,
+    315
+  ],
+  "marking": "pyre-ward"
+}

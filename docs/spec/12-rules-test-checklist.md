@@ -458,3 +458,63 @@ are fixed.
 | TER-122 | Each board: the 3 mat maps exist at 2048 × 2048; the wood surround and brass trim render; the board's key, ambient and fog colours are applied; Low graphics drops the normal and roughness maps | 70 §C, §F |
 | TER-123 | `art.spec` on each board: all terrain GLBs load, no console errors, mean frame time ≤ M5 baseline + 3 ms | 70 §F |
 | TER-124 | IP lint: no board or piece name, prose or catalog prompt contains a faction, product or company name from the denylist in `tools/validate-data.ts`; catalog prompts are ≤ 60 words | 70 IP rule |
+
+## M9 warlocks and fury (FURY)
+
+Spec: `81-warlocks-fury.md` (`Ref` = its F-ids, FZ steps and T steps). Fixtures need one fury list: a warlock
+(ARC 6, CTRL 12) and beasts with spiral branches 6/3/7/5/6/3 (Mind 1–2, Body 3–4, Spirit 5–6) unless a case says
+otherwise. FURY-031 stays `todo` until non-attack damage can raise a transfer prompt.
+
+| ID | Case | Ref |
+|---|---|---|
+| FURY-001 | Game start: warlock ARC 6 holds 6 fury (`FuryChanged reason 'start'`), its beasts 0, `focus` 0 on all fury models | F1.4 |
+| FURY-002 | Maintenance: warlock at 8 fury with ARC 6 drops to 6 (`trim`); a beast holding 3 keeps 3 | F2.4 |
+| FURY-003 | Leech cap: ARC 7, warlock at 2, two beasts in CTRL with 3 each → `leech {3,3}` rejected `E_FURY_CAP`; `{3,2}` accepted → warlock 7, beasts 0 and 1 | F4.1 F4.3 |
+| FURY-004 | Leech from a beast outside CTRL → `E_OUT_OF_CTRL`; from a beast of another battlegroup or a wild beast → `E_TARGET_INVALID` | F4.4 |
+| FURY-005 | Self-leech 2 → warlock gains 2 and suffers 2 damage points; no `transferDamage` is raised for that damage | F4.2 F8 T1 |
+| FURY-006 | Self-leech that fills the warlock's last box → disabled; a Tough warlock rolls Tough in its death window | F4.2 F10.6 |
+| FURY-007 | Spirit Bond: one destroyed 50 mm beast and one destroyed 30 mm beast of this battlegroup → +1 fury after leeching, auto-applied (`FuryLeeched.spiritBond = 1`), never above ARC | F4.5 F4.6 |
+| FURY-008 | Spirit Bond: a beast that returned to play no longer counts; a beast that was wild when destroyed never counts | F4.5 F9.6 |
+| FURY-009 | Order: a beast at 4 fury leeched to 0 in C2 makes no threshold roll in C6; upkeep (C5) is paid after leeching | F3 C2 C5 C6 |
+| FURY-010 | Upkeep with fury: warlock at 1 fury with two upkeeps → `payUpkeep` keeping both rejected `E_INSUFFICIENT_FURY`; keeping one spends 1, the other expires (`upkeepDropped`) | F6.1 |
+| FURY-011 | Threshold: THR 9, fury 3, rolls 3,3 → total 9 → passes; rolls 3,4 → total 10 → frenzies (`ThresholdChecked.frenzied`) | F7 |
+| FURY-012 | A Construct beast with fury makes no threshold roll | F1.7 F7.1 |
+| FURY-013 | Frenzy target: a friendly solo 2" away and an enemy 3" away, both in LOS → the beast charges and attacks the friendly solo | F7 FZ3 FZ5 |
+| FURY-014 | Frenzy tie: two models at the same distance → one `frenzyTie` roll picks; `Frenzied.tiedIds` lists both; replay gives the same pick | F7 FZ3 F7.b |
+| FURY-015 | Frenzy with no model in LOS → `Frenzied reason 'noTarget'`, no movement, `adjustFury` raised, and the beast is not offered in this turn's `chooseActivation` | FZ3 FZ7 F7.c |
+| FURY-016 | Frenzy while knocked down and engaged: stands up with no fury gained, then charges the closest model even though engaged | FZ2 FZ4 |
+| FURY-017 | Frenzy attack uses the highest-POW melee weapon that reaches; its attack roll is boosted for free (`RollBoosted source 'frenzy'`); moved 4" → damage boosted (charge attack); moved 2" → damage not boosted | FZ5 |
+| FURY-018 | Frenzy activation: no additional-attack, force, animus or special-action option is ever offered; the activation ends after the one attack; the beast cannot activate again this turn | FZ5 FZ6 |
+| FURY-019 | Frenzy end: `adjustFury` lists deltas 0..−3 for a beast at 3; choosing −2 leaves 1 (`FrenzyEnded.vented = 2`), then the next beast's threshold check runs | FZ7 F3.b |
+| FURY-020 | A beast outside its warlock's CTRL is offered no run, charge, slam or trample; `chooseMovement run` → `E_OUT_OF_CTRL` | F5 gate 3, F5.1 |
+| FURY-021 | Cap: beast FURY 3 at 3 fury → `boostAttack` rejected `E_FURY_CAP`; at 2 → boost accepted, fury 3, `BeastForced {purpose:'boostAttack', gained:1}` | F5 gate 5, F5.3 |
+| FURY-022 | Spirit crippled: every force rejected `E_CRIPPLED`; the beast can still advance and make its initial attacks | F5 gate 4, F10.5 |
+| FURY-023 | Beast forced for two additional melee attacks → two extra attacks, +2 fury; never a ranged additional attack without a card rule | F5.2 |
+| FURY-024 | Warlock: 1 fury per boost and per additional melee attack in its activation; an out-of-activation attack by the warlock offers no fury spend | F2.1 F2.2 |
+| FURY-025 | Beast power attacks: headbutt costs +1 fury at `chooseCombatAction`; slam costs +1 once when declared (not again for the movement); with Mind crippled neither is offered | F5.4 F5.b F10.5 |
+| FURY-026 | Rile: FURY 4 beast at 1 → `adjustFury +2` → 3; `+4` rejected `E_FURY_CAP`; before a run the AT sample offers rile `room` and `room − 1` | F5.7 F5.a |
+| FURY-027 | Shed: warlock at 5 → `adjustFury −3` → 2 (`reason 'shed'`); `−6` rejected | F2.3 |
+| FURY-028 | Beast forced animus COST 2 → +2 fury, `SpellCast.forced`; a second animus cast that activation → `E_ALREADY_USED`; a cast that would pass FURY → `E_FURY_CAP` | F12.3 |
+| FURY-029 | Warlock casts a battlegroup beast's animus while the beast is in CTRL (pays COST in fury); with the beast outside CTRL the animus is not offered | F12.2 |
+| FURY-030 | One friendly animus per model: a second friendly animus affecting the same model replaces the first; an enemy animus does not | F12.4 |
+| FURY-031 | Continuous fire damage to a warlock in Maintenance raises `transferDamage` (todo until F8.c is lifted) | F8.c |
+| FURY-032 | Transfer: warlock with 1 unmarked box takes 10 points; transfer to a beast with 8 unmarked → beast marks 8 (branch rolled), 2 overflow hit the warlock with no second prompt, warlock disabled; `DamageTransferred {absorbed:8, overflow:2}` | F8 T4–T6 |
+| FURY-033 | A beast at fury = FURY is not a transfer candidate; a forged `transferDamage` to it → `E_FURY_CAP` | F8 T2 |
+| FURY-034 | No transfer prompt when the warlock has 0 fury or the instance deals 0 points | F8 T1 |
+| FURY-035 | A beast destroyed by transferred damage is not reaved (fury lost); next Control it counts for Spirit Bond | F8.3 F9.3 F4.5 |
+| FURY-036 | After a transfer the warlock still counts as damaged: its "when damaged" trigger fires once; the beast's own "when damaged" trigger fires too | F8 T7 |
+| FURY-037 | Transfer onto a Tough beast that fills its spiral: beast rolls Tough (5 → survives, knocked down); the overflow computed before marking still goes to the warlock; death windows run beast then warlock | F8.1 F8.a |
+| FURY-038 | Reave: a beast with 3 fury in CTRL destroyed by an enemy attack → warlock +3 (auto, `FuryReaved`); at ARC 6 with 5 fury → +1, `lost: 2` | F9.1 F9.2 F9.5 F12.a |
+| FURY-039 | No reave when the beast was destroyed by a friendly frenzy attack or outside CTRL: its fury is lost (`FuryChanged reason 'lose'`) | F9.3 F9.4 |
+| FURY-040 | Spiral fill: branches 6/3/7/5/6/3, branch 2 already has 1 mark, branch roll 2, 5 points → 2 boxes in branch 2 (outer first), then 3 in branch 3 from its outermost box; a 6 on a full branch 6 wraps to branch 1 | F10.2 |
+| FURY-041 | All Spirit boxes marked → `AspectCrippled spirit` and `SystemCrippled 's'`; healing one Spirit box → `AspectRestored spirit` | F10.4 B.1 |
+| FURY-042 | Crippled Body: a 2d6 damage roll becomes 1d6, boosted 3d6 becomes 2d6. Crippled Mind: attack roll −1 die; power attacks and ★Attacks not offered | F10.5 |
+| FURY-043 | "Suffers 2 damage to Mind" → the lowest-numbered branch with an unmarked Mind box, outermost Mind boxes first | F10.3 |
+| FURY-044 | Warlock destroyed: each beast of its battlegroup becomes wild (`BeastWild`, fury 0, `inert`), its upkeeps expire; wild beasts don't activate, have base DEF 5, are auto-hit in melee and neither secure nor contest scenario elements | F11.1 F11.2 F11.4 |
+| FURY-045 | Take control: a friendly same-Faction warlock within 1" pays 1 fury → the beast joins its battlegroup and forfeits its Combat Action this turn; another Faction's warlock → `E_TARGET_INVALID`; 1.5" away → `E_OUT_OF_RANGE` | F11.3 |
+| FURY-046 | Heal: warlock spends 2 fury on a beast in CTRL → 2 boxes removed, the default order restores a crippled Spirit first; a Construct beast → `E_TARGET_INVALID` | F2.2 F10.7 F1.7 |
+| FURY-047 | C7 shake: warlock knocked down at 1 fury and a stationary beast in CTRL at 0 fury → both offered; shaking costs the warlock 1 fury and gives the beast +1; a beast outside CTRL is not offered | F6.4 F6.5 F3.a |
+| FURY-048 | An effect lowers a beast's FURY from 4 to 3 while it holds 4 → 1 fury removed at once (`capTrim`) | F5.8 |
+| FURY-049 | `npm run sim` with a fury list (30 games): every new decision's `legalActions` is non-empty and each member passes `validate`; 0 invariant violations | 00 §5, 81 C.1 |
+| FURY-050 | Recon setup: a warlock list whose only beast is lesser → `E_BAD_SETUP`; with a light beast → valid | F1.6 |
+| FURY-051 | A beast secures a 50 mm objective like a war-engine (Cohort); the same beast while wild cannot | F13.3 F11.2 |

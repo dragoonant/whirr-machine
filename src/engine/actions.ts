@@ -51,9 +51,20 @@ export interface CombinedAttackAction extends Base<'combinedAttack'> { primaryId
 
 // ---------- caster any-time actions ----------
 export interface ChannelAction extends Base<'channel'> { via: ModelId | null } // null = cast from the caster
-export interface CastSpellAction extends Base<'castSpell'> { casterId: ModelId; spellId: Id; targetId?: ModelId; point?: Vec2 }
+export interface CastSpellAction extends Base<'castSpell'> {
+  casterId: ModelId
+  spellId: Id
+  targetId?: ModelId
+  point?: Vec2
+  animusOf?: ModelId // M9: the beast whose animus the warlock casts
+}
 export interface UseFeatAction extends Base<'useFeat'> { casterId: ModelId; featId: Id; choices?: Record<string, unknown> }
-export interface HealAction extends Base<'heal'> { casterId: ModelId; points: number }
+export interface HealAction extends Base<'heal'> {
+  casterId: ModelId
+  points: number
+  targetId?: ModelId // M9: self (default) or a battlegroup beast in CTRL
+  boxes?: BoxRef[] // M9: spiral box picks; omitted = the engine's default heal order
+}
 
 // ---------- attack / damage answers ----------
 export interface BoostAttackAction extends Base<'boostAttack'> { boost: boolean }
@@ -64,6 +75,13 @@ export interface ChooseGridAction extends Base<'chooseGrid'> { grid: GridState['
 export interface PowerFieldAction extends Base<'powerField'> { spend: 0 | 1; instanceId?: string }
 export interface ChooseBoxesAction extends Base<'chooseBoxes'> { column?: number; boxes?: BoxRef[] }
 
+// ---------- fury (M9, 81 C) ----------
+export interface LeechAction extends Base<'leech'> { warlockId: ModelId; from: Record<ModelId, number>; self: number }
+export interface TransferDamageAction extends Base<'transferDamage'> { toId: ModelId | null } // null = keep the damage
+export interface AdjustFuryAction extends Base<'adjustFury'> { modelId: ModelId; delta: number } // rile (+, beast), shed/vent (-)
+export interface ReaveAction extends Base<'reave'> { reaverId: ModelId | null }
+export interface TakeControlAction extends Base<'takeControl'> { casterId: ModelId; targetId: ModelId }
+
 export type Action =
   | PassAction | AckAction | AbilityChoiceAction | TriggerWindowAction
   | ChooseTurnOrderAction | ChooseEdgeAction | DeployAction | AdvanceDeployAction
@@ -73,6 +91,7 @@ export type Action =
   | CombinedAttackAction | ChannelAction | CastSpellAction | UseFeatAction | HealAction
   | BoostAttackAction | RollAnywayAction | RerollAction | BoostDamageAction | ChooseGridAction | PowerFieldAction
   | ChooseBoxesAction
+  | LeechAction | TransferDamageAction | AdjustFuryAction | ReaveAction | TakeControlAction
 
 export type ActionType = Action['type']
 export type ActionOf<T extends ActionType> = Extract<Action, { type: T }>

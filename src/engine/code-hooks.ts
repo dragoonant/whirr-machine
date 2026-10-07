@@ -14,6 +14,10 @@ import type {
 } from './types'
 import { cygnarHooks, cygnarPlugins } from './factions/cygnar'
 import { khadorHooks, khadorPlugins } from './factions/khador'
+import { trollbloodsHooks, trollbloodsPlugins } from './factions/trollbloods'
+import { circleHooks, circlePlugins } from './factions/circle'
+import { cryxHooks, cryxPlugins } from './factions/cryx'
+import { menothHooks, menothPlugins } from './factions/menoth'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Rec = Record<string, any>
@@ -356,11 +360,17 @@ export interface AttackPlugin {
 }
 // Lazy: faction files import helpers from this file, so the tables are built on first use (avoids an import cycle at load).
 let pluginCache: AttackPlugin[] | null = null
-export const plugins = (): AttackPlugin[] => (pluginCache ??= [...cygnarPlugins, ...khadorPlugins])
+export const plugins = (): AttackPlugin[] => (pluginCache ??= [...cygnarPlugins, ...khadorPlugins, ...trollbloodsPlugins, ...circlePlugins, ...cryxPlugins, ...menothPlugins])
 let hookCache: CodeHookRegistry | null = null
 export const codeHooks = (): CodeHookRegistry => (hookCache ??= {
-  conditions: { ...coreHooks.conditions, ...cygnarHooks.conditions, ...khadorHooks.conditions },
-  effects: { ...coreHooks.effects, ...cygnarHooks.effects, ...khadorHooks.effects },
+  conditions: {
+    ...coreHooks.conditions, ...cygnarHooks.conditions, ...khadorHooks.conditions, ...trollbloodsHooks.conditions,
+    ...circleHooks.conditions, ...cryxHooks.conditions, ...menothHooks.conditions,
+  },
+  effects: {
+    ...coreHooks.effects, ...cygnarHooks.effects, ...khadorHooks.effects, ...trollbloodsHooks.effects,
+    ...circleHooks.effects, ...cryxHooks.effects, ...menothHooks.effects,
+  },
 })
 export function runCodeEffect(state: GameState, b: DataBundle, code: string, ctx: Omit<HookContext, 'state'>, params: Rec = {}): HookResult {
   const h = codeHooks().effects[code]

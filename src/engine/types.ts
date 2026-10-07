@@ -22,21 +22,24 @@ export type DamageType = 'blast' | 'cold' | 'corrosion' | 'electricity' | 'fire'
 export type Stat = 'SPD' | 'AAT' | 'MAT' | 'RAT' | 'DEF' | 'ARM' | 'ARC' | 'CTRL' | 'FURY' | 'THR' | 'POW' | 'RNG' | 'ROF' | 'AOE'
 export type Shape = { circle: { r: number } } | { rect: { w: number; d: number } } | { polygon: Vec2[] }
 export type ModelType = 'leader' | 'warEngine' | 'solo' | 'trooper' | 'unit' | 'battleEngine' | 'structure'
+  | 'beast' // M9 (81 §E): a warbeast, the warlock's Cohort model
 export type ConditionId = 'knockedDown' | 'stationary' | 'disrupted' | 'fire' | 'corrosion' | 'inert' | 'engaged'
+  | 'shadowBind' | 'blind' // M9 faction conditions (factions/circle.md, factions/cryx.md)
 export type StoredConditionId = Exclude<ConditionId, 'engaged'> // engaged is derived, never stored
 export type LifeState = 'active' | 'disabled' | 'boxed' | 'destroyed'
 export type Phase = 'setup' | 'deploy' | 'maintenance' | 'control' | 'activation' | 'ended'
 
 // ---------- windows (00 §7; data triggers use the same ids plus 'passive') ----------
 export const WINDOW_IDS = [
-  'turn.start', 'maintenance.start', 'maintenance.effects', 'control.refill', 'control.powerUp', 'control.allocate',
-  'control.upkeep', 'control.shake', 'activation.start', 'activation.end', 'turn.end', 'round.end',
+  'turn.start', 'maintenance.start', 'maintenance.effects', 'control.refill', 'control.leech', 'control.powerUp',
+  'control.allocate', 'control.upkeep', 'control.threshold', 'control.shake', 'activation.start', 'activation.end', 'turn.end', 'round.end',
   'movement.choose', 'movement.start', 'movement.move', 'movement.charge', 'movement.place', 'movement.end',
   'combat.choose', 'combat.chooseAttack', 'combat.end',
   'attack.declared', 'attack.beforeRoll', 'attack.rolled', 'attack.hit', 'attack.crit', 'attack.miss', 'attack.resolved',
   'damage.beforeRoll', 'damage.rolled', 'damage.beforeApply', 'damage.applied', 'damage.crippled',
   'death.disabled', 'death.boxed', 'death.destroyed',
   'spell.declare', 'spell.cast', 'feat.used', 'scenario.score', 'game.end',
+  'spell.expire', // M9 (factions/cryx.md): an upkeep spell is about to be removed by an effect
 ] as const
 export type WindowId = (typeof WINDOW_IDS)[number]
 export type TriggerWindow = WindowId | 'passive'
@@ -87,6 +90,12 @@ export interface ModelState {
   controllerId?: ModelId // war-engine → its caster
   inert?: boolean
   offTable?: boolean // ambush, not yet arrived
+  // M9 (81 B.1): fury is present iff the model is a fury model (warlock: ARC at setup; beast: 0); focus stays 0 on them
+  fury?: number
+  wild?: boolean // F11; always set together with inert: true
+  frenzied?: boolean // true only during a frenzy activation
+  bondedTo?: ModelId // Spirit Bond source (F9.6)
+  tokens?: Partial<Record<TokenKind, number>> // M9 faction specs: soul and corpse tokens held
 }
 export interface UnitState {
   id: UnitId
@@ -162,7 +171,7 @@ export interface LosVerdict { visible: boolean; reasons: LosReason[]; blockers: 
 export interface DamageInstance {
   id: string
   targetId: ModelId
-  kind: 'direct' | 'blast' | 'collateral' | 'continuous' | 'fall' | 'spell' | 'other'
+  kind: 'direct' | 'blast' | 'collateral' | 'continuous' | 'fall' | 'spell' | 'other' | 'transfer'
   pow: number
   dice: number // after additions/removals, ≥1
   boosted: boolean
@@ -173,6 +182,8 @@ export interface DamageInstance {
   total?: number
   powerField?: number
   grid?: GridState['id']
+  noTransfer?: boolean // M9 F8: this damage cannot be transferred (overflow, or a rule says so)
+  transferredFrom?: ModelId // M9 F8: the warlock this damage was moved off
 }
 export interface AttackContext {
   attackId: AttackId
@@ -238,6 +249,7 @@ export interface ActivationContext {
   healed: number
   limitsUsed: string[] // "<abilityId>:<limit>"
   reposition?: number // inches allowed at activation end
+  frenzy?: { beastId: ModelId; targetId: ModelId | null; tiedIds: ModelId[] } // M9: a frenzy activation (FZ1-FZ7)
 }
 
 // ---------- decisions (00 §5) ----------
@@ -248,6 +260,7 @@ export type DecisionKind =
   | 'placeTroopers' | 'chooseCombatAction' | 'chooseAttack' | 'combinedAttack' | 'channel' | 'castSpell' | 'useFeat'
   | 'boostAttack' | 'rollAnyway' | 'reroll' | 'boostDamage' | 'chooseGrid' | 'powerField' | 'chooseBoxes'
   | 'triggerWindow' | 'abilityChoice' | 'gameOver'
+  | 'leech' | 'transferDamage' | 'adjustFury' | 'reave' // M9 (81 C.1)
 export interface DecisionOdds { pHit?: number; pHitBoosted?: number; pCrit?: number; expectedDamage?: number; pKill?: number }
 export interface DecisionContext {
   modelId?: ModelId
@@ -259,7 +272,8 @@ export interface DecisionContext {
   odds?: DecisionOdds
   data?: Record<string, unknown> & { code?: string } // abilityChoice: code names the hook
 }
-export interface DecisionOption { id: string; label: string; action: Action; cost?: { focus: number }; odds?: DecisionOdds }
+// cost.fury = fury a warlock spends; cost.forced = fury a beast gains when forced (M9, 81 C.3)
+export interface DecisionOption { id: string; label: string; action: Action; cost?: { focus: number; fury?: number; forced?: number }; odds?: DecisionOdds }
 export interface MoveConstraints {
   modelId: ModelId
   from: Vec2
@@ -289,6 +303,8 @@ export type RejectionCode =
   | 'E_ENGAGED' | 'E_KNOCKED_DOWN' | 'E_STATIONARY' | 'E_ALREADY_ACTIVATED' | 'E_ALREADY_USED' | 'E_TARGET_INVALID'
   | 'E_BASE_OVERLAP' | 'E_PATH_BLOCKED' | 'E_TOO_FAR' | 'E_NOT_STRAIGHT' | 'E_OUT_OF_ZONE' | 'E_PLACEMENT'
   | 'E_UPKEEP_LIMIT' | 'E_POWER_ATTACK' | 'E_NO_DUAL_ATTACK'
+  | 'E_INSUFFICIENT_FURY' | 'E_FURY_CAP' | 'E_CANNOT_FORCE' // M9 (81 §E)
+  | 'E_INSUFFICIENT_TOKENS' // M9 faction specs: a soul/corpse token cost cannot be paid
 export interface Rejection { code: RejectionCode; message: string; detail?: Record<string, unknown> }
 export class EngineInvariantError extends Error { override name = 'EngineInvariantError' }
 
@@ -296,11 +312,26 @@ export class EngineInvariantError extends Error { override name = 'EngineInvaria
 export type FocusReason = 'refill' | 'powerUp' | 'allocate' | 'trim' | 'maintenanceClear' | 'spend' | 'lose' | 'gain'
 export type FocusPurpose = 'boostAttack' | 'boostDamage' | 'additionalAttack' | 'spell' | 'upkeep' | 'shake' | 'heal' | 'powerField' | 'run' | 'charge' | 'powerAttack' | 'reload'
 
+// ---------- fury (M9, 81 B and D.1) ----------
+export type Aspect = 'mind' | 'body' | 'spirit'
+/** Crippled aspects live in ModelState.crippled as these lowercase letters (never collide with grid systems). */
+export const ASPECT_LETTER: Readonly<Record<Aspect, SystemLetter>> = { mind: 'm', body: 'b', spirit: 's' }
+export type FuryReason = 'start' | 'leech' | 'leechSelf' | 'spiritBond' | 'reave' | 'forced' | 'spend' | 'shed' | 'trim'
+  | 'capTrim' | 'vent' | 'wild' | 'lose' | 'gain'
+export type FuryPurpose = 'boostAttack' | 'boostDamage' | 'additionalAttack' | 'spell' | 'upkeep' | 'shake' | 'heal'
+  | 'transfer' | 'takeControl' | 'reload'
+export type ForcePurpose = 'run' | 'charge' | 'additionalAttack' | 'boostAttack' | 'boostDamage' | 'powerAttack' | 'animus'
+  | 'shake' | 'rile' | 'reload' | 'ability'
+
+// ---------- tokens (M9 faction specs: Circle corpse tokens, Cryx soul tokens) ----------
+export type TokenKind = 'soul' | 'corpse'
+
 // ---------- rng (00 §9) ----------
 export type RngState = [number, number, number, number] // sfc32 state, u32 each
 export type RollPurpose =
   | 'rollOff' | 'attack' | 'damage' | 'column' | 'tough' | 'continuous' | 'slamDist' | 'throwDist' | 'fall' | 'rof'
   | 'd3' | 'aoeTie' | 'collateral' | 'spell' | 'maintenance' | 'scenario' | 'other'
+  | 'threshold' | 'frenzyTie' // M9 (81 §E)
 
 // ---------- game state (00 §3) ----------
 export interface GameState {
@@ -330,6 +361,7 @@ export interface GameState {
   pending: PendingDecision
   decisionSeq: number
   log: Action[]
+  thresholdQueue?: ModelId[] // M9 C6: beasts still to check while a frenzy activation waits; cleared when C6 ends
 }
 
 // ---------- engine API results (00 §2, §10) ----------

@@ -1,0 +1,25 @@
+{
+  "id": "cir",
+  "name": "Circle Orboros",
+  "short": "Circle",
+  "appVersion": "community",
+  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/circle.md.",
+  "keywords": [
+    "circle",
+    "devourers-host",
+    "blackclad",
+    "tharn"
+  ],
+  "palette": {
+    "primary": "#4b6b3c",
+    "secondary": "#8a5a32",
+    "metal": "#a3874f",
+    "base": "#4a3d2c",
+    "ui": "#6fa35a"
+  },
+  "sourceHues": [
+    110,
+    25
+  ],
+  "marking": "thornknot"
+}

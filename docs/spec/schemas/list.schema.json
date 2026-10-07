@@ -22,7 +22,8 @@
           "loadout": { "type": "object", "description": "hardpoint slot -> option id",
             "additionalProperties": { "$ref": "common.schema.json#/$defs/Id" } },
           "attachments": { "$ref": "common.schema.json#/$defs/IdList" },
-          "advanceDeploy": { "type": "boolean" }
+          "advanceDeploy": { "type": "boolean" },
+          "controller": { "$ref": "common.schema.json#/$defs/Id", "description": "Beasts: the ref of the entry whose battlegroup it joins; default = the Leader." }
         }
       }
     },

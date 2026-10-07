@@ -16,7 +16,7 @@
     "duration": { "$ref": "common.schema.json#/$defs/Duration" },
     "optional": { "type": "boolean", "default": false, "description": "true = owner may decline; raises triggerWindow." },
     "limit": { "enum": ["oncePerActivation", "oncePerTurn", "oncePerRound", "oncePerGame"] },
-    "cost": { "type": "object", "additionalProperties": false, "properties": { "focus": { "type": "integer", "minimum": 0 } } },
+    "cost": { "$ref": "common.schema.json#/$defs/Cost" },
     "attack": { "$ref": "common.schema.json#/$defs/Id", "description": "specialAttack only: the weapon it uses." },
     "verify": { "type": "string", "description": "Open rules question; mirrored in needs-rules-check.md." }
   }

@@ -50,6 +50,7 @@ export function checkRefs(byId: Record<string, TypedRecord>): string[] {
         for (const a of arr(o.abilities)) need(r.id, a, ['ability'], 'ability')
         for (const s of arr(o.spells)) need(r.id, s, ['spell'], 'spell')
         need(r.id, o.feat, ['feat'], 'feat')
+        need(r.id, o.animus, ['spell'], 'animus') // M9: warbeast animus
         const comp = o.composition as { grunts: { profile: string }; extra?: { profile: string }[]; commandAttachments?: string[]; weaponAttachments?: string[] } | undefined
         if (comp) {
           need(r.id, comp.grunts.profile, ['model'], 'trooper')
@@ -59,6 +60,7 @@ export function checkRefs(byId: Record<string, TypedRecord>): string[] {
         for (const h of arr(o.hardpoints)) for (const opt of arr(asObj(h).options)) {
           for (const m of arr(asObj(opt).weapons)) need(r.id, asObj(m).weapon, ['weapon'], 'weapon')
           for (const a of arr(asObj(opt).abilities)) need(r.id, a, ['ability'], 'ability')
+          need(r.id, asObj(opt).animus, ['spell'], 'animus')
         }
         need(r.id, o.faction, ['faction'], 'faction')
         break

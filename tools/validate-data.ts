@@ -98,6 +98,15 @@ export function validateAll(): ValidationReport {
         for (const l of letters) if (!allowed.has(l)) errors.push(`${r.id}: grid letter '${l}' has no system`)
         warnings.push(`${r.id}: grid ${boxes} boxes, systems ${[...letters].sort().join('')}`)
       }
+      // M9 (81 B.2): life spirals (6 branches and the -MBS letters are schema-checked); animus refs must be animus spells
+      if (o.damage?.track === 'spiral') {
+        const count: Record<string, number> = { M: 0, B: 0, S: 0, '-': 0 }
+        for (const br of o.damage.branches as string[]) for (const ch of br) count[ch] = (count[ch] ?? 0) + 1
+        const total = Object.values(count).reduce((a, n) => a + n, 0)
+        warnings.push(`${r.id}: spiral ${total} boxes, M${count.M} B${count.B} S${count.S} blank ${count['-']}`)
+      }
+      const animi = [o.animus, ...(o.hardpoints ?? []).flatMap((h: Any) => (h.options ?? []).map((x: Any) => x.animus))].filter(Boolean)
+      for (const a of animi) { const sp = byId[a] as unknown as Any | undefined; if (sp && sp.animus !== true) errors.push(`${r.id}: animus ${a} is not marked animus: true`) }
       if (o.type !== 'warEngine') {
         for (const m of o.weapons ?? []) if (m.location && m.location !== '-') errors.push(`${r.id}: weapon location '${m.location}' on a non-war-engine`)
         for (const m of o.weapons ?? []) {
@@ -126,7 +135,9 @@ export function validateAll(): ValidationReport {
     if (!leader || leader.type !== 'leader') errors.push(`${r.id}: leader '${o.leader}' is not a leader`)
     else if (leader.cost !== 0) errors.push(`${r.id}: leader cost must be 0`)
     let total = 0
-    let engines = 0
+    let engines = 0 // war-engines and warbeasts (Cohort models) in the Leader's battlegroup, lesser ones excluded
+    const isWarlock = leader?.resource === 'fury'
+    const refs = new Map<string, Any>((o.entries as Any[]).map((e: Any) => [e.ref ?? e.profile, e]))
     const used: Record<string, number> = {}
     for (const e of o.entries as Any[]) {
       const m = byId[e.profile] as unknown as Any | undefined
@@ -144,6 +155,16 @@ export function validateAll(): ValidationReport {
         if (bySize !== undefined) total += bySize - m.cost
       }
       if (m.type === 'warEngine' && !m.lesser) engines++
+      if (m.type === 'beast') {
+        // M9 (81 B.2): a beast joins the Leader's battlegroup unless `controller` names another warlock entry
+        const ctl = e.controller !== undefined ? refs.get(e.controller) : undefined
+        const ctlProfile = ctl ? (byId[ctl.profile] as unknown as Any | undefined) : undefined
+        if (e.controller !== undefined && ctlProfile?.resource !== 'fury') errors.push(`${r.id}: ${e.profile} controller '${e.controller}' is not a warlock entry`)
+        if (e.controller === undefined && !isWarlock) errors.push(`${r.id}: ${e.profile} is a warbeast but the Leader is not a warlock`)
+        if (e.controller === undefined && m.beastClass !== 'lesser') engines++
+        if (m.beastClass === 'gargantuan' && (o.level === 'recon' || o.level === 'skirmish')) errors.push(`${r.id}: no gargantuan at ${o.level}`)
+      } else if (e.controller !== undefined) errors.push(`${r.id}: ${e.profile} has a controller but is not a warbeast`)
+      if (m.type === 'warEngine' && isWarlock) errors.push(`${r.id}: ${e.profile} is a war-engine but the Leader is a warlock`)
       used[e.profile] = (used[e.profile] ?? 0) + 1
     }
     for (const [id, n] of Object.entries(used)) {
@@ -154,7 +175,7 @@ export function validateAll(): ValidationReport {
     if (o.points !== undefined && o.points !== total) errors.push(`${r.id}: declared ${o.points} points, computed ${total}`)
     const cap = LEVEL_CAP[o.level]
     if (total > cap || total < cap - 4) errors.push(`${r.id}: ${total} points outside ${cap - 4}..${cap}`)
-    if ((o.level === 'recon' || o.level === 'skirmish') && engines < 1) errors.push(`${r.id}: needs at least one war-engine`)
+    if ((o.level === 'recon' || o.level === 'skirmish') && engines < 1) errors.push(`${r.id}: needs at least one war-engine or warbeast in the Leader's battlegroup`)
   }
 
   // 6. MK3 leak and prose copy check

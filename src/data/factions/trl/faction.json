@@ -1,0 +1,23 @@
+{
+  "id": "trl",
+  "name": "Trollbloods",
+  "short": "Trollbloods",
+  "appVersion": "community",
+  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/trollbloods.md.",
+  "keywords": [
+    "united-kriels",
+    "trollkin"
+  ],
+  "palette": {
+    "primary": "#4f87a6",
+    "secondary": "#3e6b4c",
+    "metal": "#a8743a",
+    "base": "#6b5b3e",
+    "ui": "#3fa0c4"
+  },
+  "sourceHues": [
+    200,
+    30
+  ],
+  "marking": "river-knot"
+}

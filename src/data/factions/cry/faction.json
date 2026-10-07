@@ -1,0 +1,22 @@
+{
+  "id": "cry",
+  "name": "Cryx",
+  "short": "Cryx",
+  "appVersion": "community",
+  "source": "Community card data as a research aid, app check pending; see docs/spec/factions/cryx.md.",
+  "keywords": [
+    "necrofactorium"
+  ],
+  "palette": {
+    "primary": "#1f3a42",
+    "secondary": "#a7a443",
+    "metal": "#7f8b90",
+    "base": "#4a3a2e",
+    "ui": "#7ad13a"
+  },
+  "sourceHues": [
+    192,
+    60
+  ],
+  "marking": "grave-lantern"
+}

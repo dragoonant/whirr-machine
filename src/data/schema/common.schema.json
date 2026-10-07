@@ -42,20 +42,20 @@
     "WindowId": {
       "enum": [
         "passive",
-        "turn.start", "maintenance.start", "maintenance.effects", "control.refill", "control.powerUp", "control.allocate",
-        "control.upkeep", "control.shake", "activation.start", "activation.end", "turn.end", "round.end",
+        "turn.start", "maintenance.start", "maintenance.effects", "control.refill", "control.leech", "control.powerUp",
+        "control.allocate", "control.upkeep", "control.threshold", "control.shake", "activation.start", "activation.end", "turn.end", "round.end",
         "movement.choose", "movement.start", "movement.move", "movement.charge", "movement.place", "movement.end",
         "combat.choose", "combat.chooseAttack", "combat.end",
         "attack.declared", "attack.beforeRoll", "attack.rolled", "attack.hit", "attack.crit", "attack.miss", "attack.resolved",
         "damage.beforeRoll", "damage.rolled", "damage.beforeApply", "damage.applied", "damage.crippled",
         "death.disabled", "death.boxed", "death.destroyed",
-        "spell.declare", "spell.cast", "feat.used", "scenario.score", "game.end"
+        "spell.declare", "spell.cast", "feat.used", "scenario.score", "game.end", "spell.expire"
       ]
     },
     "Scope": {
       "type": "object", "additionalProperties": false, "required": ["who"],
       "properties": {
-        "who": { "enum": ["self", "target", "attacker", "unit", "controller", "warEngines", "friendly", "enemy", "any", "point"] },
+        "who": { "enum": ["self", "target", "attacker", "unit", "controller", "warEngines", "warbeasts", "friendly", "enemy", "any", "point"] },
         "range": { "oneOf": [ { "$ref": "#/$defs/Inches" }, { "enum": ["CTRL", "melee"] } ] },
         "filter": { "$ref": "#/$defs/Condition" },
         "count": { "type": "integer", "minimum": 1 }
@@ -82,7 +82,9 @@
             "test": { "enum": ["modelType", "keyword", "baseAtLeast", "baseAtMost", "attackKind", "charged", "crit", "hit",
                                "withinInches", "inCtrl", "engaged", "hasCondition", "hasEffect", "focusAtLeast",
                                "weaponLocation", "weaponQuality", "damageType", "isFriendly", "isEnemy", "isCharacter",
-                               "systemCrippled", "lifeState", "inLos", "elevatedOver", "concealed", "isPrey", "b2b"] },
+                               "systemCrippled", "lifeState", "inLos", "elevatedOver", "concealed", "isPrey", "b2b",
+                               "furyAtLeast", "aspectCrippled", "frenzied", "inBattlegroup", "living", "undead", "hasAbility",
+                               "tokensAtLeast"] },
             "subject": { "enum": ["self", "target", "attacker", "unit", "controller"] },
             "value": {},
             "of": { "enum": ["self", "target", "attacker", "controller", "point"] },
@@ -100,22 +102,26 @@
                              "damage", "heal", "push", "place", "knockDown", "gainFocus", "loseFocus", "grantAbility",
                              "grantResistance", "grantImmunity", "preventDamage", "forbid", "cloud", "addAttack",
                              "advance", "slam", "throw", "endActivation", "removeFromPlay", "removeAbility", "modRoll",
-                             "discardLowest", "makeAttack", "ignore"] },
+                             "discardLowest", "makeAttack", "ignore", "gainFury", "loseFury", "gainToken", "spendToken"] },
             "stat": { "$ref": "#/$defs/Stat" },
             "mode": { "enum": ["add", "set", "double", "half"] },
             "value": { "type": "integer" },
             "roll": { "enum": ["attack", "damage", "any"] },
-            "condition": { "enum": ["knockedDown", "stationary", "disrupted", "fire", "corrosion", "inert"] },
+            "condition": { "enum": ["knockedDown", "stationary", "disrupted", "fire", "corrosion", "inert", "shadowBind", "blind"] },
             "pow": { "type": "integer", "minimum": 0 },
             "damageType": { "$ref": "#/$defs/DamageType" },
             "dist": { "$ref": "#/$defs/DiceExpr" },
             "direction": { "enum": ["away", "toward", "any"] },
             "ability": { "$ref": "#/$defs/Id" },
             "what": { "enum": ["run", "charge", "slam", "trample", "powerAttack", "cast", "advance", "attack", "beCharged",
-                               "beTargeted", "gainFocus", "tough", "knockDown", "weaponAttacks"] },
+                               "beTargeted", "gainFocus", "tough", "knockDown", "weaponAttacks", "gainFury", "force",
+                               "beTransferred", "combatAction", "heal"] },
             "aoe": { "$ref": "#/$defs/Inches" },
             "limit": { "type": "integer", "minimum": 1 },
-            "ignore": { "enum": ["clouds", "stealth", "concealment", "cover", "interveningModels", "targetInMelee", "gas"] },
+            "ignore": { "enum": ["clouds", "stealth", "concealment", "cover", "interveningModels", "targetInMelee", "gas", "forest",
+                                 "friendlyModels", "shieldBonuses"] },
+            "token": { "$ref": "#/$defs/TokenKind" },
+            "placeMode": { "enum": ["b2bWithTarget"] },
             "count": { "$ref": "#/$defs/DiceExpr" },
             "placement": { "enum": ["ctrl", "centredOnTarget", "point"] },
             "area": { "enum": ["cloud", "hazard", "flare"] },
@@ -135,6 +141,7 @@
           },
           "allOf": [
             { "if": { "properties": { "op": { "const": "ignore" } } }, "then": { "required": ["ignore"] } },
+            { "if": { "properties": { "op": { "enum": ["gainToken", "spendToken"] } } }, "then": { "required": ["token"] } },
             { "if": { "properties": { "op": { "const": "modRoll" } } }, "then": { "required": ["roll", "value"] } },
             { "if": { "properties": { "op": { "enum": ["advance", "slam", "throw"] } } }, "then": { "required": ["dist"] } },
             { "if": { "properties": { "op": { "const": "modStat" } } }, "then": { "required": ["stat", "value"] } },
@@ -143,6 +150,19 @@
             { "if": { "properties": { "op": { "enum": ["addDie", "boost", "reroll"] } } }, "then": { "required": ["roll"] } }
           ] }
       ]
+    },
+    "TokenKind": { "enum": ["soul", "corpse"] },
+    "Cost": {
+      "type": "object", "additionalProperties": false,
+      "description": "What a rule costs: focus or fury from the model, forced = fury a warbeast gains, tokens, or damage to the payer.",
+      "properties": {
+        "focus": { "type": "integer", "minimum": 0 },
+        "fury": { "type": "integer", "minimum": 0 },
+        "forced": { "type": "integer", "minimum": 0 },
+        "soul": { "type": "integer", "minimum": 0 },
+        "corpse": { "type": "integer", "minimum": 0 },
+        "damage": { "type": "integer", "minimum": 0 }
+      }
     },
     "EffectList": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/Effect" } }
   }

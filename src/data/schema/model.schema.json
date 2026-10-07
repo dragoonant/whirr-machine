@@ -8,7 +8,10 @@
     "id": { "$ref": "common.schema.json#/$defs/Id" },
     "name": { "$ref": "common.schema.json#/$defs/Name" },
     "faction": { "$ref": "common.schema.json#/$defs/Id" },
-    "type": { "enum": ["leader", "warEngine", "solo", "trooper", "unit", "battleEngine", "structure"] },
+    "type": { "enum": ["leader", "warEngine", "solo", "trooper", "unit", "battleEngine", "structure", "beast"] },
+    "resource": { "enum": ["focus", "fury"], "default": "focus", "description": "Leaders only. 'fury' = a warlock (81 B.2)." },
+    "beastClass": { "enum": ["lesser", "light", "heavy", "superHeavy", "gargantuan"], "description": "beast only, required." },
+    "animus": { "$ref": "common.schema.json#/$defs/Id", "description": "beast only: its animus (a spell record with animus: true); omitted when a hardpoint picks it." },
     "engineClass": { "enum": ["light", "heavy", "superHeavy", "colossal"], "description": "warEngine only." },
     "lesser": { "type": "boolean", "default": false, "description": "Lesser war-engine (does not satisfy the Recon war-engine minimum)." },
     "character": { "type": "boolean", "default": false },
@@ -49,11 +52,21 @@
     { "if": { "properties": { "type": { "const": "unit" } } },
       "then": { "required": ["composition"] },
       "else": { "required": ["base", "stats", "damage"] } },
-    { "if": { "properties": { "type": { "const": "warEngine" } } }, "then": { "required": ["engineClass"] } }
+    { "if": { "properties": { "type": { "const": "warEngine" } } }, "then": { "required": ["engineClass"] } },
+    { "if": { "properties": { "type": { "const": "beast" } } },
+      "then": { "required": ["beastClass"], "properties": { "stats": { "required": ["FURY", "THR"] } } },
+      "else": { "properties": { "stats": { "required": ["RAT"] } } } },
+    { "if": { "required": ["resource"], "properties": { "resource": { "const": "fury" } } },
+      "then": { "properties": { "type": { "const": "leader" }, "stats": { "required": ["ARC", "CTRL"] } } } },
+    { "if": { "anyOf": [ { "required": ["beastClass"] }, { "required": ["animus"] } ] },
+      "then": { "properties": { "type": { "const": "beast" } } } },
+    { "if": { "required": ["damage"], "properties": { "damage": { "required": ["track"], "properties": { "track": { "const": "spiral" } } } } },
+      "then": { "properties": { "type": { "const": "beast" } } } }
   ],
   "$defs": {
     "Stats": {
-      "type": "object", "additionalProperties": false, "required": ["SPD", "MAT", "RAT", "DEF", "ARM"],
+      "type": "object", "additionalProperties": false, "required": ["SPD", "MAT", "DEF", "ARM"],
+      "description": "RAT is required for every type but beast (a beast needs it only with a ranged weapon); beasts also need FURY and THR; warlocks ARC and CTRL.",
       "properties": {
         "SPD": { "type": "integer", "minimum": 0 },
         "AAT": { "type": "integer", "minimum": 0 },
@@ -75,6 +88,14 @@
       "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/$defs/GridColumn" },
       "description": "Index 0 = column 1. Damage fills a column top-down, then spills right, wrapping 6 -> 1."
     },
+    "SpiralBranch": {
+      "type": "string", "pattern": "^[-MBS]{1,10}$",
+      "description": "One life-spiral branch, outermost box first. M Mind, B Body, S Spirit, '-' no aspect."
+    },
+    "Spiral": {
+      "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/$defs/SpiralBranch" },
+      "description": "Index 0 = branch 1. Damage fills a branch outside-in, then spills to the next branch, wrapping 6 -> 1."
+    },
     "DamageTrack": {
       "oneOf": [
         { "type": "object", "additionalProperties": false, "required": ["track", "boxes"],
@@ -84,7 +105,9 @@
         { "type": "object", "additionalProperties": false, "required": ["track", "grids"],
           "properties": { "track": { "const": "dualGrid" },
             "grids": { "type": "object", "additionalProperties": false, "required": ["left", "right"],
-              "properties": { "left": { "$ref": "#/$defs/Grid" }, "right": { "$ref": "#/$defs/Grid" } } } } }
+              "properties": { "left": { "$ref": "#/$defs/Grid" }, "right": { "$ref": "#/$defs/Grid" } } } } },
+        { "type": "object", "additionalProperties": false, "required": ["track", "branches"],
+          "properties": { "track": { "const": "spiral" }, "branches": { "$ref": "#/$defs/Spiral" } } }
       ]
     },
     "System": {
@@ -119,6 +142,7 @@
             "weapons": { "type": "array", "items": { "$ref": "#/$defs/WeaponMount" } },
             "abilities": { "$ref": "common.schema.json#/$defs/IdList" },
             "statMods": { "type": "object", "additionalProperties": { "type": "integer" } },
+            "animus": { "$ref": "common.schema.json#/$defs/Id", "description": "Customizable animus picked by this option (beasts)." },
             "cost": { "type": "integer", "default": 0 }
           } } }
       }

@@ -39,6 +39,7 @@ export const ROLL_PURPOSE_LABELS: Record<RollPurpose, string> = {
   continuous: 'Lingering effect', slamDist: 'Slam distance', throwDist: 'Throw distance', fall: 'Falling damage',
   rof: 'Rate of fire', d3: 'D3 roll', aoeTie: 'Blast tie-break', collateral: 'Collateral damage', spell: 'Spell roll',
   maintenance: 'Upkeep roll', scenario: 'Scenario roll', other: 'Roll',
+  threshold: 'Threshold check', frenzyTie: 'Frenzy tie-break', // M9
 }
 
 export function rollLabel(state: GameState | null, ev: DiceRolled): string {

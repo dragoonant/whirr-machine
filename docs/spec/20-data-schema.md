@@ -13,6 +13,7 @@ words** (≤400 chars); names of units, weapons and abilities may match the card
 | `src/data/core/qualities.json` | `ability[]` (kind `weaponQuality`) | weapon qualities (Blessed, Buckler, Shield, Magical, Pistol, Throw, Continuous Fire/Corrosion, …) |
 | `src/data/core/systems.json` | `{[letter]: System}` | default system letters: L, R, H → `crippleLocation`; M → `crippleMovement`; C → `crippleCortex`; A → `crippleArcNode` |
 | `src/data/factions/<id>/faction.json` | `faction` | name, `appVersion`, palette, `sourceHues`, faction rules |
+| `src/data/factions/<id>/raw.ts` | | the faction's `RawGroup`: static imports of its own JSON files (and its lists), by record kind; `src/data/raw.ts` spreads every group, so a faction builder edits only this file |
 | `src/data/factions/<id>/models/*.json` | `model` | one profile per file (casters, war-engines, solos, troopers, units) |
 | `src/data/factions/<id>/weapons.json` | `weapon[]` | |
 | `src/data/factions/<id>/abilities.json` | `ability[]` | |
@@ -22,6 +23,7 @@ words** (≤400 chars); names of units, weapons and abilities may match the card
 | `src/data/scenarios/*.json` | `scenario` | |
 | `src/data/terrain/pieces.json` | `terrain[]` | piece types |
 | `src/data/terrain/layouts/*.json` | `terrain-layout` | placed pieces |
+| `src/data/raw.ts` | | core and shared files plus `FACTION_RAW` (cyg, kha, trl, cir, cry, men); tests/data checks every JSON file is listed |
 | `src/data/index.ts` | | builds `DataBundle {byId, version}`; throws on duplicate id or dangling ref; `version` = content hash |
 
 Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<model>`, `<f>.w.<weapon>`,
@@ -35,7 +37,9 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | refs | every Id resolves (weapons, abilities, spells, feat, profiles, attachments, layout pieces) |
 | hooks | every `{code}` in `effect`/`when`/`System` exists in `src/engine/code-hooks.ts` registry |
 | grid | exactly 6 columns; letters are in `core/systems.json` or the model's `systems`; heavy/light box totals logged for review |
-| lists | `points` = recomputed total; ≤ level cap and ≥ cap − 4; leader present, cost 0; Recon/Skirmish: ≥1 non-lesser war-engine, no battle engines/colossals/gargantuans; FA respected |
+| spiral | exactly 6 branches of `-MBS` letters (schema); only beasts have spirals; per-aspect box totals logged for review; a model's `animus` (and a hardpoint option's) must be a spell with `animus: true` |
+| lists | `points` = recomputed total; ≤ level cap and ≥ cap − 4; leader present, cost 0; Recon/Skirmish: ≥1 non-lesser Cohort model in the Leader's battlegroup (war-engine, or a beast with no `controller`), no battle engines/colossals/gargantuans; FA respected |
+| battlegroups | `resource: 'fury'` only on leaders (schema); a beast needs a warlock Leader or a `controller` naming a warlock entry; `controller` only on beasts; no war-engines under a warlock Leader. Not checked yet: Mercenary/Farrow/Gatorman pairing (no such content) |
 | units | `size` within composition min..max; ≤1 command and ≤3 weapon attachments |
 | weapons | locations L/R/H only on war-engines; `blastPow` iff `aoe` |
 | prose | `text` has no run of ≥12 words matching `docs/sources/` text (skipped when sources are absent) |
@@ -54,25 +58,31 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | `DamageType` | `blast cold corrosion electricity fire magical` |
 | `Stat` | `SPD AAT MAT RAT DEF ARM ARC CTRL FURY THR POW RNG ROF AOE` (no STR, no FOCUS) |
 | `Vec2`, `Shape` | `{x,z}`; `{circle:{r}} \| {rect:{w,d}} \| {polygon:[Vec2]}` |
-| `WindowId` | same list as `00-architecture` §7, plus `passive` |
-| `Scope` | `{who, range?: inches\|'CTRL'\|'melee', filter?: Condition, count?}` |
+| `WindowId` | same list as `00-architecture` §7, plus `passive` (M9: `control.leech`, `control.threshold`, `spell.expire`) |
+| `Cost` | `{focus?, fury?, forced?, soul?, corpse?, damage?}` ints ≥0; `forced` = fury a beast gains (Regeneration-style "force for 1" = `forced: 1`); `damage` = damage the payer takes |
+| `TokenKind` | `soul \| corpse` |
+| `Scope` | `{who, range?: inches\|'CTRL'\|'melee', filter?: Condition, count?}`; `who` includes `warbeasts` (beasts of the subject's battlegroup) |
 | `Duration` | `instant attack activation turn round upkeep continuous game while` |
-| `Condition` | `{all}` `{any}` `{not}` `{test, subject?, value?, of?, dist?}` `{code, params?}` |
+| `Condition` | `{all}` `{any}` `{not}` `{test, subject?, value?, of?, dist?}` `{code, params?}`; M9 tests `furyAtLeast aspectCrippled frenzied inBattlegroup living undead hasAbility tokensAtLeast` |
 | `Effect` | `{op, …}` or `{code, params?}` (§5) |
 
 ## 4. Models (`model.schema.json`)
 
 | Field | Notes |
 |---|---|
-| `type` | `leader warEngine solo trooper unit battleEngine structure`; `unit` needs `composition`, all others need `base`, `stats`, `damage` |
+| `type` | `leader warEngine solo trooper unit battleEngine structure beast`; `unit` needs `composition`, all others need `base`, `stats`, `damage` |
+| `resource` | `focus` (default) \| `fury`; leaders only; `fury` = a warlock (Fury Manipulation, Battlegroup Controller) |
+| `beastClass` | `lesser light heavy superHeavy gargantuan`; beasts only, required |
+| `animus` | spell id (beasts only; a spell record with `animus: true`); omitted when a hardpoint option picks it |
 | `engineClass` | `light heavy superHeavy colossal` (warEngine only); `lesser: true` for lesser war-engines |
 | `base`, `losHeight` | mm; `losHeight` defaults by base (30mm 1.75", 40mm 2.25", 50mm 2.75", 80mm 3.25", 120mm 5") |
-| `stats` | `SPD MAT RAT DEF ARM` required; `AAT ARC CTRL` for casters; `FURY THR` reserved |
-| `damage` | `{track:'single', boxes}` (per card: models without boxes 1; Black 13th troopers several (QS); casters 15–17, factions/*.md) \| `{track:'grid', columns:[6]}` \| `{track:'dualGrid', grids:{left,right}}` |
+| `stats` | `SPD MAT DEF ARM` required; `RAT` required for every type but `beast` (beasts give it only with a ranged weapon); beasts require `FURY THR`; warlocks require `ARC CTRL`; `AAT ARC CTRL` for casters. Warlock AAT is optional (Gunnbjorn has none, factions/trollbloods.md) |
+| `damage` | `{track:'single', boxes}` (per card: models without boxes 1; Black 13th troopers several (QS); casters 15–17, factions/*.md) \| `{track:'grid', columns:[6]}` \| `{track:'dualGrid', grids:{left,right}}` \| `{track:'spiral', branches:[6]}` (beasts only) |
+| spiral branch | string `^[-MBS]{1,10}$`, outermost box first: `M` Mind, `B` Body, `S` Spirit, `-` no aspect. Index 0 = branch 1. Fill outside-in, spill to the next branch, wrap 6 → 1. At runtime `spiralLayout` maps it to a grid layout with lowercase letters (`m b s`, 81 B.2). Beast weapons use location `-` |
 | grid column | string, top box first: `-` blank box, letter = system box. Index 0 = column 1. Fill top-down, spill right, wrap 6 → 1 |
 | `systems` | per-model override of `core/systems.json` (`effect: crippleLocation\|crippleMovement\|crippleCortex\|crippleHead\|crippleArcNode\|code`) |
 | `weapons` | `[{weapon, location?, count?, socket?}]`; `socket` names the figure attach point (`30-figures` §5) |
-| `hardpoints` | `[{slot, location, default?, options:[{id, name, weapons?, abilities?, statMods?, cost?}]}]` |
+| `hardpoints` | `[{slot, location, default?, options:[{id, name, weapons?, abilities?, statMods?, cost?, animus?}]}]` (`animus`: a customizable animus, beasts) |
 | `abilities`, `spells`, `feat`, `arcNode` | refs |
 | `cost`, `fa` | points (leaders 0); FA int, `C` character, `U` unlimited |
 | `composition` | units: `{grunts:{profile,min,max}, extra?, commandAttachments?, weaponAttachments?, costBySize?}` |
@@ -86,7 +96,7 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
   (`DiceExpr`, e.g. `"d3+1"`). AOE weapons carry `aoe` + `pow` (direct) + `blastPow`.
 - No STR anywhere: power attacks use 12/14 from base size in engine code (`10-rules-core`).
 
-**Ability** `{id, name, text, kind, trigger, when?, effect[], scope, duration, optional?, limit?, cost?, attack?}`
+**Ability** `{id, name, text, kind, trigger, when?, effect[], scope, duration, optional?, limit?, cost?: Cost, attack?}`
 - `kind`: `passive triggered specialAttack specialAction weaponQuality aura`.
 - `trigger`: a `WindowId` (`passive` = always-on modifier evaluated by `query.stat`).
 - `optional: true` raises a `triggerWindow` decision; mandatory triggers resolve automatically in data order.
@@ -98,15 +108,17 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | `modStat` | `stat, value, mode?: add\|set\|double\|half` |
 | `addDie` / `boost` / `reroll` | `roll: attack\|damage\|any`, `limit?` |
 | `autoHit` / `autoMiss` | |
-| `applyCondition` / `removeCondition` | `condition: knockedDown stationary disrupted fire corrosion inert` |
+| `applyCondition` / `removeCondition` | `condition: knockedDown stationary disrupted fire corrosion inert shadowBind blind` |
 | `damage` | `pow, damageType?` |
 | `heal` | `value` |
-| `push` / `place` | `dist: DiceExpr, direction?: away\|toward\|any` |
+| `push` / `place` | `dist: DiceExpr, direction?: away\|toward\|any`; `place` also `placeMode?: b2bWithTarget` (Shifter) |
 | `knockDown`, `gainFocus`, `loseFocus` | `value?` |
+| `gainFury` / `loseFury` | `value?` (M9) |
+| `gainToken` / `spendToken` | `token: soul\|corpse`, `value?` (count, default 1) |
 | `grantAbility` | `ability` |
 | `grantResistance` / `grantImmunity` | `damageType` |
 | `preventDamage` | `value` (Power Field-like reductions) |
-| `forbid` | `what: run charge slam trample powerAttack cast advance attack beCharged beTargeted gainFocus tough knockDown weaponAttacks` |
+| `forbid` | `what: run charge slam trample powerAttack cast advance attack beCharged beTargeted gainFocus tough knockDown weaponAttacks gainFury force beTransferred combatAction heal` |
 | `cloud` | `aoe` (diameter, default 3), `count?: DiceExpr`, `placement?: ctrl\|centredOnTarget\|point`, `area?: cloud\|hazard\|flare`, `blocksLos?`, `hazard?: {pow, damageType?, on: [enter\|endActivation]}` |
 | `addAttack` | `value` (extra initial attacks) |
 | `advance` | `dist: DiceExpr, direction?` (an advance outside Normal Movement: Evasive, Beat Back, Reposition) |
@@ -116,9 +128,11 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
 | `modRoll` | `roll: attack\|damage\|any, value` (flat roll bonus that isn't a stat: Prey, Both Barrels, Volume Fire) |
 | `discardLowest` | `roll` (Heart Seeker) |
 | `makeAttack` | `target?: self\|target\|attacker, weaponFilter?: same\|any\|melee\|ranged\|<weapon id>, basic?` (Reciprocate, Critical Shred, Avenging Force; set the ability's `makesAttack`) |
-| `ignore` | `ignore: clouds stealth concealment cover interveningModels targetInMelee gas` |
+| `ignore` | `ignore: clouds stealth concealment cover interveningModels targetInMelee gas forest friendlyModels shieldBonuses` |
 
-**Spell** `{id, name, text, cost, rng: n|SELF|CTRL, aoe?: n|CTRL, pow?, dur: -|TURN|RND|UP, offensive, when?, effect[], scope}`.
+**Spell** `{id, name, text, cost, rng: n|SELF|CTRL|"SP<n>", aoe?: n|CTRL, pow?, dur: -|TURN|RND|UP, offensive, animus?, when?, effect[], scope}`.
+An animus is a spell record with `animus: true`; its `cost` is the fury a beast gains when forced to cast it (its warlock pays
+the same in fury). `rng "SP<n>"` is a spray spell (Venom).
 **Feat** `{id, name, text, when?, effect[], scope, duration}`.
 
 ## 6. Factions and lists
@@ -126,7 +140,8 @@ Ids: lowercase kebab, dot-namespaced. Faction prefix = faction id; kinds: `<f>.<
   sourceHues:[h1,h2], marking?}`. `appVersion` records the card/app version the numbers came from (balance updates
   Jan 2026 and mid-2026).
 - **List** `{id, name, faction, level: recon|skirmish|pitched|grandMelee, points?, leader, entries:[{ref?, profile, size?,
-  loadout?: {slot: option}, attachments?, advanceDeploy?}], source?}`.
+  loadout?: {slot: option}, attachments?, advanceDeploy?, controller?}], source?}`. `controller` (beasts only) is the `ref` of the
+  warlock entry whose battlegroup the beast joins; omitted = the Leader's battlegroup.
 
 ## 7. Scenarios (`scenario.schema.json`), inches, origin = table centre, +z toward player B
 
