@@ -182,7 +182,10 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
         const o = ctx.odds
         title = `Powerful Attack: ${who} → ${tgt}${o?.pHit !== undefined && o.pHitBoosted !== undefined ? ` — ${pct(o.pHit)} → ${pct(o.pHitBoosted)}` : ''}`
         lines.push('One focus boosts both the attack roll and the damage roll.')
-      } else if (code === 'prey') title = 'Choose a Prey: pick the enemy this unit hunts.'
+      } else if (code === 'prey') {
+        title = `Choose a Prey for ${who || 'this unit'}`
+        lines.push('Prey is the one enemy model this unit is hunting. Its attack and damage rolls against that model get +2. When the prey is destroyed, you pick a new one.')
+      }
       else title = `${code ? niceName(code) : 'Choose'}: ${who}`
       break
     }
