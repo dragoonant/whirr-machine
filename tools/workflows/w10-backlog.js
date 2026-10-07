@@ -244,6 +244,22 @@ Do not commit. Return RESULT.`, { label: 'wire:figs', phase: 'Skirmish data', sc
   return { fix: s(f), wire: s(w), integrate: s(i) }
 }
 
+if (STAGE === 'seams') {
+  phase('Cards SR clock')
+  const f = await agent(`${COMMON}
+Task: close the M13 seams the packages left between them:
+1. BUG: src/engine/phases/activation.ts cacheOptions (about line 1241) returns scenarioSpecialActions options stamped with the previous decision's id, so a human's cache claim fails with E_WRONG_DECISION. Restamp each option's action.decisionId to the current decision id; add a test that a human claim through step() succeeds.
+2. src/engine/index.ts step(): after every successful dispatch while isClockedOut(state), call settleClockOut(flowOut, b) from clock.ts, so a clocked-out player's later decisions auto-answer (test CLK-*).
+3. src/engine/setup.ts buildTerrain: omit the pieces in droppedPieces(bundle, scenarioId, layoutId, quarterTurns) from src/data/battlefields.ts (the SR rule that drops impassable pieces near elements), and check that the client board draws state.terrain so they vanish.
+4. Data: set army ids on the Khador lists (kha.winter-korps or kha.old-umbrey, whichever the docs/spec/91 §A.3 sources support for each list) so For the Motherland can be taken; check the hand picker shows it.
+5. src/ai/random.ts pickSensible and tools/sim.ts handle the new codes (flagTerrain, fuse, heelToken, heelMove, payload, haul, card, scn.claimCache) sensibly instead of falling back to legal[0].
+6. src/ai: chooseEdge picks the edge sensibly (terrain and scenario aware, normal tier); on Trench Warfare and High Stakes make Normal clearly stronger than Easy (bench 20 games each; report before and after).
+7. docs/spec/12-rules-test-checklist.md: add the AIC-001..014 rows used by tests/ai.
+You own ONLY the files named above plus tests/engine/**, tests/ai/**, tests/client/** and docs/needs-rules-check.md. Frozen contracts: additive only, with §14 rows.
+Run npm run typecheck && npm test && npm run validate:data && npm run sim -- --games 20 --seed 9 && PW_PORT=4183 npx playwright test tests/e2e/steamroller.spec.ts. Then stage by exact path, commit "M13: cache claims, clock-out settling, SR terrain drops, Khador army ids, bot answers for scenario decisions" + blank line + "${ATTR}", and push. Return RESULT.`, { label: 'seams:m13', phase: 'Cards SR clock', schema: RESULT, model: 'sonnet', effort: 'high' })
+  return s(f)
+}
+
 if (STAGE === 'docs') {
   phase('Docs')
   const d = await agent(`${COMMON}
