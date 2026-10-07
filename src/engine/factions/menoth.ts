@@ -27,12 +27,6 @@ const isMenoth = (b: DataBundle, m: ModelState | undefined): boolean => !!m && k
 const onFire = (state: GameState, m: ModelState): boolean => m.conditions.includes('fire')
 const liveOnTable = (m: ModelState | undefined): m is ModelState => !!m && m.life === 'active' && isOnTable(m)
 
-/** Stop the rest of the running ability's effect list (runAbility reads and clears this flag after each code effect). */
-const skipRest = (state: GameState): GameState => {
-  const a = atkOf(state)
-  return a ? setAtk(state, { ...a, x: { ...a.x, flags: { ...a.x.flags, skipRest: true } } }) : state
-}
-
 /** A fire damage roll outside an attack (Fire Step, the feat): Resistance: Fire removes one die. */
 function fireDamage(state0: GameState, b: DataBundle, id: ModelId, pow: number): { state: GameState; events: GameEvent[] } {
   let state = state0
@@ -53,27 +47,33 @@ function fireDamage(state0: GameState, b: DataBundle, id: ModelId, pow: number):
 
 // ---------- Stoke the Pyre ----------
 /**
- * Stoke the Pyre, attack roll half: strip the fire off the target to boost the melee attack roll. Policy (RULING): only when the
- * hit is a long shot (DEF - MAT >= 8), otherwise the fire is kept for the damage roll. The data's addDie follows this code unless skipped.
+ * Stoke the Pyre, attack roll half: strip the fire off the target to BOOST the melee attack roll (one extra die, like a focus boost).
+ * A roll is boosted once, so nothing happens when it already is. Policy (RULING): only when the hit is a long shot (DEF - MAT >= 8),
+ * otherwise the fire is kept for the damage roll. Marking the roll boosted also stops the core offering a focus boost on top.
  */
 const stokeStripAttack = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   const tid = c.targetId
   const tgt = tid ? c.state.models[tid] : undefined
-  if (!tid || !tgt || !onFire(c.state, tgt)) return out(skipRest(c.state))
+  const a = atkOf(c.state)
+  if (!tid || !tgt || !a || !onFire(c.state, tgt) || a.x.boosted || a.x.powerful || a.autoMiss) return out(c.state)
   const need = statOf(c.state, b, tid, 'DEF') - statOf(c.state, b, c.selfId, 'MAT')
-  if (need < 8) return out(skipRest(c.state))
+  if (need < 8) return out(c.state)
   const r = removeCondition(c.state, tid, 'fire', 'effect')
-  return out(r.state, r.events)
+  const a2 = atkOf(r.state)
+  return out(a2 ? setAtk(r.state, { ...a2, x: { ...a2.x, boosted: true } }) : r.state, r.events)
 }
 
-/** Stoke the Pyre, damage roll half: strip the fire off the target; the data's addDie adds the die. */
+/** Stoke the Pyre, damage roll half: strip the fire off the target to boost the damage roll (not one that is already boosted or cannot be). */
 const stokeStripDamage = (c: HookContext): HookResult => {
   const tid = c.targetId
   const tgt = tid ? c.state.models[tid] : undefined
-  if (!tid || !tgt || !onFire(c.state, tgt)) return out(skipRest(c.state))
+  const a = atkOf(c.state)
+  const job = a ? a.x.jobs[a.x.jobIdx] : undefined
+  if (!tid || !tgt || !a || !a.x.cur || !job || !onFire(c.state, tgt) || a.x.cur.boost || job.autoBoost || job.unboostable) return out(c.state)
   const r = removeCondition(c.state, tid, 'fire', 'effect')
-  return out(r.state, r.events)
+  const a2 = atkOf(r.state)
+  return out(a2?.x.cur ? setAtk(r.state, { ...a2, x: { ...a2.x, cur: { ...a2.x.cur, boost: true } } }) : r.state, r.events)
 }
 
 /**
@@ -111,14 +111,21 @@ const inciteFor = (state: GameState, owner: ModelState['owner']): EffectInstance
   state.effects.find((e) => e.sourceId === 'men.s.incite' && e.owner === owner)
 
 // ---------- Fire Step ----------
-/** Fire Step: enemies within 2" take a POW 13 fire damage roll, then the caster is placed within 2" (RULING: auto-placed away from the nearest enemy). Once per activation. */
+/** Fire Step may be cast once per activation: castSpell asks this before taking any focus, so a repeat is rejected. */
+export function fireStepSpent(state: GameState, spellId: Id): boolean {
+  return spellId === 'men.s.fire-step' && !!actOf(state)?.spellsCast.includes(spellId)
+}
+
+/**
+ * Fire Step: enemies within 2" take a POW 13 fire damage roll, then the caster is placed within 2" whether or not anyone was hit
+ * (RULING: auto-placed on the spot within 2" farthest from the nearest enemy; it stays put when no spot is better). Once per activation
+ * (enforced by fireStepSpent in castSpell).
+ */
 const fireStep = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   let state = c.state
-  const act = actOf(state)
   const caster = state.models[c.selfId]
-  if (!act || !caster) return noop(c)
-  if (act.spellsCast.filter((s) => s === 'men.s.fire-step').length > 1) return noop(c)
+  if (!actOf(state) || !caster) return noop(c)
   const events: GameEvent[] = []
   const victims = Object.values(state.models)
     .filter((m) => m.owner !== caster.owner && liveOnTable(m) && within(caster, m, 2))
@@ -128,8 +135,9 @@ const fireStep = (c: HookContext): HookResult => {
     state = r.state; events.push(...r.events)
   }
   const me = state.models[caster.id]!
-  if (!victims.length || !liveOnTable(me)) return out(state, events)
+  if (!liveOnTable(me)) return out(state, events)
   const foes = Object.values(state.models).filter((m) => m.owner !== me.owner && liveOnTable(m))
+  if (!foes.length) return out(state, events)
   const gap = (p: { x: number; z: number }): number => Math.min(...foes.map((f) => dist(p, f.pos) - baseRadius(f.base)))
   let best: { x: number; z: number } | null = null
   let bestGap = gap(me.pos)
@@ -204,37 +212,62 @@ const blessingOfTheFirstGift = (c: HookContext): HookResult => {
 }
 
 // ---------- Pyrrhus: Battle Plan ----------
-/**
- * Battle Plan, run at the end of Pyrrhus's activation (core has no any-time ability choice yet). RULING: the plan is picked by rule of
- * thumb: the first friendly Menoth group within 5" that has not activated yet: Stir the Blood when it can melee, Precision Strike for
- * shooters with friends in the way, else Fight to the Last. The effect is recorded on the chosen models (it grants Tough, or lets them
- * see and pass through friends, through the effect's extra fields).
- */
-const battlePlan = (c: HookContext): HookResult => {
-  const b = bundleOf(c)
-  const me = c.state.models[c.selfId]
-  const act = actOf(c.state)
-  if (!me || !act || !liveOnTable(me)) return noop(c)
-  const near = Object.values(c.state.models)
-    .filter((m) => m.id !== me.id && m.owner === me.owner && liveOnTable(m) && !m.inert && isMenoth(b, m) && within(me, m, 5))
-    .sort((x, y) => Number(x.activated) - Number(y.activated) || x.id.localeCompare(y.id))
-  const pick = near.find((m) => !m.activated)
-  if (!pick) return noop(c)
-  const group = pick.unitId
-    ? Object.values(c.state.models).filter((m) => m.unitId === pick.unitId && liveOnTable(m)).map((m) => m.id)
-    : [pick.id]
-  const melee = weaponsOf(b, pick).some((w) => isMelee(w.w))
-  const ranged = weaponsOf(b, pick).some((w) => !isMelee(w.w))
-  // RULING: melee troops get Stir the Blood; shooters get Precision Strike when friends are in the way, else Fight to the Last
-  const friendsInWay = group.length > 1 || Object.values(c.state.models).some((m) => m.owner === me.owner && m.id !== pick.id && !group.includes(m.id) && liveOnTable(m) && within(m, pick, 6))
-  const plan = melee
-    ? { id: 'men.a.stir-the-blood', name: 'Stir the Blood', duration: 'turn' as const, extra: {} }
-    : ranged && friendsInWay
-      ? { id: 'men.a.precision-strike', name: 'Precision Strike', duration: 'turn' as const, extra: { ignoreFriendly: true } }
-      : { id: 'men.a.fight-to-the-last', name: 'Fight to the Last', duration: 'round' as const, extra: { grants: ['core.a.tough'] } }
-  const made = applyEffect(c.state, { sourceId: plan.id, name: plan.name, owner: me.owner, casterId: me.id, targetIds: group, mods: [], duration: plan.duration, ...plan.extra })
-  return out(made.state, made.events)
+/** The three plans; the first two aim at one friendly Menoth warrior model or unit within 5", Precision Strike covers friends within 10". */
+const PLANS = [
+  { id: 'men.a.fight-to-the-last', name: 'Fight to the Last', grouped: true, duration: 'round' as const, extra: { grants: ['core.a.tough'] } as Record<string, unknown> },
+  { id: 'men.a.stir-the-blood', name: 'Stir the Blood', grouped: true, duration: 'turn' as const, extra: {} as Record<string, unknown> },
+  { id: 'men.a.precision-strike', name: 'Precision Strike', grouped: false, duration: 'turn' as const, extra: { ignoreFriendly: true } as Record<string, unknown> },
+]
+/** RULING: a warrior model is a Menoth model that is not a construct, warjack, beast, battle engine or structure (warcasters and solos count). */
+const isWarrior = (state: GameState, b: DataBundle, m: ModelState): boolean =>
+  !['warEngine', 'beast', 'battleEngine', 'structure'].includes(m.type) && isMenoth(b, m) && !isConstruct(state, b, m.id)
+export interface BattlePlanChoice { optionId: string; label: string }
+
+/** The groups a Fight to the Last / Stir the Blood plan could aim at: friendly Menoth warrior models or units within 5" of the planner. */
+function planGroups(state: GameState, b: DataBundle, me: ModelState): Array<{ key: string; ids: ModelId[] }> {
+  const near = Object.values(state.models)
+    .filter((m) => m.id !== me.id && m.owner === me.owner && liveOnTable(m) && !m.inert && isWarrior(state, b, m) && within(me, m, 5))
+    .sort((x, y) => x.id.localeCompare(y.id))
+  const groups: Array<{ key: string; ids: ModelId[] }> = []
+  for (const m of near) {
+    const key = m.unitId ?? m.id
+    if (groups.some((g) => g.key === key)) continue
+    const ids = m.unitId
+      ? Object.values(state.models).filter((x) => x.unitId === m.unitId && liveOnTable(x) && !x.inert).map((x) => x.id)
+      : [m.id]
+    groups.push({ key, ids })
+  }
+  return groups
 }
+const precisionIds = (state: GameState, me: ModelState): ModelId[] =>
+  Object.values(state.models).filter((m) => m.owner === me.owner && liveOnTable(m) && !m.inert && (m.id === me.id || within(me, m, 10))).map((m) => m.id)
+
+/** Battle Plan choices for the planner: one per plan and group (Precision Strike has one). Empty when nothing could be aimed at. */
+export function battlePlanChoices(state: GameState, b: DataBundle, id: ModelId): BattlePlanChoice[] {
+  const me = state.models[id]
+  if (!me || !liveOnTable(me)) return []
+  const groups = planGroups(state, b, me)
+  const res: BattlePlanChoice[] = []
+  for (const p of PLANS) {
+    if (p.grouped) for (const g of groups) res.push({ optionId: p.id + '|' + g.key, label: p.name + ': ' + g.key })
+    else if (precisionIds(state, me).length > 1) res.push({ optionId: p.id + '|all', label: p.name + ': friends within 10"' })
+  }
+  return res
+}
+
+/** Apply one Battle Plan choice (an optionId from battlePlanChoices); null when it is not available. */
+export function applyBattlePlan(state: GameState, b: DataBundle, id: ModelId, optionId: string): { state: GameState; events: GameEvent[] } | null {
+  const me = state.models[id]
+  if (!me || !battlePlanChoices(state, b, id).some((c) => c.optionId === optionId)) return null
+  const [planId, key] = optionId.split('|') as [string, string]
+  const plan = PLANS.find((x) => x.id === planId)!
+  const targetIds = plan.grouped ? planGroups(state, b, me).find((g) => g.key === key)!.ids : precisionIds(state, me)
+  const made = applyEffect(state, { sourceId: plan.id, name: plan.name, owner: me.owner, casterId: me.id, targetIds, mods: [], duration: plan.duration, ...plan.extra })
+  return { state: made.state, events: made.events }
+}
+
+/** Battle Plan is chosen through an abilityChoice the core raises at the start of the activation (activation.ts raiseStart); nothing to run here. */
+const battlePlan = (c: HookContext): HookResult => noop(c)
 
 export const menothHooks: CodeHookRegistry = {
   conditions: {},

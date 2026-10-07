@@ -39,6 +39,8 @@ export interface EffectExtras {
   condMods?: { stat: Stat; value: number; mode?: 'add' | 'set' | 'double' | 'half'; kinds: string[] }[]
   ignoreFriendly?: boolean
   noAdvance?: boolean
+  /** Fortification: friendly models of the caster inside its CTRL count as in cover against ranged and arcane attacks (read by defFor) */
+  grantedCover?: boolean
   /** flat attack or damage roll modifiers of the models the effect is on (Crippling Grasp); `kinds` limits them to those attack kinds */
   rollMods?: { roll: 'attack' | 'damage' | 'any'; value: number; kinds?: string[] }[]
   /** Enliven: after an enemy attack damages the model it may advance this far at once, then the effect ends */

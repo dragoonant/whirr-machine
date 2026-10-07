@@ -36,7 +36,7 @@ describe('CORE-M9d fury casting and offers', () => {
     expect(gf!.cost?.fury).toBe(3)
     o = send(o, raw(gf!.action))
     expect(o.state.models['A:L']!.fury).toBe(3)
-    expect(o.state.effects.some((e) => e.sourceId === 'trl.s.guided-fire' && e.targetIds.includes('A:e0'))).toBe(true)
+    expect(o.state.effects.some((e) => e.sourceId === 'trl.s.guided-fire' && e.casterId === 'A:L')).toBe(true)
     // the Bomber's own activation: Far Strike lengthens its ranged weapons by 3
     let t = choose(asOut({ ...s, models: { ...s.models } }), 'A:e0')
     t = send(t, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:e0' })
@@ -50,7 +50,7 @@ describe('CORE-M9d fury casting and offers', () => {
     expect(weaponRangeFor(t.state, 'A:e0', bomb.w)).toBe(weaponRangeFor(s, 'A:e0', bomb.w) + 3)
   })
 
-  it('CORE-081 Regeneration at activation.start is offered to a damaged Troll and forces it', () => {
+  it('CORE-081 Regeneration is a Combat Action choice for a damaged Troll and forces it', () => {
     let s = startList(TRL, 'core-81')
     s = park(s, ['A:L', 'A:e0'])
     s = place(s, 'A:L', { x: 0, z: 0 }, { fury: 6 }); s = place(s, 'A:e0', { x: 3, z: 0 })
@@ -58,13 +58,15 @@ describe('CORE-M9d fury casting and offers', () => {
     if (g.track !== 'grid') throw new Error('spiral expected')
     s = withModel(s, 'A:e0', { damage: { track: 'grid', grids: g.grids.map((x) => ({ ...x, cols: x.cols.map((c, ci) => c.map((v, i) => (ci === 0 && i < 3 ? true : v))) })) } })
     let o = choose(asOut(s), 'A:e0')
-    expect(o.pending.kind).toBe('abilityChoice')
-    expect(o.pending.context.data?.code).toBe('startTrigger')
+    expect(o.pending.kind).toBe('chooseMovement') // nothing is offered at the start any more
+    o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:e0' })
+    const regen = o.pending.options!.find((x) => (x.action as { abilityId?: string }).abilityId === 'trl.a.regeneration')
+    expect(regen, 'Regeneration is offered with the Combat Action choices').toBeDefined()
     const before = marked(o.state.models['A:e0']!)
-    o = send(o, { type: 'abilityChoice', optionId: 'use' })
+    o = send(o, regen!.action as unknown as Record<string, unknown>)
     expect(o.state.models['A:e0']!.fury).toBe(1) // forced once
     expect(marked(o.state.models['A:e0']!)).toBeLessThan(before)
-    expect(o.pending.kind).toBe('chooseMovement')
+    expect(o.pending.kind).toBe('chooseCombatAction')
   })
 
   it('CORE-082 targeted spells are offered on every friend or enemy they can reach, not only war-engines', () => {

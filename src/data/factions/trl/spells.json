@@ -2,7 +2,7 @@
   {
     "id": "trl.s.guided-fire",
     "name": "Guided Fire",
-    "text": "This turn, warbeasts of Gunnbjorn's battlegroup inside his CTRL roll one extra die on their ranged attack rolls.",
+    "text": "This turn, Gunnbjorn and the warbeasts of his battlegroup have their ranged attack rolls boosted for free while they are inside his CTRL.",
     "cost": 3,
     "rng": "SELF",
     "aoe": "CTRL",
@@ -22,7 +22,7 @@
     "offensive": false,
     "effect": [{ "code": "rockWall" }],
     "scope": { "who": "point" },
-    "verify": "Duration Up as the data says (older cards: one turn); wall size 4 by 1 inch is a guess."
+    "verify": "Duration Up as the data says (older cards: one turn); wall is 4 by 3/4 inch (rulebook wall piece)."
   },
   {
     "id": "trl.s.sentry",

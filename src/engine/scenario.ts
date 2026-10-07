@@ -279,7 +279,7 @@ export function afterDeaths(state: GameState, bundle: DataBundle): EndOfTurnResu
   let s = state
   const events: GameEvent[] = []
   // M9 (81 F9): warbeasts that left play this step record Spirit Bond and get reaved (not by a friendly attack)
-  const actor = s.attack?.attackerId ?? s.activation?.activeId
+  const actor = s.attack?.attackerId // only an attack can be a friendly attack (F9.3); other deaths in a friendly activation still reave
   const actorOwner = actor ? (s.models[actor]?.owner ?? s.units[actor]?.owner) : undefined
   for (const m of Object.values(s.models)) {
     if (m.type !== 'beast' || (m.life !== 'destroyed' && m.life !== 'boxed') || m.bondedTo !== undefined || m.controllerId === undefined || m.wild) continue

@@ -3,16 +3,16 @@
 import { describe, expect, it } from 'vitest'
 import type { GameEvent } from '../../src/engine/events'
 import { applyDamage, newGrid } from '../../src/engine/damage'
-import { abilitiesOf, atkOf, evalCond, runCodeEffect, statOf } from '../../src/engine/code-hooks'
+import { abilitiesOf, atkOf, evalCond, runCodeEffect, setAtk, statOf } from '../../src/engine/code-hooks'
 import { applyEffect } from '../../src/engine/effects'
-import { useFeat, castSpell } from '../../src/engine/spells'
+import { useFeat, castSpell, anytimeOptions } from '../../src/engine/spells'
 import { declareAttack } from '../../src/engine/phases/activation'
 import type { GameState, ModelState } from '../../src/engine/types'
 import {
   CORPSE_CAP, activeWarp, admonitionReady, afflictionFloor, circleHooks, circlePlugins, circleSpellCost, deathPoweredArm, layoutFor,
   markedBoxes, noHealing, ritesChannelers, scythingTouchArmPenalty, setWarp, treewalkerDefBonus, vitalMagicKeep, vitalMagicOffer,
 } from '../../src/engine/factions/circle'
-import { asOut, bundle, choose, openCombat, place, send, settle, startState } from './action-helpers'
+import { asOut, bundle, choose, openCombat, place, send, settle, startState, trySend } from './action-helpers'
 
 const B = bundle
 const TANITH = 'A:L', BEAST = 'A:e0', LORD = 'A:e1', RAV = ['A:u2.1', 'A:u2.2', 'A:u2.3']
@@ -40,6 +40,20 @@ const hurt = (s: GameState, id: string, pts: number): GameState => {
 const hook = (s: GameState, code: string, id: string, extra: Record<string, unknown> = {}, params: Record<string, unknown> = {}) =>
   runCodeEffect(s, B, code, { point: 'activation.start', selfId: id, activePlayer: s.activePlayer, ...extra }, params)
 const types = (ev: GameEvent[]) => ev.map((e) => e.type)
+/** A declared Cygnar pistol attack on a damaged Ravager (the state Rapid Healing's attack.resolved hook sees); `damaged` logs this attack's damage. */
+function pistolOnRavager(seed: string, damaged: boolean): GameState {
+  let s = circleState(seed)
+  s = place(s, RAV[0]!, { x: 0, z: -3 })
+  s = place(s, 'B:L', { x: 0, z: -9 })
+  s = hurt(s, RAV[0]!, 4)
+  s = { ...s, activePlayer: 'B', pending: { ...s.pending, kind: 'chooseActivation', player: 'B', id: 'd:900', options: [] }, decisionSeq: 900 }
+  let o = choose(asOut(s), 'B:L')
+  o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'B:L' })
+  const d = declareAttack(o.state, B, { attackerId: 'B:L', targetId: RAV[0]!, weaponId: 'cyg.w.spellstorm-pistol', additional: false, noFocus: false, chargeAttack: false })
+  if ('rejection' in d) throw new Error(JSON.stringify(d.rejection))
+  const a = atkOf(d.state)!
+  return damaged ? setAtk(d.state, { ...a, x: { ...a.x, flags: { ...a.x.flags, damagedIds: [RAV[0]!] } } }) : d.state
+}
 
 describe('Circle data and hooks wiring', () => {
   it('FAC-CIR-000 every {code} the Circle data references is registered and prefixed', () => {
@@ -82,6 +96,9 @@ describe('Tanith', () => {
     expect(abilitiesOf(s, B, BEAST)).toContain('core.a.prowl')
     expect(abilitiesOf(s, B, 'B:e0')).not.toContain('core.a.prowl')
     expect(abilitiesOf(s, B, LORD)).not.toContain('core.a.prowl')
+    // Prowl is also Tanith's own ability (spec: Stealth while she has concealment)
+    expect(abilitiesOf(s, B, TANITH)).toContain('core.a.prowl')
+    expect((B.byId['cir.tanith'] as unknown as { abilities: string[] }).abilities).toContain('core.a.prowl')
   })
 
   it('FAC-CIR-003 Vital Magic: she may keep an expiring upkeep for d3 damage; others are not offered', () => {
@@ -168,16 +185,42 @@ describe('Tanith spells', () => {
     return r
   }
 
-  it('FAC-CIR-021 Affliction: -2 DEF on the enemy model, and a failed direct-hit roll still deals 1', () => {
-    let s = circleState('aff', { focus: 6 })
+  it('FAC-CIR-021 Affliction is offensive (spec OFF yes): the cast hands back an attack, it is not a plain debuff', () => {
+    let s = circleState('aff0', { focus: 6 })
     s = place(s, 'B:e1', { x: 0, z: -7 })
-    const base = statOf(s, B, 'B:e1', 'DEF')
+    expect((B.byId['cir.s.affliction'] as unknown as { offensive: boolean }).offensive).toBe(true)
     const r = cast(s, 'cir.s.affliction', 'B:e1')
-    expect(statOf(r.state, B, 'B:e1', 'DEF')).toBe(base - 2)
-    expect(afflictionFloor(r.state, 'B:e1', 0, true)).toBe(1)
-    expect(afflictionFloor(r.state, 'B:e1', 0, false)).toBe(0)
-    expect(afflictionFloor(r.state, 'B:e1', 4, true)).toBe(4)
+    expect('offensive' in r && r.offensive).toMatchObject({ spellId: 'cir.s.affliction', targetId: 'B:e1' })
+    expect(r.state.effects.some((e) => e.sourceId === 'cir.s.affliction')).toBe(false) // nothing lands before the attack roll hits
     expect(afflictionFloor(s, 'B:e1', 0, true)).toBe(0)
+  })
+
+  it('FAC-CIR-021b Affliction through the engine: a hit puts -2 DEF and the 1-damage floor on the target (upkeep), no damage roll of its own (loop seeds)', () => {
+    let hit = false, missed = false
+    for (let i = 0; i < 80 && !(hit && missed); i++) {
+      let s = circleState('aff' + i, { focus: 6 })
+      s = place(s, 'B:e1', { x: 0, z: -7 })
+      const base = statOf(s, B, 'B:e1', 'DEF')
+      let o = choose(asOut(s), TANITH)
+      o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH })
+      o = send(o, { type: 'castSpell', casterId: TANITH, spellId: 'cir.s.affliction', targetId: 'B:e1' })
+      o = settle(o)
+      const res = o.events.find((e) => e.type === 'AttackResolved') as Extract<GameEvent, { type: 'AttackResolved' }> | undefined
+      expect(res).toBeDefined()
+      expect(o.events.some((e) => e.type === 'DamageRolled')).toBe(false) // the card has no POW
+      const eff = o.state.effects.find((e) => e.sourceId === 'cir.s.affliction')
+      if (!res!.hit) { missed = true; expect(eff).toBeUndefined(); continue }
+      hit = true
+      expect(eff).toMatchObject({ casterId: TANITH, targetIds: ['B:e1'], duration: 'upkeep', upkeep: { casterId: TANITH } })
+      expect(o.state.upkeeps['B:e1']?.enemy).toBe(eff!.id)
+      expect(statOf(o.state, B, 'B:e1', 'DEF')).toBe(base - 2)
+      expect(afflictionFloor(o.state, 'B:e1', 0, true)).toBe(1)
+      expect(afflictionFloor(o.state, 'B:e1', 0, false)).toBe(0)
+      expect(afflictionFloor(o.state, 'B:e1', 4, true)).toBe(4)
+      expect(afflictionFloor(s, 'B:e1', 0, true)).toBe(0)
+    }
+    expect(hit).toBe(true)
+    expect(missed).toBe(true)
   })
 
   it('FAC-CIR-022 Veil of Mists: a 3 inch cloud its owner side sees through, tied to the spell effect', () => {
@@ -203,13 +246,33 @@ describe('Tanith spells', () => {
     expect(scythingTouchArmPenalty(s, RAV[0]!)).toBe(0) // friendly
   })
 
-  it('FAC-CIR-024 Admonition: lists the wards within 6 inches of an enemy that ended a move', () => {
+  it('FAC-CIR-024 Admonition: a battlegroup warbeast only; lists the ward within 6 inches of an enemy that ended a move', () => {
     let s = circleState('adm', { focus: 6 })
-    s = place(place(s, TANITH, { x: 0, z: -8 }), LORD, { x: 0, z: -4 })
-    const r = cast(s, 'cir.s.admonition', LORD)
+    s = place(place(s, TANITH, { x: 0, z: -8 }), BEAST, { x: 0, z: -4 })
+    const r = cast(s, 'cir.s.admonition', BEAST)
+    expect(r.state.effects.some((e) => e.sourceId === 'cir.s.admonition' && e.targetIds.includes(BEAST))).toBe(true)
     s = place(r.state, 'B:e1', { x: 0, z: 0 })
-    expect(admonitionReady(s, 'B:e1').map((x) => x.modelId)).toEqual([LORD])
+    expect(admonitionReady(s, 'B:e1').map((x) => x.modelId)).toEqual([BEAST])
     expect(admonitionReady(place(s, 'B:e1', { x: 0, z: 9 }), 'B:e1')).toEqual([])
+  })
+
+  it('FAC-CIR-024b Admonition is refused on anything outside the battlegroup: the Lord (a solo), a Ravager, an enemy, a wild beast or another warlock beast', () => {
+    let s = circleState('adm2', { focus: 6 })
+    s = place(place(s, TANITH, { x: 0, z: -8 }), BEAST, { x: 0, z: -4 })
+    s = place(place(s, LORD, { x: 2, z: -5 }), RAV[0]!, { x: -2, z: -5 })
+    s = place(s, 'B:e0', { x: 3, z: -6 })
+    let o = choose(asOut(s), TANITH)
+    o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: TANITH })
+    const tryCast = (target: string, st = o.state) => castSpell(st, B, { type: 'castSpell', decisionId: o.pending.id, player: 'A', casterId: TANITH, spellId: 'cir.s.admonition', targetId: target })
+    for (const t of [LORD, RAV[0]!, 'B:e0']) expect('rejection' in tryCast(t), t).toBe(true)
+    expect('rejection' in tryCast(BEAST)).toBe(false)
+    const wild = { ...o.state, models: { ...o.state.models, [BEAST]: { ...o.state.models[BEAST]!, wild: true } } }
+    expect('rejection' in tryCast(BEAST, wild)).toBe(true)
+    const other = { ...o.state, models: { ...o.state.models, [BEAST]: { ...o.state.models[BEAST]!, controllerId: LORD } } }
+    expect('rejection' in tryCast(BEAST, other)).toBe(true)
+    // legal casts offered to the player list the warbeast and no other model
+    const offered = anytimeOptions(o.state, B, TANITH, o.pending.id).map((x) => x.action).filter((a) => a.type === 'castSpell' && a.spellId === 'cir.s.admonition').map((a) => (a as { targetId?: string }).targetId)
+    expect(offered).toEqual([BEAST])
   })
 
   it('FAC-CIR-025 Wraithbane (animus) makes the target\'s attacks Blessed through Wraithbane Weapons', () => {
@@ -236,9 +299,10 @@ describe('Tanith spells', () => {
 function choose0(s: GameState) { return asOut(s) }
 
 describe('Pureblood Warpwolf', () => {
-  it('FAC-CIR-004 Controlled Warping: Warp Strength by default, an explicit pick replaces it, frenzy forces Strength', () => {
+  it('FAC-CIR-004 Controlled Warping hook: no pick, no warp (no default); a pick replaces the old one; frenzy forces Strength', () => {
     let s = circleState('cw')
-    expect(activeWarp(s, B, BEAST)).toBe('strength')
+    expect(activeWarp(s, B, BEAST)).toBeNull()
+    expect(hook(s, 'cirControlledWarping', BEAST).state.effects.some((e) => e.sourceId.startsWith('cir.a.warp-'))).toBe(false)
     expect(activeWarp(s, B, LORD)).toBeNull()
     let r = hook(s, 'cirControlledWarping', BEAST, {}, { choice: 'ghostly' })
     s = r.state
@@ -251,6 +315,31 @@ describe('Pureblood Warpwolf', () => {
     s = { ...s, models: { ...s.models, [BEAST]: { ...s.models[BEAST]!, frenzied: true } } }
     r = hook(s, 'cirControlledWarping', BEAST, {}, { choice: 'ghostly' })
     expect(activeWarp(r.state, B, BEAST)).toBe('strength')
+  })
+
+  it('FAC-CIR-004b Controlled Warping through the engine: activating a beast asks which warp (three options), the pick is the one applied, a bad answer is refused', () => {
+    const s = circleState('cw-eng')
+    let o = choose(asOut(s), BEAST)
+    expect(o.pending.kind).toBe('abilityChoice')
+    expect(o.pending.context.data).toMatchObject({ code: 'startTrigger', warp: true })
+    expect((o.pending.options ?? []).map((x) => x.id).sort()).toEqual(['ghostly', 'spellWard', 'strength'])
+    expect(activeWarp(o.state, B, BEAST)).toBeNull() // nothing is chosen for the player
+    expect(trySend(o, { type: 'abilityChoice', optionId: 'skip' })).toMatchObject({ rejection: expect.anything() })
+    expect(trySend(o, { type: 'abilityChoice', optionId: 'use' })).toMatchObject({ rejection: expect.anything() })
+    for (const pick of ['ghostly', 'spellWard', 'strength'] as const) {
+      const o2 = send(o, { type: 'abilityChoice', optionId: pick })
+      expect(activeWarp(o2.state, B, BEAST)).toBe(pick)
+      expect(o2.state.effects.filter((e) => e.sourceId.startsWith('cir.a.warp-')).length).toBe(1)
+      expect(o2.pending.kind).toBe('chooseMovement') // on to Normal Movement
+    }
+  })
+
+  it('FAC-CIR-004c a frenzied beast takes Warp Strength with no choice offered', () => {
+    let s = circleState('cw-fz')
+    s = { ...s, models: { ...s.models, [BEAST]: { ...s.models[BEAST]!, frenzied: true } } }
+    const o = choose(asOut(s), BEAST)
+    expect(o.pending.kind).not.toBe('abilityChoice')
+    expect(activeWarp(o.state, B, BEAST)).toBe('strength')
   })
 
   it('FAC-CIR-005 Spell Ward: the warp carries a spell-only forbid for the engine to read', () => {
@@ -267,6 +356,8 @@ describe('Pureblood Warpwolf', () => {
     let s = circleState('ws')
     const atk = (kind: string) => ({ attackerId: BEAST, kind, x: {} }) as never
     const job = { id: 'j', targetId: 'B:e1', kind: 'direct' as const, pow: 14, types: [] }
+    expect(plugin.damageFlat!(s, B, atk('melee'), job)).toBe(0) // no warp picked yet
+    s = setWarp(s, BEAST, 'strength').state
     expect(plugin.damageFlat!(s, B, atk('melee'), job)).toBe(2)
     expect(plugin.damageFlat!(s, B, atk('power'), job)).toBe(2)
     expect(plugin.damageFlat!(s, B, atk('ranged'), job)).toBe(0)
@@ -416,7 +507,7 @@ describe('Lord of the Feast and Ravagers', () => {
       const hit = o.events.some((e) => e.type === 'AttackResolved' && e.hit)
       if (!hit) continue
       const dmg = o.events.filter((e) => e.type === 'DamageApplied' && e.targetId === RAV[0]!).reduce((a, e) => a + (e as Extract<GameEvent, { type: 'DamageApplied' }>).points, 0)
-      if (dmg === 0) continue
+      if (dmg === 0) { expect(o.events.some((e) => e.type === 'Healed')).toBe(false); continue }
       seen = true
       const healed = o.events.find((e) => e.type === 'Healed' && e.modelId === RAV[0]!) as Extract<GameEvent, { type: 'Healed' }> | undefined
       expect(healed).toBeDefined()
@@ -425,6 +516,24 @@ describe('Lord of the Feast and Ravagers', () => {
       expect(markedBoxes(o.state.models[RAV[0]!]!)).toBe(Math.max(0, dmg - healed!.points))
     }
     expect(seen).toBe(true)
+  })
+
+  it('FAC-CIR-014c Rapid Healing heals only when THIS attack damaged the model: an already-damaged model hit for 0 does not heal', () => {
+    const d = { state: pistolOnRavager('rh0', false) }
+    const a = atkOf(d.state)!
+    expect(a.x.flags.damagedIds).toBeUndefined()
+    // a hit that dealt nothing: no heal, state untouched
+    const none = hook(d.state, 'cirRapidHealing', RAV[0]!, { point: 'attack.resolved' })
+    expect(none.events).toEqual([])
+    expect(markedBoxes(none.state.models[RAV[0]!]!)).toBe(4)
+    // the same attack that did damage it: d3 heals
+    const hurtIt = setAtk(d.state, { ...a, x: { ...a.x, flags: { ...a.x.flags, damagedIds: [RAV[0]!] } } })
+    const healed = hook(hurtIt, 'cirRapidHealing', RAV[0]!, { point: 'attack.resolved' })
+    expect(types(healed.events)).toContain('Healed')
+    expect(markedBoxes(healed.state.models[RAV[0]!]!)).toBeLessThan(4)
+    // damaged this attack, but nothing marked left to heal (e.g. fully healed by it): nothing happens
+    const clean = hook(setAtk(circleState('rh1'), { ...a, x: { ...a.x, flags: { ...a.x.flags, damagedIds: [RAV[1]!] } } }), 'cirRapidHealing', RAV[1]!, { point: 'attack.resolved' })
+    expect(clean.events).toEqual([])
   })
 
   it('FAC-CIR-016 Brutal Charge: +2 damage only on a charge attack', () => {
@@ -470,8 +579,10 @@ describe('Lord of the Feast and Ravagers', () => {
     s = { ...s, models: { ...s.models, [RAV[0]!]: { ...s.models[RAV[0]!]!, damage: { track: 'single', filled: 4, boxes: 8 } } } }
     const withGw = hook(s, 'cirGrievousWounds', LORD, { targetId: RAV[0]! }).state
     expect(noHealing(withGw, RAV[0]!)).toBe(true)
-    expect(markedBoxes(hook(withGw, 'cirRapidHealing', RAV[0]!).state.models[RAV[0]!]!)).toBe(4)
-    expect(markedBoxes(hook(s, 'cirRapidHealing', RAV[0]!).state.models[RAV[0]!]!)).toBeLessThan(4)
+    const atkS = pistolOnRavager('gw-heal2', true)
+    const gwAtk = hook(atkS, 'cirGrievousWounds', LORD, { targetId: RAV[0]! }).state
+    expect(markedBoxes(hook(gwAtk, 'cirRapidHealing', RAV[0]!).state.models[RAV[0]!]!)).toBe(4)
+    expect(markedBoxes(hook(atkS, 'cirRapidHealing', RAV[0]!).state.models[RAV[0]!]!)).toBeLessThan(4)
   })
 
   it('FAC-CIR-019 Shifter: a Raven hit places the Lord base to base with the model hit (loop seeds)', () => {
@@ -491,6 +602,26 @@ describe('Lord of the Feast and Ravagers', () => {
       const lord = o.state.models[LORD]!, t = o.state.models['B:e1']!
       expect(Math.hypot(lord.pos.x - t.pos.x, lord.pos.z - t.pos.z) - 2 * (30 / 25.4 / 2)).toBeLessThan(0.01)
       expect(o.events.some((e) => e.type === 'ModelMoved' && e.modelId === LORD)).toBe(true)
+    }
+    expect(seen).toBe(true)
+  })
+
+  it('FAC-CIR-019b Raven has no POW: a hit rolls no damage, so no Affliction floor and no Meat for the Beast token is spent (loop seeds)', () => {
+    let seen = false
+    for (let i = 0; i < 80 && !seen; i++) {
+      let s = circleState('rv' + i)
+      s = withTokens(place(s, LORD, { x: 0, z: -12 }), LORD, 2)
+      s = place(s, 'B:e1', { x: 0, z: -6 })
+      s = applyEffect(s, { sourceId: 'cir.s.affliction', name: 'Affliction', owner: 'A', casterId: TANITH, targetIds: ['B:e1'], mods: [], duration: 'upkeep', upkeep: { casterId: TANITH } }).state
+      let o = openCombat(asOut(s), LORD, 'ranged')
+      o = send(o, { type: 'chooseAttack', modelId: LORD, weaponId: 'cir.w.raven', targetId: 'B:e1', additional: false })
+      // the Raven attack alone: Shifter then puts the Lord base to base and its Wurmblade attack follows (that one rolls damage), so cut the log there
+      const second = o.events.map((e, k) => (e.type === 'AttackDeclared' ? k : -1)).filter((k) => k >= 0)[1]
+      const first = second === undefined ? o.events : o.events.slice(0, second)
+      if (!first.some((e) => e.type === 'AttackResolved' && e.hit)) continue
+      seen = true
+      expect(first.filter((e) => e.type === 'DamageRolled' || e.type === 'DamageApplied')).toEqual([])
+      expect(first.some((e) => e.type === 'TokenSpent')).toBe(false)
     }
     expect(seen).toBe(true)
   })

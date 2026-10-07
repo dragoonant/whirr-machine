@@ -350,7 +350,8 @@
       "who": "enemy"
     },
     "duration": "round",
-    "attack": "cry.w.marionette"
+    "attack": "cry.w.marionette",
+    "limit": "oncePerActivation"
   },
   {
     "id": "cry.a.power-of-death",
@@ -373,7 +374,8 @@
         "value": "undead"
       }
     },
-    "duration": "turn"
+    "duration": "turn",
+    "limit": "oncePerActivation"
   },
   {
     "id": "cry.a.stygian-abyss",
@@ -391,7 +393,8 @@
       "who": "target"
     },
     "duration": "round",
-    "attack": "cry.w.stygian-abyss"
+    "attack": "cry.w.stygian-abyss",
+    "limit": "oncePerActivation"
   },
   {
     "id": "cry.a.mortal-fear",

@@ -246,6 +246,8 @@ export interface DefModOptions {
   ignoreAllConcealment?: boolean
   /** From Beneath, Wraith Shot: the attack ignores cover */
   ignoreCover?: boolean
+  /** Fortification: the target counts as in cover (+4, never stacks, not against spray; ignore-cover beats it) */
+  grantedCover?: boolean
 }
 export interface DefModResult {
   baseDef: number // after a "set" (knocked down / stationary)
@@ -312,6 +314,7 @@ export function defModifiers(state: GameState, targetId: Id, o: DefModOptions): 
       if (inside === 'cover' && !o.ignoreCover) cov = 'cover'
       const lines = sampleLines(A, B)
       if (cov !== 'cover' && !o.ignoreCover && featureAlongLine(ctx, B, 'cover', lines)) cov = 'cover'
+      if (cov !== 'cover' && o.grantedCover && !o.ignoreCover) cov = 'cover'
       if (cov !== 'cover') {
         const cloud = state.clouds.some((c) => cloudConceals(c) && circleInsideShape(B.pos, rB, cloudShape(c)))
         let conc = inside === 'concealment' || o.grantedConcealment === true || featureAlongLine(ctx, B, 'concealment', lines)

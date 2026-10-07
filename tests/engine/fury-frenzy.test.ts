@@ -135,3 +135,81 @@ describe('FURY frenzy', () => {
     expect(answerControl(r1.state, B, { ...pick.action, delta: -4 } as never)).toHaveProperty('rejection.code', 'E_INSUFFICIENT_FURY')
   })
 })
+
+// FURY-020..024: the frenzy attack runs through the real attack pipeline (81 E4, F7 FZ5/FZ6, F8.c, F10.5), not a hand-rolled copy.
+import type { Action } from '../../src/engine/actions'
+import { handleActivationAction } from '../../src/engine/phases/activation'
+import { query } from '../../src/engine/index'
+import type { FlowOut } from '../../src/engine/pending'
+
+const answer = (out: { state: GameState; events: GameEvent[]; pending: NonNullable<ReturnType<typeof continueControl>['pending']> }, a: Record<string, unknown>) => {
+  const r = handleActivationAction(out.state, B, { ...a, decisionId: out.pending.id, player: out.pending.player } as unknown as Action)
+  if (!r) throw new Error(`not an activation action: ${String(a.type)}`)
+  const res = must(r)
+  return { state: res.state, events: [...out.events, ...res.events], pending: res.pending }
+}
+const asFlow = (r: ReturnType<typeof continueControl>): FlowOut => ({ state: r.state, events: r.events, pending: r.pending! })
+const WX = 10 + R_BEAST + 2 + 40 / 25.4 / 2 // a 40 mm model 2" of edge room off the beast's +x side (no 3" charge, so no damage boost)
+
+describe('FURY frenzy runs through the attack pipeline', () => {
+  it('FURY-020 a frenzy hit on its own warlock raises the transfer prompt; keeping it ends the activation and the vent follows', () => {
+    const s = world([
+      warlock({ pos: { x: WX, z: 0 }, fury: 6 }), beast('A:b1', 10, 0, { fury: 3 }), beast('A:b2', WX, 6, { fury: 0 }), enemyLeader({ pos: { x: 20, z: 20 } }),
+    ])
+    force(s, [6, 6], [6, 6, 6], [6, 6]) // threshold; boosted attack; 14 + 12 - ARM 15 = 11 points
+    const r = continueControl(s, B, 'threshold')
+    expect(evs(r.events, 'Frenzied')).toMatchObject([{ targetId: 'A:L' }])
+    expect(r.pending?.kind).toBe('transferDamage')
+    expect(r.pending!.options!.map((o) => o.id)).toEqual(['to:A:b2', 'keep'])
+    expect(r.state.activation).toMatchObject({ frenzy: { beastId: 'A:b1', targetId: 'A:L' } })
+    const kept = answer(asFlow(r), { type: 'transferDamage', toId: null })
+    expect(evs(kept.events, 'DamageApplied').filter((e) => e.targetId === 'A:L')).toMatchObject([{ points: 11 }])
+    expect(evs(kept.events, 'AttackFinished')).toHaveLength(1)
+    expect(evs(kept.events, 'ActivationEnded')).toMatchObject([{ activeId: 'A:b1', reason: 'frenzy' }])
+    expect(kept.state.activation).toBeNull()
+    expect(kept.state.models['A:b1']).toMatchObject({ activated: true, frenzied: false })
+    expect(kept.pending.kind).toBe('adjustFury') // FZ7 comes after the attack is fully resolved
+  })
+
+  it('FURY-021 a Mind and Body crippled beast rolls one die fewer on the attack and on the damage roll', () => {
+    const s = frenzyWorld([mk('B:e', 'f.e', 'B', WX, 0)], { crippled: ['m', 'b'] })
+    force(s, [6, 6], [6, 6], [6])
+    const r = continueControl(s, B, 'threshold')
+    expect(rollsOf(r.events, 'attack')[0]!.dice).toHaveLength(2) // 2 - 1 (Mind) + 1 (free boost)
+    expect(rollsOf(r.events, 'damage')[0]!.dice).toHaveLength(1) // 2 - 1 (Body), no charge boost at 2"
+  })
+
+  it('FURY-022 a frenzied hit offers the target its Power Field decision', () => {
+    B.byId['f.pf'] = { ...(B.byId['f.e'] as object), id: 'f.pf', abilities: ['core.a.power-field'] } as never
+    const s = frenzyWorld([mk('B:e', 'f.pf', 'B', WX, 0, { focus: 1 })])
+    force(s, [6, 6], [6, 6, 6], [6, 6])
+    const r = continueControl(s, B, 'threshold')
+    expect(r.pending?.kind).toBe('powerField')
+    expect(r.pending!.player).toBe('B')
+    const o = answer(asFlow(r), { ...(r.pending!.options!.find((x) => x.id === 'spend')!.action as object) })
+    expect(evs(o.events, 'PowerFieldUsed')).toHaveLength(1)
+    expect(evs(o.events, 'ActivationEnded')).toMatchObject([{ reason: 'frenzy' }])
+    expect(o.state.models['B:e']!.focus).toBe(0)
+  })
+
+  it('FURY-023 a beast that cannot charge loses its activation even with a target in reach', () => {
+    const half = 120 / 25.4 / 2
+    const s = world([warlock({ pos: { x: -20, z: 0 } }), beast('A:b1', 10, 0, { fury: 3, base: 120 }), mk('B:e', 'f.e', 'B', 10 + half + 0.5 + 40 / 25.4 / 2, 0), enemyLeader({ pos: { x: 20, z: 20 } })])
+    force(s, [6, 6])
+    const r = continueControl(s, B, 'threshold')
+    expect(evs(r.events, 'Frenzied')).toMatchObject([{ targetId: 'B:e', reason: 'cannotCharge' }])
+    expect(evs(r.events, 'AttackDeclared')).toEqual([])
+    expect(evs(r.events, 'ActivationEnded')).toMatchObject([{ reason: 'frenzy' }])
+    expect(r.pending?.kind).toBe('adjustFury')
+  })
+
+  it('FURY-024 query.threat: a beast that cannot be forced shows no run or slam, and a forceable one needs a force', () => {
+    const s = world([warlock(), beast('A:near', 3, 0), beast('A:far', 40, 0), mk('B:e', 'f.e', 'B', 10, 5), enemyLeader()])
+    const near = query.threat(s, 'A:near')
+    expect(near).toMatchObject({ needsForce: true, run: 10, slam: 8 })
+    const far = query.threat(s, 'A:far')
+    expect(far).toMatchObject({ needsForce: true, run: far.advance, slam: null })
+    expect(far.charge).toBeLessThan(near.charge)
+    expect(query.threat(s, 'B:e').needsForce).toBeUndefined()
+  })
+})

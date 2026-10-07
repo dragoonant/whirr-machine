@@ -59,8 +59,8 @@ function settle(out0: FlowOut): FlowOut {
   return out
 }
 /** Enemy brute B:e (POW 19 cleaver, MAT 12) attacks the warlock A:L; dice are forced to deal exactly 10 damage points. */
-function bruteHitsWarlock(models: ModelState[]): FlowOut {
-  const s = world([...models, mk('B:e', 'f.e', 'B', 1.6, 0), enemyLeader({ pos: { x: 30, z: 30 } })], { phase: 'activation', activePlayer: 'B' })
+function bruteHitsWarlock(models: ModelState[], effects: GameState['effects'] = []): FlowOut {
+  const s = world([...models, mk('B:e', 'f.e', 'B', 1.6, 0), enemyLeader({ pos: { x: 30, z: 30 } })], { phase: 'activation', activePlayer: 'B', effects })
   force(s, [6, 6], [3, 3]) // hit, then 6 + POW 19 - ARM 15 = 10
   let out = raiseChooseActivation(s, [])
   out = send(out, { type: 'chooseActivation', activate: 'B:e' })
@@ -125,9 +125,13 @@ describe('FURY damage transfer', () => {
   })
 
   it('FURY-036 after a full transfer the warlock still takes a (zero-point) damage instance, so damage triggers see it', () => {
-    const out = bruteHitsWarlock([warlock({ fury: 6 }), beastWithRoom('A:b1', 15, 3)])
+    // Avenging Force arms when a friendly model is damaged in the enemy turn: the transfer's beast takes its points through damage.ts, so only
+    // the warlock's own (zero-point) instance can arm it
+    const af = { id: 'e:af', sourceId: 'kha.s.avenging-force', name: 'Avenging Force', owner: 'A', casterId: 'A:L', targetIds: ['A:b1'], mods: [], duration: 'upkeep', expires: null, upkeep: { casterId: 'A:L' }, triggered: false } as unknown as GameState['effects'][number]
+    const out = bruteHitsWarlock([warlock({ fury: 6 }), beastWithRoom('A:b1', 15, 3)], [af])
     const r = send(out, { type: 'transferDamage', toId: 'A:b1' })
     expect(evs(r.events, 'DamageTransferred')).toMatchObject([{ absorbed: 10, overflow: 0 }])
+    expect((r.state.effects.find((e) => e.id === 'e:af') as { triggered?: boolean }).triggered).toBe(true)
     const dmg = evs(r.events, 'DamageApplied')
     expect(dmg.find((e) => e.targetId === 'A:b1')).toMatchObject({ source: 'transfer', points: 10 })
     expect(dmg.find((e) => e.targetId === 'A:L')).toMatchObject({ points: 0 })

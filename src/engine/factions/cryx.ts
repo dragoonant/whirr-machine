@@ -2,16 +2,19 @@
 // Soul tokens live in ModelState.tokens; events TokenGained / TokenSpent. Data-only rules (Dodge, Wraithbinder, Volume Fire,
 // Critical Corrosion, Banish, Wraithbinder...) need no code here. Core drives the rest: start-of-activation offers, special actions, LOS, movement and damage rules (core-m9 tests).
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
-import { applyEffect } from '../effects'
+import { applyEffect, removeEffect } from '../effects'
 import { applyDamage, healDamage } from '../damage'
 import { rollD3 } from '../dice'
 import { gainFocus, spendFocus, isRejection } from '../focus'
-import { isOnTable } from '../geometry'
+import { dist, isLegalPlacement, isOnTable } from '../geometry'
+import { relocate } from '../movement'
+import { raise } from '../pending'
 import { modelDistance, within } from '../measure'
 import {
   abilitiesOf, atkOf, envOf, hasFlag, layoutsOf, noop, prof, rec, setAtk, type AtkCtx, type AttackPlugin,
 } from '../code-hooks'
-import type { DataBundle, GameState, Id, ModelId, ModelState, TokenKind } from '../types'
+import type { DataBundle, DecisionOption, GameState, Id, ModelId, ModelState, PendingDecision, Rejection, TokenKind, Vec2 } from '../types'
+import type { Action } from '../actions'
 import type { GameEvent } from '../events'
 
 export const SOUL_CAP = 3
@@ -215,11 +218,32 @@ const wrathOfLyliss = (c: HookContext): HookResult => noop(c)
 export const wrathActive = (state: GameState, casterId: ModelId): boolean =>
   state.effects.some((e) => e.sourceId === 'cry.f.wrath-of-lyliss' && e.targetIds.includes(casterId))
 
+/**
+ * Crippling Grasp (offensive spell hit): -2 SPD, DEF and ARM and -2 on melee damage rolls for as long as the upkeep is kept.
+ * RULING: the unit version is not built; one enemy model per cast, and a re-cast on a new target moves the effect.
+ */
+const cryCripplingGrasp = (c: HookContext): HookResult => {
+  const caster = c.state.models[c.selfId]
+  const t = c.targetId ? c.state.models[c.targetId] : undefined
+  if (!caster || !t || t.owner === caster.owner || !isOnTable(t)) return noop(c)
+  let s = c.state
+  const events: GameEvent[] = []
+  for (const e of s.effects.filter((x) => x.sourceId === 'cry.s.crippling-grasp' && x.casterId === caster.id)) { const r = removeEffect(s, e.id, 'replaced'); s = r.state; events.push(...r.events) }
+  const made = applyEffect(s, {
+    sourceId: 'cry.s.crippling-grasp', name: 'Crippling Grasp', owner: caster.owner, casterId: caster.id, targetIds: [t.id],
+    mods: [{ stat: 'SPD', value: -2, mode: 'add' }, { stat: 'DEF', value: -2, mode: 'add' }, { stat: 'ARM', value: -2, mode: 'add' }],
+    rollMods: [{ roll: 'damage', value: -2, kinds: ['melee', 'power'] }], duration: 'upkeep', upkeep: { casterId: caster.id },
+  })
+  s = made.state; events.push(...made.events)
+  s = { ...s, upkeeps: { ...s.upkeeps, [t.id]: { ...s.upkeeps[t.id], enemy: made.effect.id } } }
+  return { state: s, events }
+}
+
 export const cryxHooks: CodeHookRegistry = {
   conditions: {},
   effects: {
     cryBlessed, cryShadowFire, wraithShot, wraithShotDamage, soulTaker, devourSoul, shadowGate, soulGenerator, grapplingHook,
-    vitalMagic, repair, exhaustFumes, wrathOfLyliss,
+    vitalMagic, repair, exhaustFumes, wrathOfLyliss, cryCripplingGrasp,
   },
 }
 
@@ -254,3 +278,63 @@ export const cryxPlugins: AttackPlugin[] = [{
     return { state: st, events }
   },
 }]
+
+// ---------- Apparition (Mirage): a Control Phase place move of up to 2" ----------
+const APPARITION = 'cry.a.apparition'
+export const APPARITION_RANGE = 2
+const APPARITION_USED = 'cry.a.apparition-used'
+/** Models of the player that carry Apparition (from a Mirage grant) and have not used or declined it this turn. */
+export function apparitionQueue(state: GameState, b: DataBundle, player: ModelState['owner']): ModelId[] {
+  return Object.values(state.models)
+    .filter((m) => m.owner === player && isOnTable(m) && m.life === 'active'
+      && abilitiesOf(state, b, m.id).includes(APPARITION)
+      && !state.effects.some((e) => e.sourceId === APPARITION_USED && e.targetIds.includes(m.id)))
+    .map((m) => m.id).sort()
+}
+
+/** Raise the place decision for the next Apparition model, or null when none is left. */
+export function raiseApparition(state: GameState, b: DataBundle, player: ModelState['owner']): { state: GameState; pending: PendingDecision } | null {
+  const id = apparitionQueue(state, b, player)[0]
+  if (!id) return null
+  const m = state.models[id]!
+  const s0: GameState = { ...state, window: 'control.upkeep' }
+  const did = `d:${s0.decisionSeq + 1}`
+  const samples: Vec2[] = [m.pos]
+  for (let i = 0; i < 8; i++) {
+    for (const f of [1, 0.5]) {
+      const p = { x: m.pos.x + Math.cos((i * Math.PI) / 4) * APPARITION_RANGE * f, z: m.pos.z + Math.sin((i * Math.PI) / 4) * APPARITION_RANGE * f }
+      if (isLegalPlacement(s0, id, p, m.base).ok) samples.push(p)
+    }
+  }
+  const options: DecisionOption[] = samples.map((p, i) => ({ id: `ap${i}`, label: `Place at ${p.x.toFixed(1)},${p.z.toFixed(1)}`, action: { type: 'moveModel', decisionId: did, player, modelId: id, path: [p] } as Action }))
+  return raise(s0, {
+    player, kind: 'moveModel', window: 'control.upkeep',
+    context: { modelId: id, data: { code: 'apparition' } }, constraints: { modelId: id, from: m.pos, maxDist: APPARITION_RANGE }, options, canPass: true,
+  })
+}
+export function validateApparition(state: GameState, a: Action): Rejection | null {
+  if (a.type === 'pass') return null
+  if (a.type !== 'moveModel') return { code: 'E_WRONG_DECISION', message: `${a.type} does not answer an Apparition decision` }
+  const id = state.pending.context.modelId
+  if (a.modelId !== id) return { code: 'E_TARGET_INVALID', message: `${id} is the model that is placed` }
+  const m = state.models[id!]!
+  const end = a.path[a.path.length - 1] ?? m.pos
+  if (dist(m.pos, end) > APPARITION_RANGE + 1e-6) return { code: 'E_TOO_FAR', message: `place within ${APPARITION_RANGE}"` }
+  const c = isLegalPlacement(state, m.id, end, m.base)
+  return c.ok ? null : { code: c.code ?? 'E_PLACEMENT', message: c.message ?? 'illegal placement' }
+}
+export function applyApparition(state: GameState, a: Action): { state: GameState; events: GameEvent[] } {
+  const id = state.pending.context.modelId!
+  const m = state.models[id]!
+  let s = state
+  const events: GameEvent[] = []
+  if (a.type === 'moveModel') {
+    const end = a.path[a.path.length - 1] ?? m.pos
+    if (dist(m.pos, end) > 1e-9) {
+      s = relocate(s, id, end)
+      events.push({ type: 'ModelMoved', modelId: id, kind: 'place', from: m.pos, to: end, path: [end], distance: dist(m.pos, end), elevAfter: s.models[id]!.elev } as GameEvent)
+    }
+  }
+  const used = applyEffect(s, { sourceId: APPARITION_USED, name: 'Apparition used', owner: m.owner, casterId: id, targetIds: [id], mods: [], duration: 'turn' })
+  return { state: used.state, events: [...events, ...used.events] }
+}

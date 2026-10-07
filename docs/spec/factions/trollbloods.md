@@ -85,7 +85,7 @@ Fury ops (`gainFury`, `force`) are **not in `hooks.ts` yet**; they wait for `81-
 |---|---|---|---|
 | Field Marshal [Run & Gun] | passive | scope `warEngines` (battlegroup); `{op:'grantAbility', ability:'run-and-gun'}` (reuse cyg `hook.runAndGun`) | FAC-TRL-001 |
 | Resourceful | `phase.maintenance` (upkeep step) | code `hook.resourceful` (upkeep cost 0 for spells on battlegroup models) | FAC-TRL-002 |
-| Regeneration [d3] | `activation.any` | code `hook.regeneration` (special: force for 1 fury, `{op:'heal', value:'d3'}`; once per activation; forbidden after run) | FAC-TRL-003 |
+| Regeneration [d3] | `combat.choose` | code `hook.regeneration` (special: force for 1 fury, `{op:'heal', value:'d3'}`; once per activation; forbidden after run) | FAC-TRL-003 |
 | Snacking | `death.boxed` | when `{all:[attackKind melee, {test:'living'}]}`; optional `{op:'removeFromPlay'}` then `{op:'heal', value:'d3'}` on self | FAC-TRL-004 |
 | Dodge | `attack.resolved` [A1:12] | when `{all:[{not:hit}, isEnemy attacker]}`; `{op:'advance', dist:2, direction:'any'}`; optional | FAC-TRL-005 |
 | Leadership [Trollkin Highwaymen] | passive | scope friendly `trl.highwaymen` within 10; `{op:'grantAbility', ability:'trl.a.dodge'}` | FAC-TRL-006 |
@@ -144,8 +144,8 @@ All four spells and the animus are community data; **open app check** for the cu
 
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Guided Fire | 3 | SELF | CTRL | — | TURN | no | This turn, models in Gunnbjorn's battlegroup inside his CTRL roll an extra die on ranged attack rolls (boosted) | U-cd |
-| Rock Wall | 2 | CTRL | — | — | UP | no | Put a straight wall piece fully inside his CTRL, clear of bases and terrain; it is an obstacle giving cover; an 80 mm or 120 mm base touching it removes it | U-cd; DUR UP looks odd (older cards: TURN) and wall size U-guess (4" × 1") |
+| Guided Fire | 3 | SELF | CTRL | — | TURN | no | This turn, models in Gunnbjorn's battlegroup inside his CTRL have their ranged attack rolls boosted for free (Gunnbjorn included; checked when the attack is rolled) | U-cd |
+| Rock Wall | 2 | CTRL | — | — | UP | no | Put a straight wall piece fully inside his CTRL, clear of bases and terrain; it is an obstacle giving cover; an 80 mm or 120 mm base touching it removes it | U-cd; DUR UP looks odd (older cards: TURN) and wall size rulebook piece 4" × 3/4" |
 | Sentry | 2 | 6 | — | — | UP | no | A friendly Faction model gets Rapid Fire: one basic ranged attack in your Maintenance Phase | U-cd |
 | Snipe | 2 | 6 | — | — | UP | no | A friendly Faction model's or unit's ranged weapons reach 3" further | U-cd |
 | Far Strike (animus) | 1 | SELF | — | — | TURN | no | The caster's ranged weapons reach 3" further this turn | U-cd |
@@ -220,7 +220,7 @@ Faction id `trl` (engine file key `trollbloods`: `src/engine/factions/trollblood
 - RULING: spiral aspects | branches 1–2 Mind, 3–4 Body, 5–6 Spirit, every box an aspect box | the community data gives branch sizes only; the rulebook text allows mixed branches, so confirm against the card.
 - RULING: warbeast weapon location | `-` on the Powder Bomb and Claws | spirals have no L/R/H systems; crippled aspects cover all weapons.
 - RULING: base sizes | Gunnbjorn, Braylen, Highwaymen 40 mm; Bomber 50 mm | read from Privateer Press product labels; MK4 stat bars not seen.
-- RULING: Rock Wall duration | keep UP as the data says, wall 4" × 1" | community data says Up and gives no size; older cards were one turn. Confirm both.
+- RULING: Rock Wall duration | keep UP as the data says, wall 4" × 3/4" and clear of every base and terrain piece (obstacles and obstructions included) | the rulebook wall piece is 4 by 3/4 inch; community data says Up; older cards were one turn. Confirm the duration.
 - RULING: Highwaymen keyword | treat as Trollkin | the data entry lacks the Trollkin keyword the sculpts and other trollkin units carry; it matters only for keyword-scoped rules.
 - RULING: Gunnbjorn AAT | none | the data has no arcane attack stat for him and all his spells are non-offensive.
 - RULING: Fortification cover | +4 DEF against ranged and arcane attacks as normal cover (R6) | the feat grants "cover" with no number; MK4 cover is +4 DEF.

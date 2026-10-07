@@ -28,7 +28,7 @@
   {
     "id": "men.a.stoke-boost-attack",
     "name": "Stoke the Pyre (attack)",
-    "text": "Granted: against an enemy on fire, strip the fire to add a die to a melee attack roll. Used on the attack only when the hit is a long shot; otherwise the fire is kept for damage.",
+    "text": "Granted: against an enemy on fire, strip the fire to boost a melee attack roll (a roll is boosted once, so this is skipped when it already is). Used on the attack only when the hit is a long shot; otherwise the fire is kept for damage.",
     "kind": "triggered",
     "trigger": "attack.beforeRoll",
     "when": {
@@ -47,10 +47,6 @@
     "effect": [
       {
         "code": "stokeStripAttack"
-      },
-      {
-        "op": "addDie",
-        "roll": "attack"
       }
     ],
     "scope": {
@@ -61,7 +57,7 @@
   {
     "id": "men.a.stoke-boost-damage",
     "name": "Stoke the Pyre (damage)",
-    "text": "Granted: against an enemy on fire, strip the fire to add a die to a melee damage roll.",
+    "text": "Granted: against an enemy on fire, strip the fire to boost a melee damage roll (skipped when the roll is already boosted).",
     "kind": "triggered",
     "trigger": "damage.beforeRoll",
     "when": {
@@ -80,10 +76,6 @@
     "effect": [
       {
         "code": "stokeStripDamage"
-      },
-      {
-        "op": "addDie",
-        "roll": "damage"
       }
     ],
     "scope": {
@@ -219,8 +211,8 @@
     "id": "men.a.relentless-charge",
     "name": "Relentless Charge",
     "text": "This model has Pathfinder while it charges.",
-    "kind": "passive",
-    "trigger": "passive",
+    "kind": "triggered",
+    "trigger": "movement.charge",
     "effect": [
       {
         "op": "grantAbility",
@@ -230,7 +222,7 @@
     "scope": {
       "who": "self"
     },
-    "duration": "continuous"
+    "duration": "activation"
   },
   {
     "id": "men.a.impenetrable-shield",
@@ -254,9 +246,9 @@
   {
     "id": "men.a.battle-plan",
     "name": "Battle Plan",
-    "text": "Once in its activation this model picks a plan for a friendly Menoth warrior model or unit within 5 inches: Fight to the Last, Stir the Blood or Precision Strike.",
+    "text": "Once in its activation this model picks a plan: Fight to the Last or Stir the Blood for a friendly Menoth warrior model or unit within 5 inches, or Precision Strike for friendly models within 10 inches.",
     "kind": "triggered",
-    "trigger": "activation.end",
+    "trigger": "activation.start",
     "effect": [
       {
         "code": "battlePlan"
@@ -265,7 +257,8 @@
     "scope": {
       "who": "self"
     },
-    "duration": "instant"
+    "duration": "instant",
+    "optional": true
   },
   {
     "id": "men.a.fight-to-the-last",

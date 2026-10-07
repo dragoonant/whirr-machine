@@ -1,20 +1,23 @@
-// M9 (81 F7): a frenzy activation, steps FZ1-FZ6, resolved start to finish with no decisions (the target is the closest model,
-// the charge is straight, the attack is the best melee weapon with a free boost). FZ7, the vent decision, is raised by control.ts.
-import { rollAttack } from '../attack'
+// M9 (81 F7): a frenzy activation, steps FZ1-FZ6. The target is the closest model, the charge is straight, and the attack is the best melee
+// weapon with a free boost, run through the real attack pipeline (activation.ts declareAttack/drive) so Power Field, Transfer, triggers and
+// crippled-aspect dice all apply. The attack may stop for a decision (transfer, Power Field, a trigger window); the answer resumes the
+// pipeline and `finishFrenzyActivation` (called from finishAttack) does FZ6 and hands back to Control (FZ7, the vent decision).
 import { hasLos } from '../los'
 import {
-  armOf, hasFlag, isMelee, layoutsOf, statOf, weaponCrippled, weaponsOf, type WeaponInst,
+  hasFlag, isMelee, statOf, weaponCrippled, weaponsOf, type ActCtx, type WeaponInst,
 } from '../code-hooks'
 import { rollNd6 } from '../dice'
-import { applyDamage, resolveDeath, rollDamage } from '../damage'
-import { effectsOn, hasCondition, removeCondition, removeEffect } from '../effects'
+import { effectsOn, expireEffects, removeCondition, removeEffect } from '../effects'
 import type { GameEvent } from '../events'
 import { EPS, edgeDistance, isOnTable, norm, sub, sweepFrom } from '../geometry'
-import { onBeastLeavesPlay, markWildBeasts } from '../fury'
 import { modelDistance } from '../measure'
 import { movedEvent, relocate } from '../movement'
+import { raiseGameOver, raiseVent, type FlowOut } from '../pending'
 import { afterDeaths } from '../scenario'
+import { raiseChooseActivation } from '../turnflow'
 import type { DataBundle, GameState, ModelId, ModelState, StoredConditionId } from '../types'
+import { continueControl } from './control'
+import { declareAttack, drive, emptyPm } from './activation'
 
 export interface FrenzyTarget { tiedIds: ModelId[]; distance: number; friendly: boolean; canCharge: boolean; reason?: 'noTarget' | 'cannotCharge' | 'cannotActivate' }
 
@@ -50,10 +53,11 @@ export function frenzyWeapon(state: GameState, b: DataBundle, beast: ModelState,
 const setModel = (s: GameState, m: ModelState): GameState => ({ ...s, models: { ...s.models, [m.id]: m } })
 
 /**
- * Run FZ1-FZ6 for a beast that just failed its threshold check. Returns the state with the beast activated and `frenzied`
- * false again; control.ts then raises the vent decision (FZ7).
+ * Run FZ1-FZ6 for a beast that just failed its threshold check. Without an attack it returns the state with the beast activated and
+ * `frenzied` false again; control.ts then raises the vent decision (FZ7). With an attack the pipeline takes over: `out` is the flow
+ * result (a decision inside the attack, or the vent / next decision once the attack is over) and control.ts returns it as is.
  */
-export function runFrenzy(state0: GameState, b: DataBundle, beastId: ModelId): { state: GameState; events: GameEvent[]; ended?: boolean } {
+export function runFrenzy(state0: GameState, b: DataBundle, beastId: ModelId): { state: GameState; events: GameEvent[]; ended?: boolean; out?: FlowOut } {
   let s = state0
   const events: GameEvent[] = []
   const beast0 = s.models[beastId]!
@@ -92,6 +96,7 @@ export function runFrenzy(state0: GameState, b: DataBundle, beastId: ModelId): {
   events.push({ type: 'Frenzied', beastId, targetId, tiedIds: t.tiedIds, tieRollId, reason: !targetId ? 'noTarget' : !t.canCharge ? 'cannotCharge' : undefined })
   let chargeAttack = false
   let success = false
+  let travelled = 0
   if (targetId && t.canCharge) {
     // FZ4: charge with no force, even if engaged; straight at the target up to SPD+3"
     const m = s.models[beastId]!
@@ -105,51 +110,60 @@ export function runFrenzy(state0: GameState, b: DataBundle, beastId: ModelId): {
     success = edgeDistance(sw.end, m.base, tg.pos, tg.base) <= 1 + EPS
     s = relocate(s, beastId, sw.end)
     chargeAttack = success && sw.travelled >= 3 - EPS
+    travelled = sw.travelled
     events.push(
       { type: 'ChargeDeclared', modelId: beastId, targetId },
       movedEvent(beastId, 'charge', m.pos, sw.end, [sw.end], s.models[beastId]!.elev, sw.stoppedBy.id),
       { type: 'ChargeResolved', modelId: beastId, targetId, distance: sw.travelled, success, chargeAttack },
     )
   }
-  // FZ5: one attack, only after a successful charge or when the target already stood in range
+  // FZ5: one attack through the pipeline, only after a successful charge. A beast that cannot charge loses its activation (p107, FZ3),
+  // and so does one whose charge falls short.
   const beast = s.models[beastId]!
   const target = targetId ? s.models[targetId] : undefined
-  const canAttack = !!target && (t.canCharge ? success : !!frenzyWeapon(s, b, beast, target))
-  const weapon = canAttack && target ? frenzyWeapon(s, b, beast, target) : undefined
+  const weapon = target && t.canCharge && success ? frenzyWeapon(s, b, beast, target) : undefined
   if (weapon && target) {
-    const attackId = `a:${s.attackSeq + 1}`
-    s = { ...s, attackSeq: s.attackSeq + 1 }
-    events.push({ type: 'AttackDeclared', attackId, attackerId: beastId, originId: beastId, weaponId: weapon.weaponId, targetId: target.id, kind: 'melee', additional: false })
-    const auto = target.wild || target.inert || hasCondition(s, target, 'knockedDown') || hasCondition(s, target, 'stationary')
-    const def = target.wild ? 5 : statOf(s, b, target.id, 'DEF')
-    const ar = rollAttack(s, { stat: statOf(s, b, beastId, 'MAT'), target: def, dice: { boost: true }, autoHit: auto, ownerId: beastId })
-    s = ar.state; events.push(...ar.events)
-    events.push({ type: 'RollBoosted', attackId, roll: 'attack', modelId: beastId, source: 'frenzy' })
-    events.push({ type: 'AttackResolved', attackId, rollId: ar.rollId, hit: ar.hit, crit: ar.crit, auto: ar.auto })
-    if (ar.hit) {
-      const arm = armOf(s, b, target.id)
-      const dr = rollDamage(s, { pow: (weapon.w.pow as number) ?? 0, armor: arm, dice: { boost: chargeAttack }, ownerId: target.id })
-      s = dr.state; events.push(...dr.events)
-      if (chargeAttack) events.push({ type: 'RollBoosted', attackId, instanceId: `${attackId}.1`, roll: 'damage', modelId: beastId, source: 'frenzy' })
-      const layouts = layoutsOf(b, target)
-      const ap = applyDamage(s, target.id, dr.points, { layouts, attackId, instanceId: `${attackId}.1`, source: 'direct' })
-      s = ap.state; events.push(...ap.events)
-      if (s.models[target.id]!.life === 'disabled') {
-        const d = resolveDeath(s, target.id, { tough: hasFlag(s, b, target.id, 'tough'), layouts, cause: attackId })
-        s = d.state; events.push(...d.events)
-        if (d.outcome !== 'alive') {
-          // F7.3: a friendly beast killed by a frenzy attack is not reaved
-          if (s.models[target.id]!.type === 'beast') { const r = onBeastLeavesPlay(s, b, target.id, { friendlyAttack: target.owner === beast.owner }); s = r.state; events.push(...r.events) }
-          if (s.models[target.id]!.type === 'leader') { const w = markWildBeasts(s, target.id); s = w.state; events.push(...w.events) }
-          const end = afterDeaths(s, b); s = end.state; events.push(...end.events)
-          if (end.ended) return { state: s, events, ended: true }
-        }
-      }
+    const a: ActCtx = {
+      activeId: beastId, modelIds: [beastId], movedModelId: null, movement: null, moved: travelled, aimed: false, ran: false,
+      charge: { targetId: target.id, distance: travelled, success: true }, perModel: { [beastId]: emptyPm() }, spellsCast: [], featUsed: false, healed: 0, limitsUsed: [],
+      frenzy: { beastId, targetId: target.id, tiedIds: t.tiedIds },
+      x: {
+        stage: 'frenzy', queue: [], cur: beastId, forfeit: [], failedCharge: false, meleeOnly: [beastId], chargeAttackFor: chargeAttack ? beastId : null, killedAny: false, killedByRanged: false,
+        mage: {}, endMoves: [], endMoveDone: true, channelVia: null, standUpUsed: true, endMoved: [],
+      },
     }
-    events.push({ type: 'AttackFinished', attackId })
+    const dec = declareAttack({ ...s, activation: a as GameState['activation'], attack: null, thresholdQueue: s.thresholdQueue }, b, {
+      attackerId: beastId, targetId: target.id, weaponId: weapon.weaponId, additional: false, noFocus: true, chargeAttack, basic: true, flags: { frenzy: true },
+    })
+    if (!('rejection' in dec)) {
+      const out = drive(dec.state, b, [...events, ...dec.events])
+      return { state: out.state, events: out.events, out, ended: out.state.phase === 'ended' }
+    }
   }
-  // FZ6
+  // FZ6 (no attack was made)
   s = setModel(s, { ...s.models[beastId]!, frenzied: false })
   events.push({ type: 'ActivationEnded', activeId: beastId, reason: 'frenzy' })
   return { state: s, events }
+}
+
+/**
+ * FZ6 and FZ7 after the frenzy attack has fully resolved (all triggers included): end the activation, then the vent decision, or on to
+ * the next threshold check. Called by activation.ts finishAttack, in the same step as the last answer (or the same call that started it).
+ */
+export function finishFrenzyActivation(state0: GameState, b: DataBundle, events: GameEvent[]): FlowOut {
+  let s = state0
+  const beastId = (s.activation as ActCtx).frenzy!.beastId
+  const ex = expireEffects(s, 'activation'); s = ex.state; events.push(...ex.events)
+  const bm = s.models[beastId]
+  if (bm) s = setModel(s, { ...bm, frenzied: false })
+  events.push({ type: 'ActivationEnded', activeId: beastId, reason: 'frenzy' })
+  s = { ...s, activation: null, attack: null }
+  const end = afterDeaths(s, b); s = end.state; events.push(...end.events)
+  if (end.ended || s.phase === 'ended') { const g = raiseGameOver(s); return { state: g.state, events, pending: g.pending } }
+  const after = s.models[beastId]!
+  if ((after.fury ?? 0) > 0 && after.life === 'active') { const v = raiseVent(s, beastId); return { state: v.state, events, pending: v.pending } }
+  events.push({ type: 'FrenzyEnded', beastId, vented: 0 })
+  const c = continueControl(s, b, 'threshold', events)
+  if (c.pending) return { state: c.state, events: c.events, pending: c.pending }
+  return raiseChooseActivation(c.state, c.events)
 }

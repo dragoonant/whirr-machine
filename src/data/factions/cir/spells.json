@@ -8,8 +8,8 @@
     "dur": "UP",
     "offensive": false,
     "effect": [{ "code": "cirAdmonition" }],
-    "scope": { "who": "friendly" },
-    "verify": "Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired."
+    "scope": { "who": "warbeasts" },
+    "verify": "Battlegroup only (warbeasts she controls, spells.ts). Core: afterPlacement raises the ward move (admonitionReady) after an enemy move; the ward ends once it has fired."
   },
   {
     "id": "cir.s.affliction",
@@ -17,14 +17,15 @@
     "text": "An enemy model gets -2 DEF, and a direct-hit damage roll against it that fails to beat its ARM still deals 1 damage. Upkeep.",
     "cost": 2,
     "rng": 8,
+    "pow": 0,
     "dur": "UP",
-    "offensive": false,
+    "offensive": true,
     "effect": [
       { "op": "modStat", "stat": "DEF", "value": -2 },
       { "code": "cirAffliction" }
     ],
     "scope": { "who": "enemy" },
-    "verify": "RULING: cast as a plain debuff, not an attack (no POW on the card). The 1-damage floor is afflictionFloor() read by the damage roll. Single enemy model only; the unit version is not built."
+    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cirAffliction puts the upkeep effect (-2 DEF, 1-damage floor via afflictionFloor() in the damage roll) on the model hit. Single enemy model only; the unit version is not built."
   },
   {
     "id": "cir.s.rift",

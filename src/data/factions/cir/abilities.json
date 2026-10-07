@@ -69,7 +69,7 @@
     "effect": [{ "code": "cirControlledWarping" }],
     "scope": { "who": "self" },
     "duration": "round",
-    "verify": "RULING: the pick is automatic (Warp Strength) at activation.start; there is no choice decision for it yet."
+    "verify": "Core: beginActivation raises an abilityChoice (strength, ghostly, spellWard) at activation.start; a frenzied model takes Strength with no choice. There is no default pick."
   },
   {
     "id": "cir.a.warp-ghostly",

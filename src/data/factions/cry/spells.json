@@ -41,8 +41,9 @@
     "text": "The target model or unit has -2 SPD, DEF and ARM, and -2 on its melee damage rolls. Upkeep.",
     "cost": 3,
     "rng": 8,
+    "pow": 0,
     "dur": "UP",
-    "offensive": false,
+    "offensive": true,
     "effect": [
       {
         "op": "modStat",
@@ -63,11 +64,15 @@
         "op": "modRoll",
         "roll": "damage",
         "value": -2
+      },
+      {
+        "code": "cryCripplingGrasp"
       }
     ],
     "scope": {
       "who": "enemy"
-    }
+    },
+    "verify": "Offensive with no POW: the cast is an attack roll that rolls no damage; on a hit cryCripplingGrasp puts the upkeep effect (-2 SPD, DEF, ARM and -2 melee damage rolls) on the model hit. Single enemy model only; the unit version is not built."
   },
   {
     "id": "cry.s.mirage",

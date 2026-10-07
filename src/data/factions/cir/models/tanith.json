@@ -16,6 +16,7 @@
   "abilities": [
     "core.a.dual-attack",
     "core.a.pathfinder",
+    "core.a.prowl",
     "cir.a.dark-power",
     "cir.a.dark-power-damage",
     "cir.a.field-marshal-prowl",

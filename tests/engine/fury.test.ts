@@ -498,3 +498,90 @@ describe('FURY query.* extensions', () => {
 describe('FURY todo', () => {
   it.todo('FURY-031 non-attack damage (continuous fire, hazards) raises a transfer prompt (F8.c: not in M9)')
 })
+
+// FURY-038b/039b/049b: reave bookkeeping and the control decisions, driven through the real attack pipeline and real games.
+import { fillBoxes } from './fury-helpers'
+import { createGame, step, type GameSetup } from '../../src/engine/index'
+import { pickSensible } from '../../src/ai/random'
+import { handleActivationAction as hAct } from '../../src/engine/phases/activation'
+import type { FlowOut } from '../../src/engine/pending'
+
+const sendA = (out: FlowOut, a: Record<string, unknown>): FlowOut => {
+  const r = hAct(out.state, B, { ...a, decisionId: out.pending.id, player: out.pending.player } as unknown as Action)
+  if (!r) throw new Error(`not an activation action: ${String(a.type)}`)
+  const res = must(r)
+  return { ...res, events: [...out.events, ...res.events] }
+}
+const settleA = (out0: FlowOut): FlowOut => {
+  let out = out0
+  for (let i = 0; i < 20; i++) {
+    const k = out.pending.kind
+    if (k === 'boostAttack') out = sendA(out, { type: 'boostAttack', boost: false })
+    else if (k === 'boostDamage') out = sendA(out, { type: 'boostDamage', boost: false })
+    else if (k === 'chooseBoxes') out = sendA(out, { type: 'chooseBoxes', column: Number(out.pending.options![0]!.id.replace('col', '')) })
+    else if (k === 'triggerWindow') out = sendA(out, { type: 'pass' })
+    else break
+  }
+  return out
+}
+
+describe('FURY reave through real attacks', () => {
+  it('FURY-038b an enemy attack that destroys a beast in CTRL reaves its fury to the warlock (real attack, real death)', () => {
+    const target = fillBoxes(beast('A:b1', 3.5, 0, { fury: 3 }), 22) // 3 unmarked boxes
+    const s = world([warlock({ fury: 1, pos: { x: -4, z: 0 } }), target, mk('B:e', 'f.e', 'B', 1.6, 0), enemyLeader({ pos: { x: 30, z: 30 } })], { phase: 'activation', activePlayer: 'B' })
+    force2(s, [6, 6], [3, 3]) // hit; 6 + POW 19 - ARM 17 = 8
+    let out = raiseChooseActivation(s, [])
+    out = sendA(out, { type: 'chooseActivation', activate: 'B:e' })
+    out = sendA(out, { type: 'chooseMovement', option: 'forfeit', modelId: 'B:e' })
+    out = sendA(out, { type: 'chooseCombatAction', modelId: 'B:e', choice: 'melee' })
+    out = sendA(out, { type: 'chooseAttack', modelId: 'B:e', weaponId: 'f.big', targetId: 'A:b1', additional: false })
+    out = settleA(out)
+    expect(out.state.models['A:b1']!.life).toBe('destroyed')
+    expect(evs(out.events, 'FuryReaved')).toMatchObject([{ reaverId: 'A:L', beastId: 'A:b1', points: 3 }])
+    expect(out.state.models['A:L']!.fury).toBe(4)
+  })
+
+  it('FURY-039b a beast killed by a friendly frenzy attack is not reaved: its fury is lost and the warlock gains nothing', () => {
+    const wx = 10 + 50 / 25.4 / 2 + 2 + 50 / 25.4 / 2
+    const victim = fillBoxes(beast('A:b2', wx, 0, { fury: 2 }), 22)
+    const s = world([warlock({ fury: 1, pos: { x: -20, z: 0 } }), beast('A:b1', 10, 0, { fury: 3 }), victim, enemyLeader({ pos: { x: 20, z: 20 } })])
+    force2(s, [6, 6], [6, 6, 6], [6, 6])
+    const r = continueControl(s, B, 'threshold')
+    expect(evs(r.events, 'AttackDeclared')).toMatchObject([{ attackerId: 'A:b1', targetId: 'A:b2' }])
+    expect(r.state.models['A:b2']!.life).toBe('destroyed')
+    expect(evs(r.events, 'FuryReaved')).toEqual([])
+    expect(evs(r.events, 'FuryChanged')).toMatchObject([{ modelId: 'A:b2', reason: 'lose', delta: -2 }])
+    expect(r.state.models['A:L']!.fury).toBe(1)
+  })
+
+  it('FURY-039c deaths that are not attacks (hazards, fire) inside a friendly activation still reave: only an attack is a friendly attack', () => {
+    const s = world([warlock({ fury: 1 }), beast('A:b1', 3, 0, { fury: 3, life: 'destroyed' }), enemyLeader()], { phase: 'activation' })
+    const r = afterDeaths({ ...s, activation: actStub(['A:L']), attack: null }, B)
+    expect(r.state.models['A:L']!.fury).toBe(4)
+    expect(evs(r.events, 'FuryReaved')).toHaveLength(1)
+  })
+})
+
+describe('FURY decisions in real games', () => {
+  it('FURY-049b bot-vs-bot games with a warlock list: every open decision has legal answers and each passes validate', () => {
+    B.byId['f.l.sim'] = { id: 'f.l.sim', faction: 'f', leader: 'f.w', points: 99, entries: [{ profile: 'f.b' }, { profile: 'f.b' }] }
+    const setup: GameSetup = { scenario: 'scn-ashwall-divide', lists: { A: 'f.l.sim', B: 'kha.l.qs-recon' } }
+    const kinds = new Set<string>()
+    let turns = 0
+    for (const seed of ['fz1', 'fz2', 'fz3']) {
+      let r = createGame(setup, seed, B)
+      expect(r.rejection).toBeUndefined()
+      for (let guard = 0; guard < 6000 && r.pending.kind !== 'gameOver' && r.state.round < 4; guard++) {
+        const legal = legalActions(r.state)
+        expect(legal.length, `no legal action for ${r.pending.kind}`).toBeGreaterThan(0)
+        kinds.add(r.pending.kind)
+        if (['leech', 'adjustFury', 'transferDamage', 'shake', 'allocateFocus'].includes(r.pending.kind)) for (const a of legal) expect(validate(r.state, a)).toBeNull()
+        r = step(r.state, pickSensible(r.state, r.pending, legal, seed))
+        expect(r.rejection).toBeUndefined()
+        turns++
+      }
+    }
+    expect(turns).toBeGreaterThan(100)
+    expect(kinds.has('leech') || kinds.has('adjustFury') || kinds.has('shake')).toBe(true) // the fury control decisions really came up
+  })
+})

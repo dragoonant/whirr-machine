@@ -42,7 +42,7 @@ export interface AtkX {
   atkAdd: number // extra added attack dice
   jobs: DmgJob[]
   jobIdx: number
-  cur?: { addDice: number; flat: number; boost: boolean; dropLowest: boolean; points?: number; rollId?: string; armorPiercing: boolean }
+  cur?: { addDice: number; flat: number; boost: boolean; dropLowest: boolean; points?: number; rollId?: string; armorPiercing: boolean; transferred?: boolean }
   aoe?: number
   blastPow?: number
   star?: Id // ★Attack ability id
@@ -475,7 +475,7 @@ export function setAtk(s: GameState, a: AtkCtx): GameState { return { ...s, atta
 // ---------- activation scratch (lives in state.activation.x; JSON-safe) ----------
 export interface MoveReq { modelId: ModelId; dist: number; mode: 'advance' | 'place'; toward?: ModelId; abilityId: Id; endsActivation?: boolean; owner: 'A' | 'B'; optional?: boolean; cost?: { focus: number } }
 export interface ActX {
-  stage: 'start' | 'movement' | 'move' | 'chargeTarget' | 'chargeMove' | 'slamTarget' | 'slamMove' | 'trampleMove' | 'place' | 'combat' | 'endMove' | 'done'
+  stage: 'start' | 'movement' | 'move' | 'chargeTarget' | 'chargeMove' | 'slamTarget' | 'slamMove' | 'trampleMove' | 'place' | 'combat' | 'endMove' | 'frenzy' | 'done'
   queue: ModelId[] // troopers still to take their Combat Action
   cur: ModelId | null
   forfeit: ModelId[] // Combat Action forfeited

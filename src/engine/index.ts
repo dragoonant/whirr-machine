@@ -334,11 +334,15 @@ export const query = {
     const ws = weaponsOf(b, m)
     const ranged = ws.filter((w) => !isMelee(w.w) && !m.crippled.includes(w.loc)).map((w) => weaponRange(w.w, rangeBonusOf(state, modelId)))
     const hasMelee = ws.some((w) => isMelee(w.w))
+    // M9 D.2: a warbeast's run, charge and slam all cost a force, so they only show when the beast can be forced right now
+    const fz = m.type === 'beast' && m.fury !== undefined ? furyInfo(state, b, modelId) : null
+    const noForce = !!fz && !fz.forceable
     return {
-      advance: spd, run: spd + 5, charge: hasMelee ? spd + 3 + reach : spd + 3,
-      slam: m.type === 'warEngine' ? spd + 3 : null,
+      advance: spd, run: noForce ? spd : spd + 5, charge: noForce ? (hasMelee ? spd + reach : spd) : hasMelee ? spd + 3 + reach : spd + 3,
+      slam: m.type === 'warEngine' ? spd + 3 : m.type === 'beast' && !noForce ? spd + 3 : null,
       ranged: ranged.length ? spd + Math.max(...ranged) : null,
       meleeRange: reach,
+      ...(fz ? { needsForce: true } : {}),
     }
   },
 

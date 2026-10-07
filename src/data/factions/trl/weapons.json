@@ -9,7 +9,7 @@
     "pow": 14,
     "blastPow": 8,
     "qualities": ["core.q.magical"],
-    "abilities": ["trl.a.critical-devastation"]
+    "abilities": ["trl.a.critical-devastation", "trl.a.guided-fire-die"]
   },
   {
     "id": "trl.w.axe",

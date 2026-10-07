@@ -90,14 +90,14 @@ Ops and fields from `hooks.ts` (00 §14). `[A1:n]` = the "after the attack is re
 | Resistance: Fire | passive | `core.a.resist-fire` (existing) | COND-007 |
 | Set Defense **New (data-only)** | `attack.beforeRoll` | when `{any:[{test:'charged', subject:'attacker'}, {code:'isSlamRoll'}]}`; `{op:'modRoll', roll:'attack', value:-2}` on the attacker | FAC-MEN-003 |
 | Steady | passive | `{op:'forbid', what:'knockDown'}` | FAC-MEN-004 |
-| Relentless Charge | `movement.charge` | `{op:'grantAbility', ability:'core.a.pathfinder'}`, duration activation | FAC-MEN-005 |
+| Relentless Charge | `movement.charge` (run by `chooseMovementAnswer` as a charge is declared) | `{op:'grantAbility', ability:'core.a.pathfinder'}`, duration activation (no Pathfinder outside a charge) | FAC-MEN-005 |
 | Impenetrable Shield | `damage.beforeApply` | when `{all:[{test:'b2b', value:{keyword:'flameguard', friendly:true}}, {not:{test:'damageType', value:'magical'}}, {test:'attackKind', value:['melee','ranged']}]}`; `{op:'preventDamage', value:999}` | FAC-MEN-006 |
-| Battle Plan **New** | `combat.choose` (any time in activation) | code `hook.battlePlan` (abilityChoice of three plans, once per activation; each plan is a plain effect below) | FAC-MEN-007 |
+| Battle Plan **New** | `activation.start` (optional; RULING: offered with the other optional start abilities) | code `hook.battlePlan`: the core raises an `abilityChoice` (`startTrigger`) whose options are `plan:<planId>\|<group>`, one per plan and eligible group, plus `skip`; the chosen plan is applied by `applyBattlePlan` (menoth.ts), once per activation | FAC-MEN-007 |
 | Plan: Fight to the Last | (from Battle Plan) | scope friendly Faction warrior model/unit within 5; `{op:'grantAbility', ability:'core.a.tough'}`, duration round | FAC-MEN-008 |
 | Plan: Stir the Blood | (from Battle Plan) | scope as above; `{op:'modRoll', roll:'damage', value:2}` next melee damage roll, duration turn, limit one use | FAC-MEN-009 |
 | Plan: Precision Strike **New** | (from Battle Plan) | scope friendly within 10, duration turn; `{op:'ignore', ignore:'friendlyModels'}` (new IgnoreWhat: LOS and move-through) | FAC-MEN-010 |
 | Shield Wall | passive | reuse `kha.a.shield-wall` (+2 ARM and `forbid knockDown` while `b2b` unit-mate) | FAC-KHA (existing) |
-| Combined Melee Attack **New** | `combat.chooseAttack` | engine core: raise the existing `combinedAttack` decision for melee (MK4 rulebook p91: one attacker, +1 attack and damage per extra participant in melee range) | ATK-0xx (new) |
+| Combined Melee Attack **New** | `combat.chooseAttack` | engine core: raise the existing `combinedAttack` decision for melee (MK4 rulebook p91: one attacker, +1 attack and damage per participant in melee range, the primary included, so n contributors give +(n+1), no cap; a charge attack only when the primary charged and so did every contributor) | CORE-034 |
 | Reposition [3"] | `activation.end` | `core.a.reposition` (existing) | MOVE-021 |
 | Weapon Master | `damage.beforeRoll` | `core.q.weapon-master` (existing) | — |
 | Critical Fire **New (data-only)** | `attack.crit` | `{op:'applyCondition', condition:'fire'}` on target (pattern of `core.a.critical-knockdown`); new id `core.a.critical-fire` | COND-007 |
@@ -214,7 +214,7 @@ Weapon Master and Beat Back already exist).
   code hook at `spell.declare` that sets the spell's cost to 0 after removing one enemy Fire in CTRL.
 - **Combined Melee Attack:** the `combinedAttack` action exists in `actions.ts` but no rules module raises it;
   implement for melee in `phases/activation`: pick a primary in melee range, each other participant in melee range
-  forfeits its attack and adds +1 to the primary's attack and damage rolls (rulebook p91).
+  forfeits its attack and adds +1 to the primary's attack and damage rolls, the primary counting too (n contributors = +(n+1), no cap; rulebook p91).
 - **Set Defense:** data-only if `attack.beforeRoll` can apply a defender-side `modRoll` to the attacker; needs a
   condition for "this is a slam roll" (`charged` already covers charge attacks), e.g. code `isSlamRoll`.
 - **Battle Plan (choose one of three once per activation):** code hook raising an `abilityChoice` (like Prey's

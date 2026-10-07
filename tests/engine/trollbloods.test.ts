@@ -2,11 +2,14 @@
 import { describe, expect, it } from 'vitest'
 import type { GameEvent } from '../../src/engine/events'
 import { codeHooks, hasFlag, knownCodeConditions } from '../../src/engine/code-hooks'
-import { createGame, legalActions, step } from '../../src/engine/index'
+import { createGame, legalActions, query, step } from '../../src/engine/index'
 import { pickSensible } from '../../src/ai/random'
-import { pruneRockWalls, resourcefulFree, sentryReady, trollbloodsPlugins } from '../../src/engine/factions/trollbloods'
+import { hasGrantedCover, pruneRockWalls, resourcefulFree, sentryReady, shapesClash, trollbloodsPlugins } from '../../src/engine/factions/trollbloods'
+import { abilitiesOf } from '../../src/engine/code-hooks'
+import { worldShape } from '../../src/engine/terrain'
+import { runControlTo, runSetup, newGame } from './turn-helpers'
 import type { AtkCtx } from '../../src/engine/code-hooks'
-import type { GameState } from '../../src/engine/types'
+import type { GameState, TerrainInstance } from '../../src/engine/types'
 import { asOut, bundle, choose, openCombat, place, send, settle, startState } from './action-helpers'
 
 type Rec = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -83,7 +86,7 @@ describe('Trollbloods abilities', () => {
     const filled = (r.state.models['A:e0']!.damage as { filled: number }).filled
     expect(filled).toBeGreaterThanOrEqual(7)
     expect(filled).toBeLessThanOrEqual(9)
-    expect(rec('trl.a.regeneration')).toMatchObject({ trigger: 'activation.start', optional: true, limit: 'oncePerActivation', cost: { forced: 1 } })
+    expect(rec('trl.a.regeneration')).toMatchObject({ kind: 'specialAction', trigger: 'combat.choose', limit: 'oncePerActivation', cost: { forced: 1 } })
     const s2 = swap(s, 'A:e0', 'trl.bomber', { damage: single(30, 0) })
     expect((regen(hookCtx(s2, 'A:e0'), {}).state.models['A:e0']!.damage as { filled: number }).filled).toBe(0)
   })
@@ -238,7 +241,7 @@ describe('Trollbloods abilities', () => {
 })
 
 describe('Trollbloods spells', () => {
-  it('FAC-TRL-012 Guided Fire: an effect on the battlegroup in CTRL, and the extra attack die on ranged attacks', () => {
+  it('FAC-TRL-012 Guided Fire: a turn effect on the caster; the hook boosts a covered ranged roll for free (in-play checks: FAC-TRL-012b)', () => {
     let s = startState('gf').state
     s = swap(s, 'A:L', 'trl.gunnbjorn')
     s = swap(s, 'A:e0', 'trl.bomber', { controllerId: 'A:L' })
@@ -247,17 +250,20 @@ describe('Trollbloods spells', () => {
     s = place(s, 'A:e1', { x: 5, z: 0 })
     const r = hooks.effects.guidedFire!(hookCtx(s, 'A:L', { point: 'spell.cast' }), {})
     const eff = r.state.effects.find((e) => e.sourceId === 'trl.s.guided-fire')!
-    expect(eff.targetIds).toEqual(['A:e0'])
+    expect(eff.casterId).toBe('A:L')
     expect(eff.duration).toBe('turn')
-    const atk = { attackerId: 'A:e0', kind: 'aoe', x: { atkAdd: 0 } } as unknown as AtkCtx
-    const dieCtx = (st: GameState) => hookCtx({ ...st, attack: atk as never }, 'A:e0', { point: 'attack.beforeRoll' })
-    const got = hooks.effects.guidedFireDie!(dieCtx(r.state), {})
-    expect((got.state.attack as unknown as AtkCtx).x.atkAdd).toBe(1)
-    const none = hooks.effects.guidedFireDie!(dieCtx(s), {})
-    expect((none.state.attack as unknown as AtkCtx).x.atkAdd).toBe(0)
+    const atk = (id: string) => ({ attackerId: id, kind: 'aoe', x: { atkAdd: 0, boosted: false, flags: {} } }) as unknown as AtkCtx
+    const dieCtx = (st: GameState, id: string) => hookCtx({ ...st, attack: atk(id) as never }, id, { point: 'attack.beforeRoll' })
+    const got = hooks.effects.guidedFireDie!(dieCtx(r.state, 'A:e0'), {})
+    const gx = (got.state.attack as unknown as AtkCtx).x
+    expect(gx.boosted).toBe(true)
+    expect(gx.atkAdd).toBe(0) // a boost, not an extra die
+    expect((hooks.effects.guidedFireDie!(dieCtx(r.state, 'A:L'), {}).state.attack as unknown as AtkCtx).x.boosted).toBe(true) // Gunnbjorn himself
+    expect((hooks.effects.guidedFireDie!(dieCtx(r.state, 'A:e1'), {}).state.attack as unknown as AtkCtx).x.boosted).toBe(false) // not in the battlegroup
+    expect((hooks.effects.guidedFireDie!(dieCtx(s, 'A:e0'), {}).state.attack as unknown as AtkCtx).x.boosted).toBe(false) // no spell running
   })
 
-  it('FAC-TRL-013 Rock Wall: a 4x1 obstacle appears inside CTRL, clear of bases; a large base touching it removes it', () => {
+  it('FAC-TRL-013 Rock Wall: a 4x3/4 obstacle appears inside CTRL, clear of bases; a large base touching it removes it', () => {
     let s = startState('rw').state
     s = clearAround(s, ['A:L', 'B:e1'])
     s = swap(s, 'A:L', 'trl.gunnbjorn')
@@ -267,7 +273,7 @@ describe('Trollbloods spells', () => {
     const wall = r.state.terrain.find((t) => t.props.rockWall)!
     expect(wall).toBeDefined()
     expect(wall.rulesType).toBe('obstacle')
-    expect(wall.footprint).toEqual({ rect: { w: 4, d: 1 } })
+    expect(wall.footprint).toEqual({ rect: { w: 4, d: 0.75 } })
     expect(Math.hypot(wall.pos.x, wall.pos.z)).toBeLessThanOrEqual(12 + 40 / 25.4 / 2)
     expect(wall.pos.z).toBeGreaterThan(0) // between Gunnbjorn and the enemy
     // upkeep: it stays while the spell effect exists, goes when it does not, and goes when an 80 mm base touches it
@@ -291,16 +297,26 @@ describe('Trollbloods spells', () => {
 describe('Trollbloods smoke', () => {
   const setup = { scenario: 'scn-ashwall-divide', lists: { A: 'trl.l.starter-recon', B: 'cyg.l.qs-recon' } }
   const probe = createGame(setup, 'trl-smoke', bundle)
-  const ready = !probe.rejection
-  it.skipIf(!ready)('SMOKE trl.l.starter-recon vs cyg.l.qs-recon reaches round 2 with the random decider', () => {
+  it('SMOKE trl.l.starter-recon vs cyg.l.qs-recon reaches round 2 with the random decider', () => {
+    expect(probe.rejection, 'the Trollblood list must be a legal game, never skipped').toBeUndefined()
     let r = createGame(setup, 'trl-smoke', bundle)
     expect(r.rejection).toBeUndefined()
+    const acted = new Set<string>()
+    let attacked = 0
     for (let i = 0; i < 6000 && r.pending.kind !== 'gameOver' && r.state.round < 2; i++) {
       const legal = legalActions(r.state)
       expect(legal.length).toBeGreaterThan(0)
       r = step(r.state, pickSensible(r.state, r.pending, legal, 'trl'))
       expect(r.rejection).toBeUndefined()
+      for (const e of r.events) {
+        if (e.type === 'ActivationStarted' && e.activeId.startsWith('A:')) acted.add(e.activeId)
+        if (e.type === 'AttackDeclared' && e.attackerId.startsWith('A:')) attacked++
+      }
     }
     expect(r.pending.kind === 'gameOver' || r.state.round >= 2).toBe(true)
+    // the Trollblood army really played: its models activated and attacked
+    expect(acted.size).toBeGreaterThan(0)
+    expect(attacked).toBeGreaterThan(0)
   })
 })
+

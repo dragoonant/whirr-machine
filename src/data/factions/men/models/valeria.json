@@ -5,7 +5,8 @@
   "type": "solo",
   "character": true,
   "keywords": [
-    "menoth"
+    "menoth",
+    "flameguard"
   ],
   "base": 30,
   "stats": {

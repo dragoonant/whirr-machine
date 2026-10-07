@@ -155,17 +155,24 @@ describe('CORE-M9b special actions and spells through the real pipeline', () => 
     expect(losReport(o.state, 'B:e0', 'A:e0').visible).toBe(true)
   })
 
-  it('CORE-058 Crippling Grasp is a debuff that lowers melee damage and ARM', () => {
-    let s = startList(CRY, 'core-58')
-    s = park(s, ['A:L', 'B:e0'])
-    s = place(s, 'A:L', { x: 0, z: 0 }); s = place(s, 'B:e0', { x: 0, z: 6 })
-    s = withModel(s, 'A:L', { focus: 6 })
-    let o = choose(asOut(s), 'A:L')
-    o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'cry.s.crippling-grasp', targetId: 'B:e0' })
-    const e = o.state.effects.find((x) => x.sourceId === 'cry.s.crippling-grasp')!
-    expect(e.targetIds).toEqual(['B:e0'])
-    expect((e as unknown as { rollMods: unknown[] }).rollMods).toEqual([{ roll: 'damage', value: -2, kinds: ['melee', 'power'] }])
-    expect(statOf(o.state, bundle, 'B:e0', 'ARM')).toBe(statOf(s, bundle, 'B:e0', 'ARM') - 2)
+  it('CORE-058 Crippling Grasp is an offensive upkeep debuff: on a hit it lowers melee damage and ARM (loop seeds)', () => {
+    let landed = false
+    for (let i = 0; i < 80 && !landed; i++) {
+      let s = startList(CRY, 'core-58-' + i)
+      s = park(s, ['A:L', 'B:e0'])
+      s = place(s, 'A:L', { x: 0, z: 0 }); s = place(s, 'B:e0', { x: 0, z: 6 })
+      s = withModel(s, 'A:L', { focus: 6 })
+      let o = choose(asOut(s), 'A:L')
+      o = send(o, { type: 'castSpell', casterId: 'A:L', spellId: 'cry.s.crippling-grasp', targetId: 'B:e0' })
+      o = settle(o)
+      const e = o.state.effects.find((x) => x.sourceId === 'cry.s.crippling-grasp')
+      if (!e) continue
+      landed = true
+      expect(e.targetIds).toEqual(['B:e0'])
+      expect((e as unknown as { rollMods: unknown[] }).rollMods).toEqual([{ roll: 'damage', value: -2, kinds: ['melee', 'power'] }])
+      expect(statOf(o.state, bundle, 'B:e0', 'ARM')).toBe(statOf(s, bundle, 'B:e0', 'ARM') - 2)
+    }
+    expect(landed).toBe(true)
   })
 
   it('CORE-059 Venom is a spray spell that rolls AAT against every model on the line', () => {

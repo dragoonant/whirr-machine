@@ -4,22 +4,19 @@
 // exported helpers at the bottom (see the CORE notes in the issues list of the faction package).
 import type { CodeHookRegistry, HookContext, HookResult } from '../hooks'
 import { alive, atkOf, hasFlag, lookups, noop, prof, setAtk, type AtkCtx, type AttackPlugin } from '../code-hooks'
-import { applyEffect } from '../effects'
+import { applyEffect, type EffectExtras } from '../effects'
 import { hasDouble, rerollDice, rollD3, rollNd6, sum } from '../dice'
 import { dist, baseRadius } from '../geometry'
 import { healDamage } from '../damage'
 import { inCtrl } from '../measure'
 import { knockDownUnless, slideAway } from '../movement'
-import { distToShape, worldShape } from '../terrain'
-import type { DataBundle, EffectInstance, GameState, ModelId, ModelState, StatMod, TerrainInstance } from '../types'
+import { distToShape, worldShape, type WorldShape } from '../terrain'
+import { blastSet } from '../phases/activation'
+import type { DataBundle, EffectInstance, GameState, ModelId, ModelState, StatMod, TerrainInstance, Vec2 } from '../types'
 import { statOf } from '../code-hooks'
 import type { GameEvent } from '../events'
 
 const bundleOf = (c: HookContext): DataBundle => (c as HookContext & { bundle: DataBundle }).bundle
-const patchFlags = (c: HookContext, flags: Record<string, unknown>): GameState => {
-  const a = atkOf(c.state)!
-  return setAtk(c.state, { ...a, x: { ...a.x, flags: { ...a.x.flags, ...flags } } })
-}
 const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe' || k === 'spray'
 
 // ---------- Luck (Braylen's Heavy Pistols): one reroll of a missed attack roll ----------
@@ -57,28 +54,40 @@ const luck = (c: HookContext): HookResult => {
 
 // ---------- Critical Devastation (Gunnbjorn's Bazooka) ----------
 /**
- * On a critical hit: one d6 for the whole attack, then every model hit (direct hits, farthest from the attacker first) is
- * thrown that many inches directly away from the attacker and knocked down. The blast stays POW 8 (the Bazooka's own blast).
- * RULING: collateral damage from the throw uses the core throw collateral for the thrown model's base, not a flat POW 8
- * (the core slide helper owns that roll).
+ * On a critical hit: one d6 for the whole attack. The blast is fixed first (R7.9, around the direct target where it stands), then
+ * every model hit (the direct target and each model the blast reaches, farthest from the attacker first) is thrown that many
+ * inches directly away from the attacker and knocked down. The fixed blast set is kept on the attack (flag `fixedBlast`), so each
+ * blast model still takes its POW 8 blast roll after the throw.
+ * RULING: collateral damage from a Critical Devastation throw is POW 8 (the card's number), not the core 12/14 | the throw passes
+ * 8 to slideAway as the collateral POW | the card names POW 8 for collateral.
  */
+const CD_POW = 8
 const criticalDevastation = (c: HookContext): HookResult => {
   const a = atkOf(c.state)
   if (!a || a.x.flags.cdDone) return noop(c)
   const b = bundleOf(c)
   const events: GameEvent[] = []
   let state = c.state
+  const tg = state.models[a.targetId]
+  const direct = a.x.rollTargets.filter((t) => a.x.results[t]?.hit)
+  // fix the blast before anything moves
+  let blast: ModelId[] = []
+  if (a.kind === 'aoe' && tg && (a.x.aoe ?? 0) > 0 && tg.base <= 80 && a.x.results[a.targetId]?.hit) {
+    const bs = blastSet(state, b, a, a.x.aoe!)
+    state = bs.state; events.push(...bs.events)
+    blast = bs.ids
+  }
   const roll = rollNd6(state, 1, 'throwDist')
   state = roll.state; events.push(roll.event)
   const inches = roll.dice[0]!
   const from = state.models[a.attackerId]!.pos
-  const victims = a.x.rollTargets
-    .filter((t) => a.x.results[t]?.hit && alive(state.models[t]))
+  const victims = [...new Set([...direct, ...blast])]
+    .filter((t) => alive(state.models[t]))
     .sort((p, q) => dist(from, state.models[q]!.pos) - dist(from, state.models[p]!.pos))
   const look = lookups(state, b)
   for (const t of victims) {
     if (!alive(state.models[t])) continue
-    const r = slideAway(state, t, from, inches, 'throw', look)
+    const r = slideAway(state, t, from, inches, 'throw', look, CD_POW)
     state = r.state; events.push(...r.events)
     if (alive(state.models[t])) {
       const kd = knockDownUnless(state, t, look, 'trl.a.critical-devastation')
@@ -86,44 +95,65 @@ const criticalDevastation = (c: HookContext): HookResult => {
     }
   }
   const a2 = atkOf(state)!
-  state = setAtk(state, { ...a2, x: { ...a2.x, flags: { ...a2.x.flags, cdDone: true } } })
+  state = setAtk(state, { ...a2, x: { ...a2.x, flags: { ...a2.x.flags, cdDone: true, ...(a.kind === 'aoe' ? { fixedBlast: blast } : {}) } } })
   return { state, events }
 }
 
 // ---------- spells ----------
-const battlegroupInCtrl = (state: GameState, b: DataBundle, casterId: ModelId): ModelId[] => {
-  const caster = state.models[casterId]
-  if (!caster) return []
-  const ctrl = statOf(state, b, casterId, 'CTRL')
-  return Object.values(state.models)
-    .filter((m) => m.owner === caster.owner && m.controllerId === casterId && alive(m) && !m.inert && inCtrl(caster, m, ctrl))
-    .map((m) => m.id)
-}
-
-/** Guided Fire: an effect on the battlegroup models inside CTRL for this turn; the extra die comes from guidedFireDie. */
+/**
+ * Guided Fire: a turn effect carried by the caster. Who it covers is decided when the attack is rolled (guidedFireDie), not
+ * here: Gunnbjorn and the warbeasts of his battlegroup that are inside his CTRL at that moment.
+ */
 const guidedFire = (c: HookContext): HookResult => {
   const caster = c.state.models[c.selfId]
   if (!caster) return noop(c)
-  const ids = battlegroupInCtrl(c.state, bundleOf(c), c.selfId)
-  if (!ids.length) return noop(c)
-  const r = applyEffect(c.state, { sourceId: 'trl.s.guided-fire', name: 'Guided Fire', owner: caster.owner, casterId: c.selfId, targetIds: ids, mods: [], duration: 'turn' })
+  const r = applyEffect(c.state, { sourceId: 'trl.s.guided-fire', name: 'Guided Fire', owner: caster.owner, casterId: c.selfId, targetIds: [c.selfId], mods: [], duration: 'turn' })
   return { state: r.state, events: r.events }
 }
 
-/** Attack-roll side of Guided Fire (a weapon ability at attack.beforeRoll): one extra die on ranged attacks. */
+/**
+ * Attack-roll side of Guided Fire (a weapon ability at attack.beforeRoll): the ranged attack roll is boosted for free (no focus
+ * or fury, and no boost offer follows) when the attacker is the caster or a model of his battlegroup and is inside his CTRL now.
+ */
 const guidedFireDie = (c: HookContext): HookResult => {
   const a = atkOf(c.state)
-  if (!a || !isRangedKind(a.kind)) return noop(c)
-  const covered = c.state.effects.some((e) => e.sourceId === 'trl.s.guided-fire' && e.targetIds.includes(a.attackerId))
+  if (!a || !isRangedKind(a.kind) || a.x.boosted) return noop(c)
+  const at = c.state.models[a.attackerId]
+  if (!at) return noop(c)
+  const b = bundleOf(c)
+  const covered = c.state.effects.some((e) => {
+    if (e.sourceId !== 'trl.s.guided-fire' || !e.casterId) return false
+    const caster = c.state.models[e.casterId]
+    if (!alive(caster)) return false
+    if (e.casterId === at.id) return true
+    return at.controllerId === e.casterId && inCtrl(caster, at, statOf(c.state, b, caster.id, 'CTRL'))
+  })
   if (!covered) return noop(c)
-  return { state: setAtk(c.state, { ...a, x: { ...a.x, atkAdd: a.x.atkAdd + 1 } }), events: [] }
+  return { state: setAtk(c.state, { ...a, x: { ...a.x, boosted: true, flags: { ...a.x.flags, freeBoost: true } } }), events: [] }
 }
 
-const WALL = { w: 4, d: 1 }
+const WALL = { w: 4, d: 0.75 }
+const segsCross = (p: Vec2, q: Vec2, r: Vec2, s: Vec2): boolean => {
+  const o = (a: Vec2, b: Vec2, c: Vec2) => (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x)
+  return o(p, q, r) * o(p, q, s) < 0 && o(r, s, p) * o(r, s, q) < 0
+}
+/** True when two terrain footprints overlap or sit within a hair of each other. */
+export function shapesClash(a: WorldShape, b: WorldShape): boolean {
+  if (a.kind === 'circle') return distToShape(a.c, b) < a.r + 0.01
+  if (b.kind === 'circle') return distToShape(b.c, a) < b.r + 0.01
+  if (a.pts.some((p) => distToShape(p, b) < 0.01) || b.pts.some((p) => distToShape(p, a) < 0.01)) return true
+  for (let i = 0; i < a.pts.length; i++) {
+    for (let j = 0; j < b.pts.length; j++) {
+      if (segsCross(a.pts[i]!, a.pts[(i + 1) % a.pts.length]!, b.pts[j]!, b.pts[(j + 1) % b.pts.length]!)) return true
+    }
+  }
+  return false
+}
 /**
- * Rock Wall: adds a 4" x 1" obstacle (the low-wall piece, so the cover and obstacle rules and the board reskin apply) inside
- * the caster's CTRL. Uses the cast point when the engine passes one, else sits in front of the caster toward the nearest
- * enemy, pushed out until it is clear of every base. `pruneRockWalls` removes it when the upkeep ends or a big base touches it.
+ * Rock Wall: adds a 4" x 3/4" obstacle (the low-wall piece, so the cover and obstacle rules and the board reskin apply) inside
+ * the caster's CTRL, clear of every base and of every other terrain piece (obstacles and obstructions included). Uses the cast
+ * point when the engine passes one, else sits in front of the caster toward the nearest enemy, pushed out until it is clear.
+ * `pruneRockWalls` removes it when the upkeep ends or a big base touches it.
  */
 const rockWall = (c: HookContext): HookResult => {
   const caster = c.state.models[c.selfId]
@@ -137,11 +167,14 @@ const rockWall = (c: HookContext): HookResult => {
   dx /= len; dz /= len
   const ctrl = statOf(c.state, b, c.selfId, 'CTRL')
   const rot = Math.atan2(-dx, -dz)
+  // this caster's own earlier wall is replaced by the new one, so it does not count as an obstruction
+  const others = c.state.terrain.filter((t) => !(t.props.rockWall && t.props.casterId === c.selfId)).map(worldShape)
   const fits = (pos: { x: number; z: number }): boolean => {
     const t: TerrainInstance = { id: 'probe', pieceId: 'terrain.low-wall', rulesType: 'obstacle', pos, rot, footprint: { rect: WALL }, height: 0.75, props: {} }
     const sh = worldShape(t)
     if (dist(caster.pos, pos) + WALL.w / 2 > ctrl + baseRadius(caster.base)) return false
-    return Object.values(c.state.models).every((m) => !alive(m) || distToShape(m.pos, sh) - baseRadius(m.base) > 0.01)
+    if (!Object.values(c.state.models).every((m) => !alive(m) || distToShape(m.pos, sh) - baseRadius(m.base) > 0.01)) return false
+    return others.every((o) => !shapesClash(sh, o))
   }
   let pos = c.pointTarget
   if (!pos || !fits(pos)) {
@@ -166,7 +199,7 @@ const rockWall = (c: HookContext): HookResult => {
 const sentry = (c: HookContext): HookResult => noop(c)
 
 // ---------- Regeneration ----------
-/** Regeneration [d3]: heals d3 on the carrier (the forced cost and once-per-activation limit are the data's `cost` and `limit`). */
+/** Regeneration [d3]: heals d3 on the carrier (a special action: core pays the forced cost and enforces once per activation and not after running). */
 const regenerate = (c: HookContext): HookResult => {
   const m = c.state.models[c.selfId]
   if (!m || !alive(m)) return noop(c)
@@ -178,8 +211,10 @@ const regenerate = (c: HookContext): HookResult => {
 
 // ---------- Feat: Fortification ----------
 /**
- * Fortification: friendly models inside the caster's CTRL get cover (+4 DEF against ranged and arcane attacks, R6) and cannot
- * be knocked down this round, and resist blast damage (resistsDamageType reads the effect's resist list).
+ * Fortification: friendly models inside the caster's CTRL count as in cover (+4 DEF against ranged and arcane attacks, read
+ * through `hasGrantedCover` by the attack pipeline, so it never stacks with terrain cover or concealment, does not apply to
+ * spray and loses to ignore-cover), cannot be knocked down this round and resist blast damage. The knockdown and blast parts
+ * are fixed on the models inside CTRL when the feat is used; the cover follows CTRL while the round lasts.
  */
 const grantCover = (c: HookContext): HookResult => {
   const caster = c.state.models[c.selfId]
@@ -187,17 +222,27 @@ const grantCover = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   const ctrl = statOf(c.state, b, c.selfId, 'CTRL')
   const ids = Object.values(c.state.models).filter((m) => m.owner === caster.owner && alive(m) && !m.inert && inCtrl(caster, m, ctrl)).map((m) => m.id)
-  // +4 DEF against ranged and arcane attacks (cover), no knockdown, and Resistance: Blast, all carried by the one effect
   const r = applyEffect(c.state, {
     sourceId: 'trl.f.fortification', name: 'Fortification (cover)', owner: caster.owner, casterId: c.selfId, targetIds: ids, mods: [], forbid: ['knockDown'], duration: 'round',
-    condMods: [{ stat: 'DEF', value: 4, kinds: ['ranged', 'aoe', 'spray', 'arcane'] }], resist: ['blast'],
+    grantedCover: true, resist: ['blast'],
   })
   return { state: r.state, events: r.events }
 }
 
+/** True while a live Fortification of the model's own side covers it: the caster is on the table and the model is inside its CTRL now. */
+export function hasGrantedCover(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!alive(m)) return false
+  return state.effects.some((e) => {
+    if (!(e as EffectInstance & EffectExtras).grantedCover || !e.casterId) return false
+    const caster = state.models[e.casterId]
+    return alive(caster) && caster.owner === m.owner && inCtrl(caster, m, statOf(state, b, caster.id, 'CTRL'))
+  })
+}
+
 export const trollbloodsHooks: CodeHookRegistry = {
   conditions: {},
-  effects: { luck, criticalDevastation, guidedFire, guidedFireDie, rockWall, sentry, regenerate, grantCover },
+  effects: { luck, criticalDevastation, guidedFire, guidedFireDie, rockWall, sentry, grantCover, regenerate },
 }
 
 // ---------- Snacking (plugin) ----------

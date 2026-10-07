@@ -84,7 +84,7 @@ export function startGameplay(state: GameState, bundle: DataBundle, lead: GameEv
 
 // ---------- control answers ----------
 export function isControlDecision(state: GameState): boolean {
-  return state.phase === 'control' && (['allocateFocus', 'payUpkeep', 'shake', 'leech', 'adjustFury'].includes(state.pending.kind) || (state.pending.kind === 'placeTroopers' && state.pending.context.data?.code === 'ambush'))
+  return state.phase === 'control' && (['allocateFocus', 'payUpkeep', 'shake', 'leech', 'adjustFury'].includes(state.pending.kind) || (state.pending.kind === 'placeTroopers' && state.pending.context.data?.code === 'ambush') || (state.pending.kind === 'moveModel' && state.pending.context.data?.code === 'apparition'))
 }
 /** Apply an allocate / upkeep / shake answer and carry on to the next decision or the Activation Phase. */
 export function answerControlDecision(state: GameState, bundle: DataBundle, action: Action): FlowResult {

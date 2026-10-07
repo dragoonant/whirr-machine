@@ -64,7 +64,9 @@ describe('Circle Orboros data', () => {
   it('DATA-CIR-007 spells follow the documented costs, ranges and durations', () => {
     const t = (id: string) => { const s = rec(id); return [s.cost, s.rng, s.dur, s.offensive] }
     expect(t('cir.s.admonition')).toEqual([2, 6, 'UP', false])
-    expect(t('cir.s.affliction')).toEqual([2, 8, 'UP', false])
+    expect(t('cir.s.affliction')).toEqual([2, 8, 'UP', true]) // offensive (spec OFF yes), no POW
+    expect(rec('cir.s.affliction').pow).toBe(0)
+    expect(rec('cir.s.admonition').scope.who).toBe('warbeasts') // battlegroup only
     expect(t('cir.s.rift')).toEqual([3, 10, 'RND', true])
     expect(rec('cir.s.rift')).toMatchObject({ pow: 13, aoe: 3 })
     expect(t('cir.s.scything-touch')).toEqual([2, 6, 'UP', false])

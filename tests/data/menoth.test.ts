@@ -58,6 +58,18 @@ describe('FAC-MEN data', () => {
     }
   })
 
+  it('every Menoth model but the Crusader carries the flameguard keyword (Impenetrable Shield reads it)', () => {
+    for (const id of ['men.feora', 'men.valeria', 'men.pyrrhus', 'men.defenders', 'men.defenders-grunt']) expect(rec(id).keywords, id).toContain('flameguard')
+    expect(rec('men.crusader').keywords).not.toContain('flameguard')
+  })
+
+  it('Battle Plan is an optional start-of-activation choice and Relentless Charge fires on the charge', () => {
+    expect(rec('men.a.battle-plan')).toMatchObject({ trigger: 'activation.start', optional: true })
+    expect(rec('men.a.relentless-charge')).toMatchObject({ trigger: 'movement.charge', duration: 'activation' })
+    expect(rec('men.a.precision-strike').scope.range).toBe(10)
+    for (const id of ['men.a.stoke-boost-attack', 'men.a.stoke-boost-damage']) expect(JSON.stringify(rec(id).effect)).not.toContain('addDie')
+  })
+
   it('melee reach is 1" or 2", the run rule is core, and no MK3 words appear in Menoth data', () => {
     for (const id of ['men.w.blazing-star', 'men.w.flame-spear', 'men.w.pyrrhus-spear']) expect(rec(id).rng).toBe(2)
     for (const id of ['men.w.flameguard-shield', 'men.w.pyrrhus-shield', 'men.w.valeria-knife']) expect(rec(id).rng).toBe(1)

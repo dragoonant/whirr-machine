@@ -15,7 +15,7 @@ import { inCtrl, modelDistance } from './measure'
 import { rollD3 } from './dice'
 import { circleAnimusCostForWarlock, circleSpellCost, ritesChannelers, vitalMagicKeep, vitalMagicOffer } from './factions/circle'
 import { wrathActive } from './factions/cryx'
-import { stokeFreeVictim } from './factions/menoth'
+import { fireStepSpent, stokeFreeVictim } from './factions/menoth'
 import type {
   Cloud, DataBundle, DecisionOption, EffectDuration, GameState, Id, ModelId, ModelState, Rejection, StatMod, Vec2,
 } from './types'
@@ -55,6 +55,7 @@ function affected(state: GameState, b: DataBundle, casterId: ModelId, sp: Rec, t
   const t = targetId ? state.models[targetId] : undefined
   if (!t || t.life !== 'active' || t.offTable) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'spell needs a target' } }
   if (who === 'warEngines' && !(t.type === 'warEngine' && t.owner === caster.owner)) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'target must be a war-engine of the battlegroup' } }
+  if (who === 'warbeasts' && !(isBeast(t) && t.owner === caster.owner && t.controllerId === caster.id && !t.wild)) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'target must be a warbeast of the battlegroup' } }
   if (who === 'friendly' && !sp.offensive && t.owner !== caster.owner) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'friendly target only' } }
   if (who === 'enemy' && t.owner === caster.owner) return { ids: [], code: { code: 'E_TARGET_INVALID', message: 'enemy target only' } }
   return { ids: [t.id] }
@@ -126,6 +127,7 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
   } else if (!known.includes(a.spellId)) return rej('E_NOT_AN_OPTION', 'the caster does not know that spell')
   const sp = rec(b, a.spellId)
   const act = actOf(state)!
+  if (fireStepSpent(state, a.spellId)) return rej('E_ALREADY_USED', 'Fire Step can be cast once per activation')
   const cc = castCost(state, b, caster, sp, a)
   const cost = cc.cost
   if (!isFuryModel(caster) && !cc.wrath && caster.focus < cost) return rej('E_INSUFFICIENT_FOCUS', `needs ${cost} focus`)
@@ -378,6 +380,7 @@ export function anytimeOptions(state: GameState, b: DataBundle, casterId: ModelI
         const who = sp.scope?.who
         if (who === 'enemy' || sp.offensive) { if (t.owner === m.owner) continue }
         else if (who === 'warEngines') { if (t.owner !== m.owner || t.type !== 'warEngine') continue }
+        else if (who === 'warbeasts') { if (t.owner !== m.owner || !isBeast(t) || t.controllerId !== m.id || t.wild) continue }
         else if (t.owner !== m.owner) continue
         if (modelDistance(origin, t) > reach) continue
         mk(t.id)

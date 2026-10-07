@@ -88,13 +88,13 @@ export const wraithbaneOn = (state: GameState, attackerId: ModelId): boolean => 
 /** Wraithbane itself: the spell machinery creates the named effect; nothing else to do. */
 const marker = (c: HookContext): HookResult => noop(c)
 
-/** Controlled Warping: pick one warp for the round (params.choice; a frenzied model must take strength). Default: strength. */
+/** Controlled Warping: apply the warp picked at activation.start (params.choice, from the abilityChoice); a frenzied model must take strength. No pick, no warp. */
 const controlledWarping = (c: HookContext, params: Record<string, unknown> = {}): HookResult => {
   const m = c.state.models[c.selfId]
   if (!m) return noop(c)
   const wanted = (params.choice ?? c.params?.choice) as Warp | undefined
-  const choice: Warp = m.frenzied ? 'strength' : wanted === 'ghostly' || wanted === 'spellWard' || wanted === 'strength' ? wanted : 'strength'
-  return setWarp(c.state, c.selfId, choice)
+  const choice: Warp | null = m.frenzied ? 'strength' : wanted === 'ghostly' || wanted === 'spellWard' || wanted === 'strength' ? wanted : null
+  return choice ? setWarp(c.state, c.selfId, choice) : noop(c)
 }
 export function setWarp(state: GameState, id: ModelId, choice: Warp): HookResult {
   const m = state.models[id]
@@ -110,11 +110,11 @@ export function setWarp(state: GameState, id: ModelId, choice: Warp): HookResult
   })
   return { state: made.state, events: [...events, ...made.events] }
 }
-/** The warp a model is under: an explicit pick, or Strength by default while it has Controlled Warping. */
+/** The warp a model is under: the one picked at its activation this round; null before it has picked (there is no default). */
 export function activeWarp(state: GameState, b: DataBundle, id: ModelId): Warp | null {
   if (!has(state, b, id, 'cir.a.controlled-warping')) return null
   const e = effectsOn(state, id).find((x) => (WARP_IDS as readonly string[]).includes(x.sourceId))
-  if (!e) return 'strength'
+  if (!e) return null
   return e.sourceId === WARP_IDS[0] ? 'ghostly' : e.sourceId === WARP_IDS[1] ? 'spellWard' : 'strength'
 }
 
@@ -186,14 +186,36 @@ const deathFeast = (c: HookContext): HookResult => {
   return { state: s, events }
 }
 
-/** Rapid Healing: after an enemy attack that damaged this model, heal d3 (a hit that left damage marked counts as damaged). */
+/** Rapid Healing: after an enemy attack that damaged this model (applyJob logs it in flags.damagedIds), heal d3. A hit that dealt 0 does not count. */
 const rapidHealing = (c: HookContext): HookResult => {
   const b = envOf(c).bundle
   const m = c.state.models[c.selfId]
+  const a = atkOf(c.state)
   if (!m || !isOnTable(m) || markedBoxes(m) === 0) return noop(c)
+  if (!a || !((a.x.flags.damagedIds as string[] | undefined) ?? []).includes(m.id)) return noop(c)
   const d = rollD3Value(c.state)
   const h = healPoints(d.state, b, m.id, d.value)
   return { state: h.state, events: [...d.events, ...h.events] }
+}
+
+/**
+ * Affliction (spell hit): the model hit gets the upkeep effect -2 DEF; afflictionFloor() reads it in the damage roll. One casting per caster
+ * (a new hit moves it), and the effect is registered as the target's enemy upkeep so the Control Phase asks the caster to pay for it.
+ */
+const affliction = (c: HookContext): HookResult => {
+  const caster = c.state.models[c.selfId]
+  const t = c.targetId ? c.state.models[c.targetId] : undefined
+  if (!caster || !t || t.owner === caster.owner || !isOnTable(t)) return noop(c)
+  let s = c.state
+  const events: GameEvent[] = []
+  for (const e of s.effects.filter((x) => x.sourceId === 'cir.s.affliction' && x.casterId === caster.id)) { const r = removeEffect(s, e.id, 'replaced'); s = r.state; events.push(...r.events) }
+  const made = applyEffect(s, {
+    sourceId: 'cir.s.affliction', name: 'Affliction', owner: caster.owner, casterId: caster.id, targetIds: [t.id],
+    mods: [{ stat: 'DEF', value: -2, mode: 'add' }], duration: 'upkeep', upkeep: { casterId: caster.id },
+  })
+  s = made.state; events.push(...made.events)
+  s = { ...s, upkeeps: { ...s.upkeeps, [t.id]: { ...s.upkeeps[t.id], enemy: made.effect.id } } }
+  return { state: s, events }
 }
 
 /** Critical Consume (attack.crit; the data `when` limits it to small bases that are not Leaders): remove the target from play. */
@@ -286,7 +308,7 @@ export const circleHooks: CodeHookRegistry = {
     cirRegeneration: regeneration, cirBloodRage: bloodRage, cirMeatForTheBeast: meatForTheBeast, cirDeathFeast: deathFeast,
     cirDeathPowered: marker, cirRapidHealing: rapidHealing, cirTreewalkerDef: marker, cirCriticalConsume: criticalConsume,
     cirShifter: shifter, cirBloodReaper: bloodReaper, cirGrievousWounds: grievousWounds, cirRitesOfTheWurm: ritesOfTheWurm,
-    cirVitalMagic: vitalMagic, cirAdmonition: marker, cirAffliction: marker, cirRift: rift, cirScythingTouch: marker,
+    cirVitalMagic: vitalMagic, cirAdmonition: marker, cirAffliction: affliction, cirRift: rift, cirScythingTouch: marker,
     cirVeilOfMists: veilOfMists,
   },
 }
@@ -309,7 +331,7 @@ const bodySnatcher: AttackPlugin = {
   },
 }
 
-/** Flat melee damage: Death-Powered (+1 per token) and Warp: Strength (+2; the default warp of a Pureblood). */
+/** Flat melee damage: Death-Powered (+1 per token) and Warp: Strength (+2, only once Strength is the picked warp). */
 const meleeBonuses: AttackPlugin = {
   id: 'cir.melee-bonuses',
   damageFlat(state, b, atk: AtkCtx) {

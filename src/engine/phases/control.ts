@@ -18,11 +18,12 @@ import { afterDeaths } from '../scenario'
 import { runFrenzy } from './frenzy'
 import { resourcefulFree } from '../factions/trollbloods'
 import { applyAmbush, raiseAmbush, validateAmbush } from '../ambush'
+import { applyApparition, raiseApparition, validateApparition } from '../factions/cryx'
 import type {
   DataBundle, DecisionOption, EffectInstance, GameState, ModelId, ModelState, PendingDecision, Rejection, StoredConditionId,
 } from '../types'
 
-export type ControlStage = 'leech' | 'powerUp' | 'start' | 'upkeep' | 'threshold' | 'shake' | 'ambush' | 'done'
+export type ControlStage = 'leech' | 'powerUp' | 'start' | 'upkeep' | 'threshold' | 'shake' | 'apparition' | 'ambush' | 'done'
 export interface ControlOut { state: GameState; events: GameEvent[]; pending: PendingDecision | null }
 type P = 'A' | 'B'
 
@@ -221,7 +222,11 @@ export function continueControl(state: GameState, b: DataBundle, from: ControlSt
       events.push({ type: 'ThresholdChecked', beastId: id, rollId: r.event.rollId, fury: info.fury, thr: info.thr, total, frenzied })
       if (!frenzied) continue
       s = { ...s, thresholdQueue: queue }
-      const fz = runFrenzy(s, b, id); s = fz.state; events.push(...fz.events)
+      const fz = runFrenzy(s, b, id)
+      // the frenzy attack ran through the attack pipeline: whatever it left (a decision inside the attack, the vent, the next beast, the
+      // Activation Phase) is the flow's answer, and finishFrenzyActivation carries on with the rest of Control
+      if (fz.out) return { state: fz.out.state, events: [...events, ...fz.out.events], pending: fz.out.pending }
+      s = fz.state; events.push(...fz.events)
       if (fz.ended || s.phase === 'ended') { const g = raiseGameOver(s); return { state: g.state, events, pending: g.pending } }
       const bm = s.models[id]!
       if ((bm.fury ?? 0) > 0 && bm.life === 'active') { const v = raiseVent(s, id); return { state: v.state, events, pending: v.pending } }
@@ -237,6 +242,12 @@ export function continueControl(state: GameState, b: DataBundle, from: ControlSt
       const r = raiseShake(s, b, p)
       return { state: r.state, events, pending: r.pending }
     }
+    from = 'apparition'
+  }
+  if (from === 'apparition') {
+    // Mirage's Apparition: a granted model may be placed within 2" (one decision per model)
+    const r = raiseApparition(s, b, p)
+    if (r) return { state: r.state, events, pending: r.pending }
     from = 'ambush'
   }
   if (from === 'ambush') {
@@ -317,7 +328,8 @@ export function validateControlAnswer(s: GameState, b: DataBundle, a: Action): R
     case 'leech': return s.pending.kind === 'leech' ? validateLeechAnswer(s, b, a) : { code: 'E_WRONG_DECISION', message: 'not leeching' }
     case 'adjustFury': return s.pending.kind === 'adjustFury' ? validateVent(s, a) : { code: 'E_WRONG_DECISION', message: 'not venting fury' }
     case 'placeTroopers': return s.pending.kind === 'placeTroopers' && s.pending.context.data?.code === 'ambush' ? validateAmbush(s, b, a) : { code: 'E_WRONG_DECISION', message: 'not placing ambushers' }
-    case 'pass': return s.pending.canPass ? null : { code: 'E_NOT_AN_OPTION', message: 'cannot pass' }
+    case 'moveModel': return s.pending.kind === 'moveModel' && s.pending.context.data?.code === 'apparition' ? validateApparition(s, a) : { code: 'E_WRONG_DECISION', message: 'not placing a model' }
+    case 'pass': return s.pending.kind === 'moveModel' && s.pending.context.data?.code === 'apparition' ? validateApparition(s, a) : s.pending.canPass ? null : { code: 'E_NOT_AN_OPTION', message: 'cannot pass' }
     default: return { code: 'E_WRONG_DECISION', message: `${a.type} does not answer a control decision` }
   }
 }
@@ -354,6 +366,10 @@ export function answerControl(state: GameState, b: DataBundle, a: Action): Contr
   const events: GameEvent[] = []
   const kind = state.pending.kind
   if (kind === 'leech' && a.type === 'leech') return answerLeech(state, b, a)
+  if (kind === 'moveModel') {
+    const r = applyApparition(s, a)
+    return continueControl(r.state, b, 'apparition', r.events)
+  }
   if (kind === 'placeTroopers') {
     // the arrivals come in, or the player passes (they wait for a later Control Phase)
     const r = a.type === 'placeTroopers' ? applyAmbush(s, a) : { state: s, events: [] as GameEvent[] }
@@ -402,7 +418,7 @@ export function answerControl(state: GameState, b: DataBundle, a: Action): Contr
       }
     }
   }
-  return continueControl(s, b, 'ambush', events)
+  return continueControl(s, b, 'apparition', events)
 }
 
 /** Sample of legal answers to the open control decision (never empty). */

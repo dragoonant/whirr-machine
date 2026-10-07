@@ -365,7 +365,7 @@ export function push(state: GameState, id: ModelId, from: Vec2, x: number, look:
  * Slam/throw movement of the target (R5.16/R5.17) away from `from`, up to `x`. Rolls collateral for the models it
  * hits; the mover's own knockdown and damage are the caller's (power-attacks.ts).
  */
-export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, mode: 'slam' | 'throw', look: HitLookups): InvoluntaryResult {
+export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, mode: 'slam' | 'throw', look: HitLookups, collateralOverride?: number): InvoluntaryResult {
   const m = state.models[id]!
   if (look.immovable?.(id)) return { state, events: [], travelled: 0, stoppedAgainst: false, contacted: [] }
   const sw = sweepFrom(state, m, m.pos, norm(sub(m.pos, from)), x, { passThrough: 'smaller', obstacles: 'stop' })
@@ -387,7 +387,7 @@ export function slideAway(state: GameState, id: ModelId, from: Vec2, x: number, 
   for (const cid of contacted) {
     const kd = knockDownUnless(s, cid, look, 'collateral')
     s = kd.state; events.push(...kd.events)
-    const d = plainDamage(s, cid, collateralPow(m.base, s.models[cid]!.base), 2, 'collateral', look)
+    const d = plainDamage(s, cid, collateralOverride ?? collateralPow(m.base, s.models[cid]!.base), 2, 'collateral', look)
     s = d.state; events.push(...d.events)
   }
   if (mode === 'throw') {

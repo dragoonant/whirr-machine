@@ -135,11 +135,14 @@ describe('CORE-M9 Trollbloods seams', () => {
 })
 
 describe('CORE-M9 Circle seams', () => {
-  it('CORE-010 activation.start code effects run: Controlled Warping picks a warp for the round', () => {
+  it('CORE-010 activation.start: Controlled Warping asks for a warp, and the pick lasts the round', () => {
     let s = startList(CIR, 'core-10')
     s = park(s, ['A:L', 'A:e0'])
     s = place(s, 'A:L', { x: 0, z: -4 }); s = place(s, 'A:e0', { x: 0, z: 0 })
-    const o = choose(asOut(s), 'A:e0')
+    let o = choose(asOut(s), 'A:e0')
+    expect(o.pending.kind).toBe('abilityChoice')
+    expect(o.state.effects.some((e) => e.sourceId.startsWith('cir.a.warp-'))).toBe(false) // no default
+    o = send(o, { type: 'abilityChoice', optionId: 'strength' })
     expect(o.state.effects.some((e) => e.sourceId === 'cir.a.warp-strength' && e.targetIds.includes('A:e0'))).toBe(true)
   })
 
@@ -152,6 +155,7 @@ describe('CORE-M9 Circle seams', () => {
     const grids = b0.damage.grids.map((g) => ({ ...g, cols: g.cols.map((c, ci) => c.map((v, i) => (ci === 0 && i < 4 ? true : v))) }))
     s = withModel(s, 'A:e0', { damage: { track: 'grid', grids } })
     let o = choose(asOut(s), 'A:e0')
+    o = send(o, { type: 'abilityChoice', optionId: 'strength' }) // Controlled Warping
     o = send(o, { type: 'chooseMovement', option: 'forfeit', modelId: 'A:e0' })
     const regen = o.pending.options!.find((x) => (x.action as { abilityId?: string }).abilityId === 'cir.a.regeneration')
     expect(regen, 'Regeneration is offered at the Combat Action').toBeDefined()
@@ -365,7 +369,9 @@ describe('CORE-M9 Menoth seams', () => {
     const n = (comb!.action as { contributorIds: string[] }).contributorIds.length
     o = send(o, comb!.action as unknown as Record<string, unknown>)
     const m = evs(o.events, 'AttackMeasured')[0]!
-    expect(m.mods.some((x) => x.value === n && /Combined/.test(x.label))).toBe(true)
+    expect(n).toBe(2)
+    // rulebook p91: every participant counts, the primary included, so 2 contributors give +3
+    expect(m.mods.some((x) => x.value === n + 1 && /Combined/.test(x.label))).toBe(true)
   })
 })
 
