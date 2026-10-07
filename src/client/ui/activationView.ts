@@ -3,11 +3,11 @@
 import type { Action, GameState, Id, ModelId, PendingDecision } from '../../engine/index'
 import { modelName, queryAttackPreview, queryDistance, queryThreat } from '../contract'
 import { dataText, profileOf, spellRec, weaponRec } from './data'
-import { MOVE_LABEL, niceName, pct } from './format'
+import { COMBAT_TIP, MOVE_LABEL, MOVE_TIP, niceName, pct } from './format'
 import { costWords, furyBadge, isForcedCost } from './fury/furyView'
 import { humanize, isLegal, type Tone } from './promptView'
 
-export interface Button { id: string; label: string; cost?: string; /** The cost makes a warbeast gain fury. */ forced?: boolean; note?: string; tone: Tone; action: Action; enabled: boolean; hoverId?: ModelId; testid: string }
+export interface Button { id: string; label: string; cost?: string; /** The cost makes a warbeast gain fury. */ forced?: boolean; note?: string; /** Hover explanation, shown after a short delay. */ tip?: string; tone: Tone; action: Action; enabled: boolean; hoverId?: ModelId; testid: string }
 export interface AttackRow extends Button { weaponId: Id; targetId: ModelId; additional: boolean; detail: string[] }
 export interface SpellRow {
   spellId: Id; name: string; cost: number; /** What the caster pays: warlocks pay fury, everything else focus. */ unit: 'focus' | 'fury'; reach: string; text: string; offensive: boolean
@@ -62,10 +62,15 @@ export function groupActions(state: GameState, pd: PendingDecision | null, legal
           label: MOVE_LABEL[a.option] && o.label === a.option ? MOVE_LABEL[a.option]! : o.label, testid: `act-move-${a.option}`,
           ...(reach !== null && reach > 0 ? { note: `up to ${reach}"` } : {}),
           ...(a.option === 'forfeit' ? { tone: 'decline' as Tone } : {}),
+          ...(MOVE_TIP[a.option] ? { tip: MOVE_TIP[a.option] } : {}),
         }))
         break
       }
-      case 'chooseCombatAction': g.combat.push(mk(o, { testid: `act-combat-${o.id}`, ...(a.choice === 'forfeit' ? { tone: 'decline' as Tone } : {}) })); break
+      case 'chooseCombatAction': {
+        const tip = (a.abilityId && dataText(a.abilityId)) || COMBAT_TIP[a.choice]
+        g.combat.push(mk(o, { testid: `act-combat-${o.id}`, ...(a.choice === 'forfeit' ? { tone: 'decline' as Tone } : {}), ...(tip ? { tip } : {}) }))
+        break
+      }
       case 'chooseAttack': g.attacks.push(attackRow(state, o, a, legal)); break
       case 'powerAttack': {
         const t = a.targetId
@@ -98,7 +103,11 @@ export function groupActions(state: GameState, pd: PendingDecision | null, legal
       case 'takeControl':
         g.fury.push(mk(o, { testid: `act-take-control-${a.targetId}`, label: `Take control of ${modelName(state, a.targetId)}`, tone: 'primary', hoverId: a.targetId, note: 'It stays out of the fight this turn.' }))
         break
-      case 'useFeat': g.feat = mk(o, { label: `Use feat: ${niceName(a.featId)}`, testid: 'act-feat', tone: 'primary' }); break
+      case 'useFeat': {
+        const tip = dataText(a.featId)
+        g.feat = mk(o, { label: `Use feat: ${niceName(a.featId)}`, testid: 'act-feat', tone: 'primary', ...(tip ? { tip } : {}) })
+        break
+      }
       default: break
     }
   }

@@ -210,3 +210,10 @@
 .over-table td:first-child { text-align: left; color: var(--dim); }
 
 .top-board { font-size: 12px; white-space: nowrap; align-self: center; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Delayed hover explanation on activation-panel buttons (movement, combat, feat). */
+.btn-tip {
+  position: fixed; z-index: 90; max-width: 280px; padding: 8px 10px; pointer-events: none;
+  background: #14161a; color: #e8e6e1; border: 1px solid var(--accent, #c9a227); border-radius: 6px;
+  font: 12px/1.4 system-ui, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}

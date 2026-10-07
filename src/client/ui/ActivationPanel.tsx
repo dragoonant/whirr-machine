@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { GameState, ModelState } from '../../engine/index'
 import { game, modelName, uiActions, usePresentedState, usePrompt, usePromptLegal, useSelectedId } from '../contract'
 import './hud.css'
@@ -8,18 +9,53 @@ import { StatRow, WeaponList, Conditions } from './ModelBits'
 import { BattlegroupStrip, ResourcePips } from './fury/FuryPips'
 import { kindWord } from './fury/furyView'
 
+/** Hover delay before a button's explanation pops up. */
+const TIP_DELAY_MS = 300
+
+/** Explains what a button does after the pointer rests on it; fixed-positioned so the panel's scroll never clips it. */
+function useDelayedTip(tip: string | undefined) {
+  const ref = useRef<HTMLButtonElement>(null)
+  const timer = useRef<number | undefined>(undefined)
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null)
+  const clear = () => { window.clearTimeout(timer.current); setAt(null) }
+  const arm = () => {
+    if (!tip) return
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => {
+      const r = ref.current?.getBoundingClientRect()
+      if (r) setAt({ x: Math.min(r.right + 8, window.innerWidth - 300), y: r.top })
+    }, TIP_DELAY_MS)
+  }
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+  // an overlay (guide, menu) can cover the button without a mouseleave: any click, key or scroll hides the tip
+  useEffect(() => {
+    if (!at) return
+    const hide = () => setAt(null)
+    window.addEventListener('pointerdown', hide, true); window.addEventListener('keydown', hide, true); window.addEventListener('wheel', hide, true)
+    return () => { window.removeEventListener('pointerdown', hide, true); window.removeEventListener('keydown', hide, true); window.removeEventListener('wheel', hide, true) }
+  }, [at])
+  const el = tip && at
+    ? createPortal(<div className="btn-tip" role="tooltip" data-testid="btn-tip" style={{ left: at.x, top: at.y }}>{tip}</div>, document.body)
+    : null
+  return { ref, arm, clear, el }
+}
+
 function Btn({ b }: { b: Button }) {
+  const t = useDelayedTip(b.tip)
   return (
-    <button
-      type="button" className={`hud-btn ${b.tone === 'primary' ? 'hud-btn-primary' : b.tone === 'decline' ? 'hud-btn-quiet' : ''}`}
-      data-testid={b.testid} disabled={!b.enabled} onClick={() => game.dispatch(b.action)}
-      onMouseEnter={() => b.hoverId && uiActions.hover(b.hoverId)} onMouseLeave={() => b.hoverId && uiActions.hover(null)}
-      onFocus={() => b.hoverId && uiActions.hover(b.hoverId)} onBlur={() => b.hoverId && uiActions.hover(null)}
-    >
-      <span className="btn-label">{b.label}</span>
-      {b.cost && <span className={`btn-cost${b.forced ? ' btn-forced' : ''}`}>{b.cost}</span>}
-      {b.note && <span className="btn-note">{b.note}</span>}
-    </button>
+    <>
+      <button
+        ref={t.ref} type="button" className={`hud-btn ${b.tone === 'primary' ? 'hud-btn-primary' : b.tone === 'decline' ? 'hud-btn-quiet' : ''}`}
+        data-testid={b.testid} disabled={!b.enabled} onClick={() => { t.clear(); game.dispatch(b.action) }}
+        onMouseEnter={() => { t.arm(); if (b.hoverId) uiActions.hover(b.hoverId) }} onMouseLeave={() => { t.clear(); if (b.hoverId) uiActions.hover(null) }}
+        onFocus={() => b.hoverId && uiActions.hover(b.hoverId)} onBlur={() => { t.clear(); if (b.hoverId) uiActions.hover(null) }}
+      >
+        <span className="btn-label">{b.label}</span>
+        {b.cost && <span className={`btn-cost${b.forced ? ' btn-forced' : ''}`}>{b.cost}</span>}
+        {b.note && <span className="btn-note">{b.note}</span>}
+      </button>
+      {t.el}
+    </>
   )
 }
 

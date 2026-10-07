@@ -36,7 +36,7 @@ describe('start screen options', () => {
 describe('how to play content', () => {
   it('has every required tab', () => {
     const ids = HELP_TABS.map((t) => t.id)
-    for (const id of ['goal', 'army', 'turn', 'moving', 'attacking', 'focus', 'terrain', 'controls', 'first']) expect(ids).toContain(id)
+    for (const id of ['goal', 'army', 'turn', 'moving', 'attacking', 'focus', 'terrain', 'controls', 'first', 'feats']) expect(ids).toContain(id)
     for (const t of HELP_TABS) expect(t.blocks.length).toBeGreaterThan(0)
   })
 })

@@ -25,6 +25,30 @@ export const MOVE_LABEL: Record<string, string> = {
   advance: 'Advance', run: 'Run', charge: 'Charge', aim: 'Aim', slam: 'Slam', trample: 'Trample', standUp: 'Stand up', forfeit: 'Forfeit movement',
 }
 
+/** What each movement option does, in our words: the delayed hover tip on the activation panel. */
+export const MOVE_TIP: Record<string, string> = {
+  advance: "Move up to the model's SPD in inches, in any direction, then take your Combat Action as normal.",
+  run: 'Move up to SPD + 5 inches, but give up the Combat Action: the activation ends after the move. Warjacks and warbeasts may have to pay for it (cost shown on the button).',
+  charge: 'Pick an enemy and move up to SPD + 3 inches straight at it. End in melee range after moving at least 3" and your first attack on that target gets a boosted damage roll. Fall short and the activation ends.',
+  aim: 'Stay put this activation and line up a shot: +2 to ranged attack rolls.',
+  slam: 'A charge that ends in a body-slam: on a hit the target is hurled back and knocked down, and anything it crashes into can be hurt too.',
+  trample: 'Stomp in a straight line through small-based enemies, making an attack against each one you pass over.',
+  standUp: 'Spend the movement getting back on its feet. The model can still take its Combat Action.',
+  forfeit: 'Do not move at all. The model keeps its Combat Action.',
+}
+
+/** What each Combat Action choice does, in our words (hover tip). */
+export const COMBAT_TIP: Record<string, string> = {
+  melee: 'Make melee attacks with each melee weapon against enemies in melee range.',
+  ranged: 'Fire each ranged weapon at enemies in range and line of sight.',
+  dual: 'Use both melee and ranged weapons this activation.',
+  specialAttack: "Make the model's special attack instead of its normal attacks.",
+  specialAction: "Use the model's special action instead of attacking.",
+  powerAttack: 'Trade the normal attacks for a power attack such as a headbutt, shove or throw.',
+  standUp: 'Spend the Combat Action getting back on its feet.',
+  forfeit: 'Skip the Combat Action and end the activation.',
+}
+
 const WINDOW_WORDS: Partial<Record<WindowId, string>> = {
   'turn.start': 'Start of turn', 'maintenance.start': 'Upkeep', 'maintenance.effects': 'Effects resolve',
   'control.refill': 'Refilling focus', 'control.powerUp': 'Powering up', 'control.allocate': 'Allocating focus',
