@@ -10,7 +10,7 @@ import { applyTuning } from '../src/ai/tiers'
 import { createGame, legalActions, step, type Action, type GameSetup, type GameState, type PlayerId } from '../src/engine/index'
 
 type Tier = 'random' | 'easy' | 'normal'
-interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean }
+interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean; xList?: string; yList?: string }
 
 function parseArgs(argv: string[]): Args {
   const a: Args = { games: 20, seed: '1', pairs: [['normal', 'random'], ['normal', 'easy']], scenario: 'scn-ashwall-divide', cap: 4000, json: false, quiet: false }
@@ -21,6 +21,8 @@ function parseArgs(argv: string[]): Args {
     else if ((k === '--pairs' || k === '--pair') && v) { a.pairs = v.split(',').map((p) => p.split(':') as [Tier, Tier]); i++ }
     else if (k === '--scenario' && v) { a.scenario = v; i++ }
     else if (k === '--cap' && v) { a.cap = Number(v); i++ }
+    else if (k === '--xlist' && v) { a.xList = v; i++ }
+    else if (k === '--ylist' && v) { a.yList = v; i++ }
     else if (k === '--json') a.json = true
     else if (k === '--quiet') a.quiet = true
   }
@@ -31,17 +33,31 @@ export interface GameResult {
   pair: string; game: number; seed: string; xSide: PlayerId; winner: 'x' | 'y' | 'draw' | 'unfinished'; reason: string; rounds: number
   decisions: number; rejected: number; stall: boolean; cap: boolean; xLeaderLost: boolean; yLeaderLost: boolean
   ms: { x: number[]; y: number[] }; brains: { x?: Brain; y?: Brain }
+  /** fury events by the side that owns the model (x / y): frenzies, transfers, leeches, forced points, reaves */
+  fury: { x: Record<string, number>; y: Record<string, number> }
 }
 
 /** One game between tiers x and y; x plays side `xSide`. */
-export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, seed: string, scenario: string, cap = 4000): GameResult {
+export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, seed: string, scenario: string, cap = 4000, xList?: string, yList?: string): GameResult {
   const bundle = loadBundle()
-  const lists = swapLists ? { A: 'kha.l.qs-recon', B: 'cyg.l.qs-recon' } : { A: 'cyg.l.qs-recon', B: 'kha.l.qs-recon' }
+  const base = swapLists ? { A: 'kha.l.qs-recon', B: 'cyg.l.qs-recon' } : { A: 'cyg.l.qs-recon', B: 'kha.l.qs-recon' }
+  // --xlist/--ylist: x's list and y's list by id (x plays xSide), overriding the default starter pair
+  const lists = xList && yList ? (xSide === 'A' ? { A: xList, B: yList } : { A: yList, B: xList }) : base
   const setup: GameSetup = { scenario, lists }
   let s: GameState = createGame(setup, seed, bundle).state
   const tierOf = (p: PlayerId): Tier => (p === xSide ? x : y)
   const brains: Record<PlayerId, Brain> = { A: newBrain(), B: newBrain() }
   const ms: Record<PlayerId, number[]> = { A: [], B: [] }
+  const fury: GameResult['fury'] = { x: {}, y: {} }
+  const tally = (events: { type: string; [k: string]: unknown }[]): void => {
+    for (const e of events) {
+      if (!['Frenzied', 'DamageTransferred', 'FuryLeeched', 'BeastForced', 'FuryReaved', 'SpellCast', 'FeatUsed', 'Healed', 'UpkeepPaid', 'TokenSpent', 'BeastControlTaken'].includes(e.type)) continue
+      const id = (e.beastId ?? e.warlockId ?? e.modelId ?? e.reaverId ?? e.casterId) as string | undefined
+      const owner = id ? s.models[id]?.owner : undefined
+      const bucket = owner === xSide ? fury.x : fury.y
+      bucket[e.type] = (bucket[e.type] ?? 0) + 1
+    }
+  }
   let rejected = 0, i = 0, still = 0, sig = ''
   let stall = false
   for (; i < cap; i++) {
@@ -60,8 +76,10 @@ export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, 
       if (process.env.AI_DEBUG) console.error('rejected', s.pending.kind, a.type, r.rejection.message)
       const fb = legal[0]
       if (!fb) break
-      s = step(s, fb).state
-    } else s = r.state
+      const fr = step(s, fb)
+      tally(fr.events as never)
+      s = fr.state
+    } else { tally(r.events as never); s = r.state }
     const ns = `${s.round}|${s.turn}|${s.scenario.vp.A}|${s.scenario.vp.B}|${Object.values(s.models).filter((m) => m.activated).length}|${Object.values(s.models).reduce((n, m) => n + (m.damage.track === 'single' ? m.damage.filled : 0) + (m.life !== 'active' ? 100 : 0), 0)}|${s.activation?.activeId ?? ''}`
     if (ns === sig) { if (++still > 200) { stall = true; break } } else { sig = ns; still = 0 }
   }
@@ -72,7 +90,7 @@ export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, 
     pair: `${x}:${y}`, game: 0, seed, xSide,
     winner: !res ? 'unfinished' : res.winner === null ? 'draw' : res.winner === xSide ? 'x' : 'y',
     reason: res?.reason ?? 'unfinished', rounds: s.round, decisions: i, rejected, stall, cap: i >= cap,
-    xLeaderLost: lost(xSide), yLeaderLost: lost(yS),
+    xLeaderLost: lost(xSide), yLeaderLost: lost(yS), fury,
     ms: { x: x === 'random' ? [] : ms[xSide], y: y === 'random' ? [] : ms[yS] },
     brains: { ...(x !== 'random' ? { x: brains[xSide] } : {}), ...(y !== 'random' ? { y: brains[yS] } : {}) },
   }
@@ -91,7 +109,7 @@ function main(): void {
     for (let g = 0; g < args.games; g++) {
       const xSide: PlayerId = g % 2 === 0 ? 'A' : 'B'
       const swap = Math.floor(g / 2) % 2 === 1
-      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap)
+      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap, args.xList, args.yList)
       r.game = g
       rs.push(r)
       if (!args.quiet && !args.json) console.log(`${x} vs ${y} game ${g} (${x} as ${xSide}${swap ? ', lists swapped' : ''}): ${r.winner === 'x' ? x : r.winner === 'y' ? y : r.winner} by ${r.reason}, round ${r.rounds}, ${r.decisions} decisions${r.rejected ? `, ${r.rejected} REJECTED` : ''}${r.stall ? ', STALL' : ''}`)
@@ -111,8 +129,9 @@ function main(): void {
     for (const r of rs) for (const b of [r.brains.x, r.brains.y]) if (b) for (const [k, v] of Object.entries(b.stats.byKind)) {
       const e = (kinds[k] ??= { n: 0, ms: 0, max: 0 }); e.n += v.n; e.ms += v.ms; e.max = Math.max(e.max, v.max)
     }
+    const furyTot = (k: 'x' | 'y'): Record<string, number> => { const o: Record<string, number> = {}; for (const r of rs) for (const [n, v] of Object.entries(r.fury[k])) o[n] = (o[n] ?? 0) + v; return o }
     const summary = {
-      games: rs.length, winRate: wins / Math.max(1, rs.length), byCause,
+      games: rs.length, fury: { x: furyTot('x'), y: furyTot('y') }, winRate: wins / Math.max(1, rs.length), byCause,
       xLeaderLostPerGame: rs.filter((r) => r.xLeaderLost).length / Math.max(1, rs.length),
       meanMsPerDecision: { [x]: Number(mean(msX).toFixed(2)), ...(y !== 'random' ? { [`${y}(opp)`]: Number(mean(msY).toFixed(2)) } : {}) },
       p95Ms: Number(quant(msX, 0.95).toFixed(1)), maxMs: Number(Math.max(0, ...msX).toFixed(1)),
@@ -124,6 +143,7 @@ function main(): void {
     out[`${x}:${y}`] = summary
     lines.push(`${x} vs ${y}: ${x} wins ${pct(wins, rs.length)} of ${rs.length} (${Object.entries(byCause).map(([c, v]) => `${c} ${v.x}-${v.y}${v.draw ? `-${v.draw}` : ''}`).join(', ')})`)
     lines.push(`  ${x} ${summary.meanMsPerDecision[x]} ms/decision mean, p95 ${summary.p95Ms}, max ${summary.maxMs}; own Leader lost ${pct(rs.filter((r) => r.xLeaderLost).length, rs.length)} of games; lines found ${linesFound}, committed ${linesCommitted}`)
+    if (Object.keys(summary.fury.x).length + Object.keys(summary.fury.y).length) lines.push(`  fury events per game: ${x} ${JSON.stringify(Object.fromEntries(Object.entries(summary.fury.x).map(([n, v]) => [n, Number((v / rs.length).toFixed(1))])))}; ${y} ${JSON.stringify(Object.fromEntries(Object.entries(summary.fury.y).map(([n, v]) => [n, Number((v / rs.length).toFixed(1))])))}`)
     lines.push(`  rejected ${summary.rejected}, stalls ${summary.stalls}, cap hits ${summary.capHits}, fallbacks ${fallbacks}, mean rounds ${summary.meanRounds}`)
   }
   try {
