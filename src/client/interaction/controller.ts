@@ -1,6 +1,7 @@
 // Per-decision pointer/keyboard controllers (50 section 5). Pure functions over the stores: the R3F layer
 // (BoardInteraction.tsx) only forwards left-button clicks here, so right/middle clicks can never move or answer.
 import type { Action, DecisionOption, ModelId, ModelState, PendingDecision, Vec2 } from '../../engine/index'
+import { baseRadius } from '../../engine/geometry'
 import { game, queryMoveCheck, uiActions, type ClientRejection } from '../contract'
 import { useUiStore } from '../store/uiStore'
 import { currentPrompt, truthState } from './adapter'
@@ -46,6 +47,31 @@ export function placementIds(p: PendingDecision | null): ModelId[] {
   const ids = p.context.data?.modelIds
   return Array.isArray(ids) ? (ids as ModelId[]) : []
 }
+
+/** The model a placement click places: the selected one if it is still to be placed, else the first unplaced one. */
+export function nextPlacementId(p: PendingDecision | null): ModelId | null {
+  const ids = placementIds(p)
+  const { selectedId } = useUiStore.getState()
+  const { placements } = useInteractionStore.getState()
+  return (selectedId && ids.includes(selectedId) ? selectedId : ids.find((x) => !placements[x])) ?? null
+}
+
+/**
+ * Pulls a pointer point for a deployment back inside the decision's zone (`context.data.zone`, the engine's own
+ * rect), inset by the model's base radius so the whole base lands inside. Decisions without a zone pass through.
+ */
+export function clampPlacementPoint(p: PendingDecision | null, at: Vec2, id: ModelId | null = nextPlacementId(p)): Vec2 {
+  const zone = p && PLACEMENT_KINDS.has(p.kind) ? (p.context.data?.zone as { x0: number; x1: number; z0: number; z1: number } | undefined) : undefined
+  if (!zone) return at
+  const m = id ? truthState()?.models[id] : undefined
+  const r = m ? baseRadius(m.base) + 1e-3 : 0
+  const fit = (v: number, lo: number, hi: number): number => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)))
+  return { x: fit(at.x, zone.x0 + r, zone.x1 - r), z: fit(at.z, zone.z0 + r, zone.z1 - r) }
+}
+
+/** Clamp a pointer point to whatever the open decision allows (free move or deployment zone). */
+export const clampPointer = (p: PendingDecision | null, at: Vec2): Vec2 =>
+  p?.kind === 'moveModel' ? clampMovePoint(p, at) : clampPlacementPoint(p, at)
 
 /** Default staged path: a straight-line move (charge) takes the engine's own full-length option. */
 export function defaultStraightPath(p: PendingDecision | null): Vec2[] | null {
@@ -162,9 +188,9 @@ export function handleGroundClick(at: Vec2, shift = false): void {
   }
   if (PLACEMENT_KINDS.has(p.kind)) {
     const ids = placementIds(p)
-    const id = (selectedId && ids.includes(selectedId) ? selectedId : ids.find((x) => !st.placements[x]))
+    const id = nextPlacementId(p)
     if (!id) return
-    interactionActions.setPlacement(id, at)
+    interactionActions.setPlacement(id, clampPlacementPoint(p, at, id))
     const next = ids.find((x) => x !== id && !useInteractionStore.getState().placements[x])
     uiActions.select(next ?? id)
     return

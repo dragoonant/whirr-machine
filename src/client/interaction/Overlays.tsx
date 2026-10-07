@@ -12,7 +12,9 @@ import { SIDE_COLOURS, losReasonText, moveReasonText, tableOf, threatRings } fro
 import { GEO, lineMaterial } from '../figures/kit'
 import { useUiStore } from '../store/uiStore'
 import { currentPrompt } from './adapter'
-import { clampMovePoint, handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
+import { FigurePreview } from '../figures/FigurePreview'
+import { facingYaw } from '../figures/facing'
+import { clampPointer, handleGroundClick, PLACEMENT_KINDS, defaultStraightPath, placementIds, TARGET_KINDS, optionsTargeting } from './controller'
 import { interactionActions, useInteractionStore } from './store'
 
 const Y = 0.08
@@ -49,7 +51,8 @@ export function Ground(): ReactElement {
         last = now
         const at = { x: e.point.x, z: e.point.z }
         // in move mode the ghost never leaves the legal move: it sticks to the farthest reachable point
-        interactionActions.setGhost(useUiStore.getState().mode === 'move' ? clampMovePoint(currentPrompt(), at) : at)
+        // and a deployment ghost never leaves the zone
+        interactionActions.setGhost(useUiStore.getState().mode === 'move' ? clampPointer(currentPrompt(), at) : at)
       }}
       onPointerOut={() => interactionActions.setGhost(null)}
       onClick={(e) => {
@@ -112,26 +115,22 @@ export function PlacementGhosts(): ReactElement | null {
   const ghost = useInteractionStore((s) => s.ghost)
   const models = usePresentedModels()
   const selected = useSelectedModel()
+  const state = usePresentedState()
   if (!prompt || !PLACEMENT_KINDS.has(prompt.kind) || !models) return null
   const ids = placementIds(prompt)
   const next = selected && ids.includes(selected.id) ? selected.id : ids.find((i) => !placements[i])
+  // undeployed models face across the table from their owner's edge
+  const yawOf = (id: ModelId, at: Vec2): number => facingYaw(state, id, at) ?? 0
   return (
     <group>
       {ids.map((id) => {
         const m = models[id]
         const p = placements[id]
         if (!m || !p) return null
-        const r = baseRadius(m.base)
-        const col = SIDE_COLOURS[m.owner].ring
-        return (
-          <group key={id}>
-            <mesh geometry={GEO.disc} material={lineMaterial(`pl:${col}`, col, 0.5)} rotation={[-Math.PI / 2, 0, 0]} position={v3(p, 0.07)} scale={[r, r, 1]} />
-            <mesh geometry={GEO.cyl} material={lineMaterial(`plb:${col}`, col, 0.8)} position={[p.x, 0.55, p.z]} scale={[r * 0.7, 1.0, r * 0.7]} />
-          </group>
-        )
+        return <FigurePreview key={id} m={m} pos={p} yaw={yawOf(id, p)} ring={SIDE_COLOURS[m.owner].ring} />
       })}
       {ghost && next && models[next] && (
-        <mesh geometry={GEO.disc} material={lineMaterial('plg', '#c9a227', 0.3)} rotation={[-Math.PI / 2, 0, 0]} position={v3(ghost, 0.07)} scale={[baseRadius(models[next]!.base), baseRadius(models[next]!.base), 1]} />
+        <FigurePreview key={`ghost:${next}`} m={models[next]!} pos={ghost} yaw={yawOf(next, ghost)} ring="#c9a227" opacity={0.55} />
       )}
     </group>
   )
