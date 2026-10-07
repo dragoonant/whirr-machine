@@ -43,7 +43,7 @@
 - E2E (`npm run e2e`, vite preview at /whirr-machine/): `tests/e2e/play.spec.ts` plays Cygnar vs the bot through UI
   clicks to round 3 (How to Play tabs checked, screenshots in `e2e-out/`), and Khador on the Quick Start demo for a round
   with attacks made by clicking the enemy. Shared click policy in `tests/e2e/policy.ts`.
-- Tests: 619 unit tests in 61 files (M9 adds fury engine, faction data, AI fury, fury UI, picker and figure tests); M8 count 285 in 39; earlier count: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
+- Tests: 1167 unit tests in 98 files (1 todo), all passing after M13 (M9 count was 619 in 61; M8 285 in 39; M3 234 in 33). They cover engine, data, AI, client store/board/HUD/start/prompts/figures/audio, including
   `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
 
@@ -76,11 +76,50 @@
   tallies fury events per side.
 - **Figures:** the 21 new models are now Hunyuan GLBs in `public/assets/models/` (`wm-<slug>.glb`, listed in `manifest.json`;
   slug to model map in `m9-slugs.json`; contact sheets `art/figure-sheets/m9-*.png`). Highwaymen and Defenders share one sculpt
-  each; Ravagers and Furies have three sculpts, one per trooper. The procedural archetypes remain as the fallback. Every M9
-  stat stays "U-cd" (unverified; M10 researches them on the web; see the M9 RULINGs in `docs/needs-rules-check.md`). Weakest figures:
-  hades, nekane, valeria, pureblood; Tanith is being redone from the real sculpt (M10).
+  each; Ravagers and Furies have three sculpts, one per trooper. The procedural archetypes remain as the fallback. M9 stats were all
+  "U-cd" when made; M10 replaced most of them with sourced values (see M10 below). Weakest figures:
+  hades, nekane, valeria, pureblood. Tanith was redone in M10.
 - `tests/e2e/factions.spec.ts`: the picker shot; the M9 gallery (`e2e-out/m9-gallery*.png`); each new faction bot vs bot (Normal) against a random other faction
   to round 2 with no page errors (`e2e-out/m9-<trl|cir|cry|men>.png`); a human Trollbloods game to the leech form.
+
+## Sourced stats (M10)
+- All four M9 factions were audited against two dumps of the July 2026 app data and the Warmachine Academy wiki. Each
+  faction has a source doc: `docs/spec/factions/{trollbloods,circle,cryx,menoth}-sources.md` (value by value, with
+  what matched and what changed). Commits ad6cbba and db87dd0.
+- Menoth: about 95 values corrected. Trollbloods: Highwaymen are 5 grunts for 7 points. Cryx: Chatterbane base 50,
+  Fury boxes 8, names fixed. Circle: all matched.
+- Only the Crusader grid layout is still marked U-cd.
+- Tanith was redone from real-sculpt photos: hood, braid, patchwork cape, hooked staff.
+
+## Client and engine gaps closed (M11)
+- **Paint** button in the top bar: live army painter in the game, saved between games.
+- Side rails are narrower and collapse. Keys `[` and `]` toggle them.
+- Movement: drag a model to move it. Click several points for a multi-waypoint move. Backspace removes the last
+  point. Shift-click restarts the path.
+- New decisions are raised by the engine and answered by the bot and the prompt dock: reroll, rollAnyway, chooseGrid,
+  combinedAttack, channel, out-of-activation attacks and additional attacks.
+- Faction abilities were rebuilt to the sourced cards: Menoth kit, Circle battlegroup scope, Cryx Marionette and Soul
+  Phase, Trollbloods 5-model Ambush.
+- Screenshots: `e2e-out/m11-*.png`.
+
+## Skirmish, 50 points (M12)
+- Start screen "Game size": Recon 30 or Skirmish 50. URL `?size=skirmish` starts one directly.
+- Six 50 point lists (the starter plus popular add-ons from the Longshanks 2026 data), one per faction. Notes in
+  `docs/spec/90-skirmish-sources.md`.
+- 19 new models with sourced cards and MGSD figures. Cavalry and shared rules were added, plus targeted special
+  actions. The AI has roles and deployment for 4 objectives.
+- New board setup: Copperline Crossing on a 48 inch table with Kill Box.
+- Weakest new figures: dozer-smigg, night-terror (no steed), dire-wolf cannon.
+- Screenshots: `e2e-out/skirmish-*.png`.
+
+## Cards, Steamroller 2026 and clock (M13)
+- Command cards: 5 universal cards plus For the Motherland. A Cards tray in the HUD and a hand picker at the start.
+- All 7 Steamroller 2026 scenarios plus Random (rolls a d8). Cache claims, clock-out settling, terrain drops and
+  scenario decisions are handled.
+- Deathclock: off by default, switched on from the start screen.
+- Help tabs: Cards, Steamroller, Clock.
+- The AI plays cards and scenario decisions. Normal beats Easy about 67 to 69 percent on Trench Warfare and High Stakes.
+- Screenshots: `e2e-out/sr-*.png`.
 
 ## Figures and VFX (M5)
 - 33 Hunyuan MGSD figure GLBs in `public/assets/models/`, one per model and per trooper (the M5 eight plus the M9 set). `figures/glbModels.ts` maps
@@ -152,17 +191,17 @@
 | `81-warlocks-fury`, `factions/{trollbloods,circle,cryx,menoth}.md` | done (M9); every card value unverified, RULINGs in `docs/needs-rules-check.md` |
 
 ## Known gaps (engine)
-- (M4 closed: slam and trample are Normal Movement options per R7.12/R7.14; `query.attackPreview` takes `attackType`
-  and infers `chargeAttack`; see §14. `npm run sim -- --games 30 --seed 4`: 30/30 end, 0 violations.)
-- `reroll`, `rollAnyway`, `chooseGrid`, `combinedAttack`, `channel` decisions are not raised by the starter content.
-- Out-of-activation attacks other than Avenging Force (Reciprocate etc.) are not needed by the starter lists.
-- Additional attacks while initial attacks remain are accepted but not listed as options.
+- Sniper resolves after the roll, not before.
+- Not built: Spell Slave, Hunting Dog, Shield Guard on Dire Wolf, Stone Scribe Elder.
+- Bulldoze only happens at the end of a move.
+- Spell racking is not modelled (no source for the slot count).
+- Not built from M13: Defenses (WP8), Heavy and Light Airdrop and Military Engineering cards, Payload stepper,
+  the moved-objective tween.
+- Crusader grid layout is still U-cd. Spiral aspect order (Mind, Body, Spirit) is a RULING for all warbeasts.
 
 ## Known gaps (client)
-- Movement is click-to-place (single waypoint); multi-waypoint paths need Shift-click. No drag yet.
-- Left activation panel repeats some card stats.
-- Game chunks total ~1.1 MB (three.js, board, figures); the start chunk is ~0.55 MB. At 1280 wide the side panels
-  cover much of the board.
-- The army painter has no in-game control yet (gallery only).
+- Audio is unchanged: no new sounds for the M12 models.
+- Multiplayer is on hold. Owner playtest fixes are deferred.
+- Game chunks total about 1.1 MB (three.js, board, figures); the start chunk is about 0.55 MB.
 
-Next: M10 in progress overnight (web-sourced M9 faction stats, Tanith redo). Then M11 to M13; see PLAN.md and HANDOFF.md.
+Next: owner review of the HANDOFF.md questions, then the deferred playtest fixes and the not-built items above.

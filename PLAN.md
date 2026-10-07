@@ -48,8 +48,8 @@ See `docs/WARMACHINE-HANDOFF.md` Part H for the original detail.
 | M7 | Polish |
 | M8 | Five themed battlefields with generated terrain, decimated to about 6k triangles |
 | M9 | Warlocks and fury; Trollbloods, Circle, Cryx and Menoth; army picker, figures, faction audio; late polish (deployment clamp, hover tips, Feats tab, Prey prompt, ambient animation, `?fps`) |
-| M10 | Web-sourced stats for the M9 factions (not only the app), and the Tanith figure redone from the real sculpt |
-| M11 | Client and engine gaps: in-game army painter, slimmer side panels at 1280 wide, drag and multi-waypoint movement; reroll, rollAnyway, chooseGrid, combinedAttack and channel decisions, out-of-activation attacks, additional attacks listed as options |
-| M12 | Skirmish 50pt: starter plus popular add-ons per faction |
-| M13 | Command cards, Steamroller 2026 scenarios, game clock |
-| Later | Multiplayer (on hold by the owner, 2026-10-07); owner playtest fixes (deferred) |
+| M10 | Done. Sourced stats for the four M9 factions (per-faction source docs); Tanith redone from the real sculpt. Crusader grid layout still unverified |
+| M11 | Done. In-game painter, slimmer collapsible panels, drag and multi-waypoint movement; reroll, rollAnyway, chooseGrid, combinedAttack, channel, out-of-activation and additional attacks; faction abilities match the sourced cards |
+| M12 | Done, with gaps. Skirmish 50pt: six lists, 19 new models, Copperline Crossing 48in. Not built: Spell Slave, Hunting Dog, Shield Guard Dire Wolf, Stone Scribe Elder. Weakest figures: dozer-smigg, night-terror, dire-wolf cannon |
+| M13 | Partly done. Command cards, 7 Steamroller 2026 scenarios plus Random, deathclock, AI plays them. Not built: Defenses (WP8), Heavy and Light Airdrop and Military Engineering cards, Payload stepper, moved-objective tween |
+| Later | Multiplayer (on hold by the owner, 2026-10-07); owner playtest fixes (deferred); the not-built items above; Sniper before the roll, Bulldoze mid-move, spell racking; new sounds for the M12 models |

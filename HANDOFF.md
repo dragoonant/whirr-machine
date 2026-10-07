@@ -1,6 +1,30 @@
 # Handoff
 
-**Current state:** M3 to M9 are done (M10 in progress). The game is on Pages (https://dragoonant.github.io/whirr-machine/): pick one of
+## Morning summary (owner)
+- M10 to M13 shipped overnight. 1167 unit tests pass.
+- Stats for Trollbloods, Circle, Cryx and Menoth are now sourced. Tanith uses the real sculpt.
+- The Paint button is in the top bar. Side rails collapse with `[` and `]`. You can drag models to move them.
+- Skirmish (50 points): pick Game size on the start screen, or open `/whirr-machine/?size=skirmish`.
+- Steamroller 2026: pick a scenario on the start screen (all 7, or Random). Command cards are in the Cards tray.
+- Deathclock is off by default. Turn it on from the start screen.
+- Add `&seed=test` to any URL for a repeatable game.
+- Screenshots are in `e2e-out/`: `m11-*`, `skirmish-*`, `sr-*`.
+- Not built yet: Defenses, three command cards, Payload stepper, four small models. See STATUS.md Known gaps.
+
+## Owner questions
+1. Trollbloods: our Gunnbjorn starter has no MK4 box. The only current trollkin starter is the Southern Kriels Kithguard Command Starter (Craghorn, Felleye, Klangor, Scrappers, Pvt. Rattles). Switch?
+2. The Circle Skirmish list is 47 points. Add Gallows Grove x2 to reach 49?
+3. Dozer and Smigg uses the classic PP sculpt. SFG has a new 2026 Kithguard sculpt. Keep classic?
+4. Krielstone Bearer and Stone Scribes: the profiles say 40mm bases, but the sculpts suggest 50mm and 30mm. Which?
+5. Values with one source, or sources that disagree. Please check them in the app: Assailer and Storm Vane boxes, Courser blade POW (10 vs 12), Caine's Recon spell list after the June 2026 changelog, Night Terrors FA (2 vs 3), Arkanist AAT (4 vs 5), Crusader grid layout. The spiral aspect order (Mind, Body, Spirit) is a RULING for all warbeasts.
+6. Gemini history has two stray abandoned chats from the concept agents (a suggestion-chip image chat and a growth-coach prompt). Delete them if you like.
+
+## Next
+- Fix what the owner finds in the questions above.
+- Build the not-built items (STATUS.md Known gaps), then the deferred playtest fixes.
+- Multiplayer stays on hold.
+
+**Current state:** M3 to M13 are done (M12 and M13 have gaps, see STATUS.md). The game is on Pages (https://dragoonant.github.io/whirr-machine/): pick one of
 **six factions** (Cygnar, Khador, Trollbloods, Circle Orboros, Cryx, Protectorate of Menoth), an opponent army (any
 of the six or Random), the bot strength, a scenario, a battlefield and an animation speed, then play a whole game
 against the bot: roll-off, deployment, focus or fury, activations, attacks, spells, feats, scoring and game over.
@@ -12,8 +36,7 @@ strip, spiral card, leech/transfer/shed forms, frenzy flash) is in `src/client/u
 (`src/ai/fury.ts`). The 21 new figures are Hunyuan GLBs (listed in
 `public/assets/models/manifest.json`, contact sheets `art/figure-sheets/m9-*.png`; the procedural fallback still works). See STATUS.md "Factions (M9)" and `e2e-out/m9-*.png`.
 
-**M9 stats:** no MK4 card for the four new factions could be read from the app, so every stat, cost, spell and rule is
-marked U-cd. The owner decided on 2026-10-07 that these are researched on the web, not only in the app (M10). The M9
+**M9 stats:** were all U-cd when made. M10 sourced them (see `docs/spec/factions/*-sources.md`); only the Crusader grid layout is still U-cd. The M9
 RULINGs are in `docs/needs-rules-check.md` ("M9 factions" section).
 
 **M4 AI (done):** easy/normal utility bot tiers in `src/ai/` (start screen default Normal), slam/trample and exact previews in the engine; normal beat random 20/20 (`npm run bench:ai -- --games 20 --seed 1`).
@@ -36,8 +59,7 @@ triangles. Contact sheets are in `art/terrain-sheets/<board>.png`.
 The trench and the ash flats are procedural now (no GLB). Ground mats are rebuilt by
 `art/board-textures/gen.py` (Hunyuan venv python: numpy, scipy, Pillow; bases in `%TEMP%/ph` from `fetch.py`).
 
-**Next:** M10 in progress overnight: web-sourced stats for the M9 factions and the Tanith figure redo. Then M11 to M13 (see
-PLAN.md). The owner accepted terrain, figures and audio on 2026-10-07; owner playtest fixes are deferred and multiplayer
+**Older note:** The owner accepted terrain, figures and audio on 2026-10-07; owner playtest fixes are deferred and multiplayer
 is on hold. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
 
 **Client map (`src/client/`):**
