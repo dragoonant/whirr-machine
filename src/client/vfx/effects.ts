@@ -8,11 +8,16 @@ import { MESH_HEIGHT } from '../figures/kit'
 
 export interface V3 { x: number; y: number; z: number }
 export type TracerStyle = 'tracer' | 'bolt' | 'arc'
+/** The M9 weapons' own looks (claws, jaws, chain weapons, soul cannons, flame, holy fire, lightning, thorns, threshers). */
+export type FxLook = 'claws' | 'bite' | 'chain' | 'soul' | 'flame' | 'holy-fire' | 'lightning' | 'thorn' | 'thresher'
+const LOOKS: ReadonlySet<string> = new Set<FxLook>(['claws', 'bite', 'chain', 'soul', 'flame', 'holy-fire', 'lightning', 'thorn', 'thresher'])
+/** The flavour's special look, if it has one. */
+export const lookOf = (f: Flavour | undefined): FxLook | undefined => (f && LOOKS.has(f.vfx) ? (f.vfx as FxLook) : undefined)
 
 export type FxSpec =
   | { kind: 'muzzle'; at: V3; dir: V3; big: boolean }
-  | { kind: 'projectile'; from: V3; to: V3; style: TracerStyle; arcane: boolean; delay: number; dur: number }
-  | { kind: 'impact'; at: V3; mode: 'melee' | 'ranged' | 'arcane' | 'blast'; delay: number }
+  | { kind: 'projectile'; from: V3; to: V3; style: TracerStyle; arcane: boolean; delay: number; dur: number; look?: FxLook }
+  | { kind: 'impact'; at: V3; mode: 'melee' | 'ranged' | 'arcane' | 'blast'; delay: number; look?: FxLook }
   | { kind: 'ring'; at: V3; radius: number; mode: 'blast' | 'arcane'; delay: number; dur: number }
   | { kind: 'cripple'; at: V3 }
   | { kind: 'down'; at: V3 }
@@ -53,7 +58,9 @@ export const travelSeconds = (d: number, style: TracerStyle): number =>
 
 const styleOf = (f: Flavour): TracerStyle => {
   switch (f.vfx) {
-    case 'tracer': case 'spray': case 'spark-burst': return 'tracer'
+    case 'tracer': case 'spray': case 'spark-burst': case 'flame': case 'holy-fire': return 'tracer'
+    case 'soul': case 'lightning': return 'bolt'
+    case 'thorn': return 'arc'
     case 'shell': case 'lob': case 'rocket': case 'thrown': return 'arc'
     default: return 'bolt'
   }
@@ -79,8 +86,9 @@ export function planEvent(ev: GameEvent, s: GameState, memos: AttackMemos): FxSp
         break
       }
       const style = flavour ? styleOf(flavour) : 'tracer'
+      const look = lookOf(flavour)
       out.push({ kind: 'muzzle', at: from, dir: norm(from, to), big: style === 'arc' })
-      out.push({ kind: 'projectile', from, to, style, arcane: false, delay: 0.03, dur: travelSeconds(d, style) })
+      out.push({ kind: 'projectile', from, to, style, arcane: false, delay: 0.03, dur: travelSeconds(d, style), ...(look ? { look } : {}) })
       break
     }
     case 'BlastTargetsFixed': {
@@ -99,7 +107,8 @@ export function planEvent(ev: GameEvent, s: GameState, memos: AttackMemos): FxSp
       const memo = ev.attackId ? memos.get(ev.attackId) : undefined
       if (!at) break
       // a blast already burst at its centre; neighbours get the ordinary ranged spark
-      out.push({ kind: 'impact', at, mode: memo?.mode === 'blast' ? 'ranged' : memo?.mode ?? 'ranged', delay: 0 })
+      const look = memo?.weaponId ? lookOf(weaponFlavour(memo.weaponId, memo.mode === 'melee')) : undefined
+      out.push({ kind: 'impact', at, mode: memo?.mode === 'blast' ? 'ranged' : memo?.mode ?? 'ranged', delay: 0, ...(look ? { look } : {}) })
       break
     }
     case 'SpellCast': {

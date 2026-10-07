@@ -3,6 +3,7 @@
 import { query, type DiceRolled, type GameEvent, type GameState, type Id } from '../../engine/index'
 import { dataName, narrate, modelName } from '../contract'
 import { pct, signed } from './format'
+import { furyFeedLine } from './fury/feedLines'
 
 export type FeedTone = 'info' | 'attack' | 'hit' | 'miss' | 'damage' | 'death' | 'score' | 'flow' | 'spell'
 export interface FeedLine { seq: number; tone: FeedTone; text: string; detail: string[] }
@@ -114,13 +115,15 @@ export function buildFeed(state: GameState | null, feed: readonly Entry[], expec
       }
       case 'SpellCast': case 'FeatUsed': {
         const t = narrate(state, ev)
-        if (t) out.push({ seq, tone: 'spell', text: t, detail: ev.type === 'SpellCast' ? [`Cost ${ev.cost} focus`] : [] })
+        if (t) out.push({ seq, tone: 'spell', text: t, detail: ev.type === 'SpellCast' ? [`Cost ${ev.cost} ${ev.animus || ev.forced || state?.models[ev.casterId]?.fury !== undefined ? 'fury' : 'focus'}`] : [] })
         break
       }
       case 'EffectApplied': out.push({ seq, tone: 'spell', text: `${ev.name} on ${ev.targetIds.map(name).join(', ')}`, detail: [] }); break
       case 'UpkeepPaid': out.push({ seq, tone: 'spell', text: `Upkeep kept for ${name(ev.casterId)}`, detail: [] }); break
       default: {
         if (SKIP.has(ev.type)) break
+        const fz = furyFeedLine(state, ev)
+        if (fz) { out.push({ seq, ...fz }); break }
         const t = narrate(state, ev)
         if (t) out.push({ seq, tone: 'info', text: t, detail: [] })
       }

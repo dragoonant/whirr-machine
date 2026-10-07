@@ -10,14 +10,15 @@ import { directorNow, tweenPosition, uiActions, useHoverId, usePresentedModel, u
 import { SIDE_COLOURS } from '../board/layout'
 import { handleModelClick } from '../interaction/controller'
 import { StatusFx } from '../vfx/StatusFx'
+import { FuryBoardTag } from '../ui/fury/FuryPips'
 import { VfxHost } from '../vfx/VfxLayer'
 import { GLB_BASE_H, GlbBase, GlbBody, createFader, useGlbParts, type Fader } from './GlbBody'
-import { glbSlugFor } from './glbModels'
+import { glbSlugFor, useGlbManifestReady } from './glbModels'
 import { usePaint } from './paintStore'
 import { facingYaw, turnToward } from './facing'
 import { usePresentedStore } from '../presentation/presentedStore'
 import { ProceduralBody } from './Procedural'
-import { dataArchetype, dataHeightIn, factionOf } from './profile'
+import { dataArchetype, dataHeightIn, factionOf, factionPaint } from './profile'
 import { BASE_MATERIAL, GEO, HIT_MATERIAL, archetypeOf, baseRadiusOf, damageFraction, iceMaterial, lineMaterial, meshHeight, partMaterial, shellMaterial } from './kit'
 
 const BASE_H = GLB_BASE_H
@@ -51,6 +52,8 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
   const side: PlayerId = m?.owner ?? 'A'
   const faction = factionOf(m?.profileId ?? '')
   const paint = usePaint(faction, side)
+  const procPaint = paint ?? factionPaint(faction) // the procedural stand-in wears the faction palette until a GLB shows
+  useGlbManifestReady()
   const archetype = useMemo(() => (m ? archetypeOf(m.type, dataArchetype(m.profileId)) : 'trooper'), [m?.type, m?.profileId])
   const r = m ? baseRadiusOf(m) : 0.6
   const slug = m ? glbSlugFor(m.profileId) : undefined
@@ -166,7 +169,7 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
       <group ref={bodyGroup} position={[0, BASE_H, 0]} userData={{ inert }}>
         {parts
           ? <group position={[0, -BASE_H, 0]}><GlbBody parts={parts} faction={faction} paint={paint} grey={grey} /></group>
-          : <ProceduralBody archetype={archetype} h={h} r={r} side={side} grey={grey} paint={paint} />}
+          : <ProceduralBody archetype={archetype} h={h} r={r} side={side} grey={grey} paint={procPaint} />}
         {stationary && !lowGfx && <mesh geometry={GEO.sphere} material={shellMaterial} scale={[r * 2.3, h * 1.3, r * 2.3]} position={[0, h * 0.5, 0]} />}
         {stationary && (
           <group>
@@ -204,6 +207,10 @@ export const Figure = memo(function Figure({ id, upkeepSides, target }: FigurePr
         <Html position={[0, h + 0.9, 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
           <span style={{ background: '#1e2127cc', color: '#ffd866', border: '1px solid #c9a227', borderRadius: 8, padding: '0 5px', font: '600 11px system-ui' }}>{m.focus}</span>
         </Html>
+      )}
+      {/* fury flames and frenzy chance (warlocks and warbeasts only; renders nothing for other models) */}
+      {showUi && m.fury !== undefined && (
+        <Html position={[0, h + (m.type === 'leader' ? 1.5 : 0.9), 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}><FuryBoardTag id={id} /></Html>
       )}
       {/* crippled systems: sparks / smoke / steam / flicker from the nearest socket; static icons in Low graphics */}
       {showUi && <StatusFx root={root} r={r} h={h} crippled={m.crippled} conditions={m.conditions} enabled={particles} />}

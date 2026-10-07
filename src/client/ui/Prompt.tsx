@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { game, uiActions, usePresentedState, usePrompt, usePromptLegal, useWaitingFor } from '../contract'
 import './hud.css'
-import { AllocateForm, BoardForm, ShakeForm, UpkeepForm } from './PromptForms'
+import { AllocateForm, BoardForm, LeechForm, ShakeForm, TransferForm, UpkeepForm, VentForm } from './PromptForms'
 import { buildPromptView, isLegal, optionTestId, type PromptView } from './promptView'
 
 const typing = (t: EventTarget | null): boolean => {
@@ -46,6 +46,9 @@ export function PromptDock() {
       {view.form === 'shake' && <ShakeForm key={pd.id} state={state} pd={pd} />}
       {view.form === 'allocate' && <AllocateForm key={pd.id} state={state} pd={pd} view={view} />}
       {view.form === 'board' && <BoardForm key={pd.id} state={state} pd={pd} />}
+      {view.form === 'leech' && <LeechForm key={pd.id} state={state} pd={pd} />}
+      {view.form === 'transfer' && <TransferForm key={pd.id} state={state} pd={pd} />}
+      {view.form === 'vent' && <VentForm key={pd.id} state={state} pd={pd} />}
       {view.form === 'panel' && <p className="prompt-line">Pick from the activation panel on the left (it lists every legal choice).</p>}
       {hasButtons && view.form === 'buttons' && (
         <div className="pbtns pbtns-wrap">
@@ -59,7 +62,7 @@ export function PromptDock() {
               onFocus={() => o.hoverId && uiActions.hover(o.hoverId)} onBlur={() => o.hoverId && uiActions.hover(null)}
             >
               <span className="btn-label">{o.label}</span>
-              {o.cost && <span className="btn-cost">{o.cost}</span>}
+              {o.cost && <span className={`btn-cost${o.forced ? ' btn-forced' : ''}`}>{o.cost}</span>}
               {o.note && <span className="btn-note">{o.note}</span>}
             </button>
           ))}

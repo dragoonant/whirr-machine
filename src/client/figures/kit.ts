@@ -6,11 +6,18 @@ import { baseRadius } from '../../engine/geometry'
 import { SIDE_COLOURS } from '../board/layout'
 import { paintKey, type ArmyPaint } from './paintStore'
 
+/** Weapon families the procedural infantry and solos carry (profile.ts derives them from the weapon ids). */
+export type Kit = 'none' | 'gun' | 'axe' | 'spear' | 'bow' | 'blade' | 'scythe'
 export type Archetype = 'caster' | 'heavyEngine' | 'lightEngine' | 'solo' | 'trooper' | 'battleEngine' | 'structure'
+  // M9 placeholders: beasts, skeletal and robed jacks, wraiths, and kit-carrying troopers and solos ('trooper:axe', 'solo:spear+shield')
+  | 'beast' | 'warpwolf' | 'woldwarden' | 'boneJack' | 'crusaderJack' | 'wraith'
+  | `trooper:${Kit}` | `solo:${Kit}` | `trooper:${Kit}+shield` | `solo:${Kit}+shield`
 
 /** Pick a procedural archetype from the model's rules type (and the profile's figure.archetype when it names one). */
 export function archetypeOf(type: ModelType, hint?: string): Archetype {
+  if (hint && /^(trooper|solo):/.test(hint)) return hint as Archetype
   switch (hint) {
+    case 'beast': case 'warpwolf': case 'woldwarden': case 'boneJack': case 'crusaderJack': case 'wraith': return hint
     case 'heavyEngine': case 'superHeavyEngine': case 'colossal': return 'heavyEngine'
     case 'lightEngine': return 'lightEngine'
     case 'caster': return 'caster'
@@ -22,6 +29,7 @@ export function archetypeOf(type: ModelType, hint?: string): Archetype {
   }
   switch (type) {
     case 'leader': return 'caster'
+    case 'beast': return 'beast'
     case 'warEngine': return 'heavyEngine'
     case 'battleEngine': return 'battleEngine'
     case 'structure': return 'structure'
@@ -60,7 +68,7 @@ function mat(key: string, make: () => THREE.Material): THREE.Material {
   if (!m) { m = make(); cache.set(key, m) }
   return m
 }
-export type Part = 'primary' | 'secondary' | 'metal' | 'brass' | 'dark' | 'glow' | 'skin' | 'disabled'
+export type Part = 'primary' | 'secondary' | 'metal' | 'brass' | 'dark' | 'glow' | 'skin' | 'disabled' | 'bone' | 'ember' | 'fur'
 const PART_COLOUR = (side: PlayerId, part: Part): string => {
   switch (part) {
     case 'primary': return SIDE_COLOURS[side].primary
@@ -71,6 +79,9 @@ const PART_COLOUR = (side: PlayerId, part: Part): string => {
     case 'glow': return '#ffd866'
     case 'skin': return '#d8b99a'
     case 'disabled': return '#5a5c60'
+    case 'bone': return '#d9d2bd'
+    case 'ember': return '#ff7a2a'
+    case 'fur': return '#5a4632'
   }
 }
 /** Army-painter colour for a part, or the side's stock colour. Only primary and secondary are repainted. */
@@ -78,9 +89,10 @@ const paintedColour = (side: PlayerId, part: Part, paint?: ArmyPaint): string =>
   (part === 'primary' && paint?.primary) || (part === 'secondary' && paint?.secondary) || PART_COLOUR(side, part)
 export function partMaterial(side: PlayerId, part: Part, paint?: ArmyPaint): THREE.Material {
   const pk = part === 'primary' || part === 'secondary' ? paintKey(paint) : ''
-  return mat(`${side}:${part}:${pk}`, () => new THREE.MeshStandardMaterial({
+  return mat(`${side}:${part}:${pk}:${paintedColour(side, part, paint)}`, () => new THREE.MeshStandardMaterial({
     color: paintedColour(side, part, paint), roughness: part === 'metal' ? 0.45 : 0.7, metalness: part === 'metal' || part === 'brass' ? 0.6 : 0.1,
     ...(part === 'glow' ? { emissive: '#ffb830', emissiveIntensity: 1.2 } : {}),
+    ...(part === 'ember' ? { emissive: '#ff4a10', emissiveIntensity: 1.1 } : {}),
   }))
 }
 export const BASE_MATERIAL = new THREE.MeshStandardMaterial({ color: '#15161a', roughness: 0.9, metalness: 0 })

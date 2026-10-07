@@ -2,6 +2,8 @@
 // (never recomputed here).
 import { loadBundle } from '../../data/index'
 import type { DiceRolled, GameEvent, GameState, Id, PlayerId, RollPurpose } from '../../engine/index'
+import { NEUTRAL_COLOUR, SIDE_COLOURS, type SideColours } from '../board/layout'
+import { usePaintStore } from '../figures/paintStore'
 
 const recordName = (id: Id | undefined): string | undefined => {
   if (!id) return undefined
@@ -116,4 +118,67 @@ export function endWord(reason: string): string {
     case 'concession': return 'concession'
     default: return reason
   }
+}
+
+// ---------- side colours (faction palettes) ----------
+// Each side wears its faction's palette (faction.json palette.primary/secondary/ui). In a mirror match, or when two
+// factions' UI colours are too close to tell apart, side B gets a contrasting alternate: hue turned and darkened.
+type Rgb = [number, number, number]
+const HEXRE = /^#[0-9a-fA-F]{6}$/
+const toRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as Rgb
+const toHex = (c: Rgb): string => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
+function toHsv([r, g, b]: Rgb): [number, number, number] {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn
+  let h = 0
+  if (d > 0) h = mx === r ? (((g - b) / d) % 6 + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return [h * 60, mx ? d / mx : 0, mx / 255]
+}
+function fromHsv(h: number, s: number, v: number): Rgb {
+  const f = (n: number) => { const k = (n + h / 60) % 6; return 255 * v * (1 - s * Math.max(0, Math.min(k, 4 - k, 1))) }
+  return [f(5), f(3), f(1)]
+}
+const rgbDistance = (a: string, b: string): number => { const x = toRgb(a), y = toRgb(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) }
+
+/** A contrasting alternate of a colour: hue turned 150 degrees, value darkened (never equal to the input). */
+export function altColour(hex: string, darken = 0.8): string {
+  if (!HEXRE.test(hex)) return hex
+  const [h, s, v] = toHsv(toRgb(hex))
+  const out = toHex(fromHsv((h + 150) % 360, Math.max(s, 0.35), Math.max(0.2, v * darken)))
+  return out.toLowerCase() === hex.toLowerCase() ? toHex(fromHsv((h + 150) % 360, Math.max(s, 0.35), v > 0.5 ? v * 0.6 : Math.min(1, v + 0.4))) : out
+}
+
+interface PaletteRec { primary?: string; secondary?: string; ui?: string }
+const paletteOf = (faction: string | undefined): PaletteRec => ((faction ? (loadBundle().byId[faction] as { palette?: PaletteRec } | undefined) : undefined)?.palette) ?? {}
+const okHex = (c: string | undefined, fallback: string): string => (c && HEXRE.test(c) ? c : fallback)
+
+/** The faction's own colours as side colours (fallback to the neutral gold). */
+export function factionSideColours(faction: string | undefined): SideColours {
+  const p = paletteOf(faction)
+  const ui = okHex(p.ui, NEUTRAL_COLOUR)
+  return { primary: okHex(p.primary, ui), secondary: okHex(p.secondary, '#c8c8c8'), ring: ui, zone: ui }
+}
+
+/** Same colours with the alternate treatment (side B in a mirror or a clash). */
+export function altSideColours(c: SideColours): SideColours {
+  return { primary: altColour(c.primary), secondary: altColour(c.secondary), ring: altColour(c.ring, 0.85), zone: altColour(c.zone, 0.85) }
+}
+
+/** Colours for both sides. Side A keeps its faction colours; B takes the alternate on a mirror or near-identical UI colours. */
+export function sideColoursFor(factionA: string | undefined, factionB: string | undefined): { colours: Record<PlayerId, SideColours>; altB: boolean } {
+  const a = factionSideColours(factionA), b = factionSideColours(factionB)
+  const altB = (!!factionA && factionA === factionB) || rgbDistance(a.ring, b.ring) < 90
+  return { colours: { A: a, B: altB ? altSideColours(b) : b }, altB }
+}
+
+/**
+ * Point SIDE_COLOURS (rings, zones, procedural figures, objective control) at the factions in this game, and in a
+ * mirror give side B's GLB figures the alternate paint too. Called whenever a game starts or loads.
+ */
+export function applySideColours(state: GameState | null): void {
+  const { colours, altB } = sideColoursFor(state?.players?.A?.faction, state?.players?.B?.faction)
+  Object.assign(SIDE_COLOURS.A, colours.A)
+  Object.assign(SIDE_COLOURS.B, colours.B)
+  const paint = usePaintStore.getState()
+  paint.setSide('A', undefined)
+  paint.setSide('B', altB ? { primary: colours.B.primary, secondary: colours.B.secondary } : undefined)
 }

@@ -4,6 +4,7 @@ import type { Action, DecisionKind, DecisionOption, GameState, Id, ModelId, Pend
 import { engineDescribe, modelName, queryDistance, queryThreat } from '../contract'
 import { dataText } from './data'
 import { MOVE_LABEL, boxesLeft, niceName, oddsText, pct } from './format'
+import { costWords, isForcedCost, payWords } from './fury/furyView'
 
 export type Tone = 'primary' | 'neutral' | 'decline'
 export interface OptionView {
@@ -13,13 +14,15 @@ export interface OptionView {
   cost?: string
   /** Engine odds, worded ("72% -> 91%", "avg 3.1, kill 8%") or a short note. */
   note?: string
+  /** The cost makes a warbeast gain fury (drawn red). */
+  forced?: boolean
   tone: Tone
   action: Action
   /** Model to highlight on the board while the button is hovered. */
   hoverId?: ModelId
 }
 /** Which widget renders the prompt body. */
-export type PromptForm = 'buttons' | 'panel' | 'board' | 'upkeep' | 'shake' | 'allocate'
+export type PromptForm = 'buttons' | 'panel' | 'board' | 'upkeep' | 'shake' | 'allocate' | 'leech' | 'transfer' | 'vent'
 export interface PromptView {
   kind: DecisionKind
   testid: string
@@ -64,8 +67,6 @@ export function actionLabel(a: Action, state: GameState | null): string {
 export const humanize = (state: GameState, text: string): string =>
   text.replace(/\b[AB]:[\w.]*\w/g, (id) => (state.models[id] || state.units[id] ? modelName(state, id) : id))
 
-const costText = (o: DecisionOption): string | undefined => (o.cost?.focus ? `${o.cost.focus} focus` : undefined)
-
 function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxModel?: ModelId, slam = false): OptionView {
   const a = o.action
   let label = humanize(state, o.label)
@@ -96,7 +97,8 @@ function toView(o: DecisionOption, state: GameState, kind: DecisionKind, ctxMode
     tone = a.boost ? 'primary' : 'decline'
   } else if (kind === 'powerField' && a.type === 'powerField') tone = a.spend ? 'primary' : 'decline'
   else if (kind === 'abilityChoice' && /^(no|skip|decline)$/i.test(o.id)) tone = 'decline'
-  return { id: o.id, label, ...(costText(o) ? { cost: costText(o) } : {}), ...(note ? { note } : {}), tone, action: a, ...(hoverId ? { hoverId } : {}) }
+  const cost = costWords(o.cost, ctxModel ? modelName(state, ctxModel) : undefined)
+  return { id: o.id, label, ...(cost ? { cost } : {}), ...(isForcedCost(o.cost) ? { forced: true } : {}), ...(note ? { note } : {}), tone, action: a, ...(hoverId ? { hoverId } : {}) }
 }
 
 const eq = (a: Action, b: Action): boolean => JSON.stringify(a) === JSON.stringify(b)
@@ -124,12 +126,11 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
 
   switch (pd.kind) {
     case 'boostAttack': {
-      const cost = rawOf(byBoost(true))?.cost?.focus ?? 1
-      const left = Math.max(0, (state.models[ctx.modelId ?? '']?.focus ?? 0) - cost)
+      const price = payWords(state, ctx.modelId, rawOf(byBoost(true))?.cost)
       const o = ctx.odds
       const odds = o?.pHit !== undefined && o.pHitBoosted !== undefined ? ` — ${pct(o.pHit)} → ${pct(o.pHitBoosted)}` : ''
       const roll = atk ? `${atk.dice}d6 vs DEF ${atk.hitTarget}` : ''
-      title = `Boost attack? ${who} → ${tgt}${roll ? `: ${roll}` : ''}${odds} (${cost} focus, ${left} left)`
+      title = `Boost attack? ${who} → ${tgt}${roll ? `: ${roll}` : ''}${odds} (${price})`
       if (atk) {
         lines.push(...engineDescribe.mods(atk.mods).map((l) => `${l.label} ${l.value}`))
         if (atk.autoHit) lines.push('Automatic hit; the roll only matters for a critical.')
@@ -194,8 +195,26 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
     case 'chooseGrid': title = `${who}: choose a damage grid`; break
     case 'channel': title = `${who}: channel through an arc node?`; break
     case 'combinedAttack': title = `${who}: combined attack`; break
+    case 'leech':
+      title = `Leech fury: ${who}`
+      lines.push('Take fury off warbeasts in your control range so they are less likely to frenzy. You can hold up to your ARC.')
+      form = 'leech'
+      break
+    case 'transferDamage':
+      title = `Transfer the damage? ${Number(ctx.data?.points ?? 0)} incoming to ${who}`
+      lines.push('Pay 1 fury to move this hit onto a warbeast in your control range. Whatever it cannot hold comes back to you.')
+      form = 'transfer'
+      break
+    case 'adjustFury':
+      title = `${who} is done with its frenzy: vent any fury?`
+      form = 'vent'
+      break
+    case 'reave':
+      title = `${who} has fallen holding fury: who takes it?`
+      lines.push('Pick the model that reaves the fury, or let it go.')
+      break
     case 'payUpkeep': title = 'Upkeep: pick the spells to keep'; form = 'upkeep'; break
-    case 'shake': title = 'Shake off effects (1 focus each)'; form = 'shake'; break
+    case 'shake': title = 'Shake off effects (1 focus or fury each)'; form = 'shake'; break
     case 'allocateFocus': title = 'Allocate focus to your war engines'; form = 'allocate'; break
     case 'maintenanceOrder': title = 'Choose the order effects resolve'; break
     case 'chooseMovement': title = `${who}: choose Normal Movement`; form = 'panel'; break

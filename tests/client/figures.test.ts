@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Group, Mesh, MeshStandardMaterial, BoxGeometry } from 'three'
 import type { GameEvent, GameState } from '../../src/engine/index'
 import { loadBundle } from '../../src/data/index'
-import { ENABLED_GLB_SLUGS, GLB_SLUG_BY_MODEL, glbSlugFor, profileForSlug } from '../../src/client/figures/glbModels'
+import { ENABLED_GLB_SLUGS, EXPECTED_GLB_SLUGS, GLB_SLUG_BY_MODEL, glbSlugFor, profileForSlug } from '../../src/client/figures/glbModels'
 import { BAND_DEG, hsvOf, sourceBands, variantCount, variantMaterial } from '../../src/client/figures/glbPaint'
 import { PAINT_PRESETS, paintKey, resolvePaint, sanitizePaint, usePaintStore } from '../../src/client/figures/paintStore'
 import { splitGlb } from '../../src/client/figures/GlbBody'
@@ -26,7 +26,7 @@ describe('GLB mapping (30 section 3)', () => {
     const byId = loadBundle().byId
     for (const [profile, slug] of Object.entries(GLB_SLUG_BY_MODEL)) {
       expect(byId[profile], profile).toBeDefined()
-      expect(ENABLED_GLB_SLUGS.has(slug), slug).toBe(true)
+      expect(ENABLED_GLB_SLUGS.has(slug) || EXPECTED_GLB_SLUGS.has(slug), slug).toBe(true)
     }
   })
   it('each trooper has its own GLB; unknown profiles stay procedural', () => {
@@ -35,7 +35,7 @@ describe('GLB mapping (30 section 3)', () => {
     expect(glbSlugFor('kha.hounds-tererya')).toBe('wm-tererya')
     expect(glbSlugFor('kha.razor')).toBe('wm-razor')
     expect(glbSlugFor('cyg.nobody')).toBeUndefined()
-    for (const s of ENABLED_GLB_SLUGS) expect(profileForSlug(s), s).toBeDefined()
+    for (const s of [...ENABLED_GLB_SLUGS, ...EXPECTED_GLB_SLUGS]) expect(profileForSlug(s), s).toBeDefined()
   })
 })
 

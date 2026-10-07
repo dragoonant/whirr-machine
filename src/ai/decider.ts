@@ -8,13 +8,14 @@ import { findLine, type AssassinLine } from './assassin'
 import { newCtx, planSequence, profileOf, type Ctx } from './damage'
 import { deployAction } from './deploy'
 import { allocate, reserveNeeded } from './focus'
+import { forcePenalty, furyWrapUp, leechAction, spendCost, transferAction, ventAction } from './fury'
 import { actKey, activationPriority, bestMove, evalPosition, leaderAllIn, pickBest, planMovement, seqValue, type ActPlan, type Env } from './plan'
 import { damageDist, expected } from './prob'
 import { pickSensible } from './random'
 import { TIERS, type AiTierId, type TierParams } from './tiers'
 import { legalMoveCandidates } from './moves'
 import {
-  boxesLeft, boxesTotal, dist, enemiesOf, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, rec, valueOf,
+  boxesLeft, boxesTotal, dist, enemiesOf, isBeast, isWarlock, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, rec, resourceOf, valueOf,
 } from './world'
 
 // ---------- memory ----------
@@ -48,15 +49,35 @@ function spellValue(env: Env, a: Extract<Action, { type: 'castSpell' }>): number
   if (!caster) return 0
   const name = sp.name ?? a.spellId
   const ops = sp.effect ?? []
+  if (!a.targetId && s.effects.some((e) => e.sourceId === a.spellId && e.casterId === a.casterId && !e.upkeep)) return 0
+  if ((sp as { offensive?: boolean }).offensive && a.targetId) {
+    // a damage spell is an attack: value it like one
+    const t = s.models[a.targetId]
+    if (!live(t)) return 0
+    let pv
+    try { pv = query.attackPreview(s, a.casterId, '', a.targetId, { spellId: a.spellId }) } catch { return 0 }
+    if (pv.legal) return 0
+    const bt = boxesTotal(t), v = valueOf(s, t), isL = t.type === 'leader'
+    return (Math.min(pv.expectedDamage, bt) / bt) * v * (isL ? 0.6 : 1) + pv.pKill * (isL ? 400 : v * 0.7)
+  }
+  const modOps = ops.filter((o) => o.op === 'modStat')
+  const otherOps = ops.length - modOps.length
   if (a.targetId) {
     const t = s.models[a.targetId]
     if (!live(t) || effectNamed(s, t.id, name)) return 0
     const activated = t.unitId ? !!s.units[t.unitId]?.activated : t.activated
     const foesNear = enemiesOf(s, t.owner).filter((e) => dist(e.pos, t.pos) < 16).length
     if (ops.some((o) => o.code === 'avengingForce')) return foesNear ? 1.6 : 0.4
-    const buff = ops.filter((o) => o.op === 'modStat').reduce((x, o) => x + (o.value ?? 0), 0)
-    if (buff <= 0) return 0.3
-    return (activated ? 0.6 : 1.4) + buff * 0.35 + (foesNear ? 0.8 : 0)
+    const net = modOps.reduce((x, o) => x + (o.value ?? 0), 0)
+    if (t.owner !== caster.owner) {
+      // a debuff or a curse on an enemy: worth more on big, close models
+      const near = dist(t.pos, caster.pos) < 18 ? 1 : 0.5
+      const weight = Math.min(2.2, 0.5 + valueOf(s, t) / 10)
+      return near * weight * (0.5 + Math.min(1.5, Math.abs(net) * 0.3) + (otherOps ? 0.7 : 0))
+    }
+    if (net <= 0 && !otherOps) return 0.3
+    const self = t.id === caster.id ? 0.7 : 1
+    return self * ((activated ? 0.6 : 1.4) + Math.max(0, net) * 0.35 + (otherOps ? 0.6 : 0) + (foesNear ? 0.8 : 0))
   }
   // area buff in CTRL (Deflection): only worth it while it will still be up in the enemy's turn
   if (sp.scope?.who === 'friendly') {
@@ -68,7 +89,13 @@ function spellValue(env: Env, a: Extract<Action, { type: 'castSpell' }>): number
     }
     return 0.8
   }
-  return 0.5
+  const foes = enemiesOf(s, env.me).filter((e) => dist(e.pos, caster.pos) < 20)
+  if (sp.scope?.who === 'warbeasts') {
+    const n = modelsOf(s, env.me).filter((m) => m.type === 'beast' && m.controllerId === caster.id && !m.activated).length
+    return foes.length ? 0.7 * n : 0.2 * n
+  }
+  if (sp.scope?.who === 'enemy') return Math.min(2.5, 0.5 * foes.filter((e) => dist(e.pos, caster.pos) < 14).length)
+  return foes.length ? 0.6 : 0.2
 }
 
 /** Value of using the feat now. */
@@ -84,18 +111,41 @@ function featValue(env: Env, casterId: ModelId): number {
   return 0
 }
 
-/** The best spell/feat to use now, if it beats its cost and keeps the Leader's reserve. */
+/** The best spell, feat, heal or take-control to use now, if it beats its cost and keeps the reserve (focus, fury or forcing risk). */
 function anytimePick(env: Env, legal: Action[], reserve: number): Action | null {
   let best: Action | null = null, bv = 0
+  const s = env.s
   for (const a of legal) {
     if (a.type === 'castSpell') {
-      const c = env.s.models[a.casterId]
-      const cost = (rec(a.spellId)?.cost as number | undefined) ?? 2
-      if (!c || c.focus - cost < reserve) continue
-      const v = spellValue(env, a) - cost * 0.55
+      const c = s.models[a.casterId]
+      const oc = (s.pending.options ?? []).find((o) => o.action === a)?.cost
+      const cost = oc ? (oc.fury ?? oc.forced ?? oc.focus) : ((rec(a.spellId)?.cost as number | undefined) ?? 2)
+      if (!c) continue
+      const sc = spendCost(s, c, cost, reserve)
+      if (!sc.ok) continue
+      const v = spellValue(env, a) - cost * 0.55 - sc.pen
       if (v > bv) { bv = v; best = a }
     } else if (a.type === 'useFeat') {
       const v = featValue(env, a.casterId) - 1
+      if (v > bv) { bv = v; best = a }
+    } else if (a.type === 'heal') {
+      const c = s.models[a.casterId]
+      const t = a.targetId ? s.models[a.targetId] : c
+      if (!c || !live(t)) continue
+      const sc = spendCost(s, c, a.points, reserve)
+      if (!sc.ok) continue
+      const marked = Math.max(0, boxesTotal(t) - boxesLeft(t))
+      const healed = Math.min(a.points, marked)
+      if (healed <= 0) continue
+      // a Spirit-crippled beast healed back to forceable is worth more
+      const v = (healed / boxesTotal(t)) * valueOf(s, t) * (t.type === 'leader' ? 1.5 : 1) * (env.tier.knapsack ? 1 : 0.7) - 0.6 * a.points - sc.pen
+      if (v > bv) { bv = v; best = a }
+    } else if (a.type === 'takeControl') {
+      const c = s.models[a.casterId], t = s.models[a.targetId]
+      if (!c || !live(t)) continue
+      const sc = spendCost(s, c, 1, reserve)
+      if (!sc.ok) continue
+      const v = valueOf(s, t) * 0.45 + 0.5 - 1 - sc.pen
       if (v > bv) { bv = v; best = a }
     }
   }
@@ -174,8 +224,8 @@ function chooseMovement(env: Env, legal: Action[], brain: Brain): Action {
   const lead = leadId ? env.s.models[leadId] : undefined
   if (!live(lead)) return legal[0]!
   refreshLine(env, brain)
-  if (lead.type === 'leader') {
-    const pick = anytimePick(env, legal, leaderReserve(env))
+  if (lead.type === 'leader' || isBeast(lead)) {
+    const pick = anytimePick(env, legal, lead.type === 'leader' ? leaderReserve(env) : 0)
     if (pick) return pick
   }
   const r = planMovement(env, lead, legal)
@@ -202,7 +252,7 @@ function moveModel(env: Env, legal: Action[], brain: Brain): Action {
   }
   // re-plan (a trigger move such as Reposition, or the planned point is gone)
   const maxDist = pd.constraints?.maxDist ?? 0
-  const trig = !!data.trigger
+  const trig = !!data.trigger || (data as { code?: string }).code === 'apparition'
   const best = trig
     ? pickBest(env, m, legalMoveCandidates(s, m, maxDist, env.tier.moveSamples).map((c) => evalPosition(env, m, c.pos, { melee: false, ranged: false })))
     : bestMove(env, m, maxDist, { melee: plan?.mode !== 'none', ranged: plan?.mode !== 'none' })
@@ -255,8 +305,30 @@ function combatValue(env: Env, m: ModelState, mode: 'melee' | 'ranged', focus: n
 
 function focusFor(env: Env, m: ModelState): number {
   if (m.type !== 'leader') return m.focus
-  if (leaderAllIn(env, m)) return m.focus
-  return Math.max(0, m.focus - leaderReserve(env))
+  if (leaderAllIn(env, m)) return resourceOf(m)
+  return Math.max(0, resourceOf(m) - leaderReserve(env))
+}
+
+const forcePen = (env: Env, m: ModelState, k: number): number => forcePenalty(env.s, m, k)
+
+/** Menoth combined melee attack (+1 to attack and damage per contributor, who give up their own attacks): take it when it out-damages them. */
+function combinedPick(env: Env, legal: Action[]): { a: Action; v: number } | null {
+  let best: { a: Action; v: number } | null = null
+  for (const a of legal) {
+    if (a.type !== 'combinedAttack') continue
+    const t = env.s.models[a.targetId]
+    if (!live(t)) continue
+    let pv
+    try { pv = query.attackPreview(env.s, a.primaryId, a.weaponId, a.targetId) } catch { continue }
+    if (pv.legal || pv.pHit <= 0) continue
+    const n = a.contributorIds.length
+    const perHit = pv.expectedDamage / pv.pHit
+    const combined = Math.min(0.97, pv.pHit + 0.13 * n) * (perHit + n)
+    const apart = (n + 1) * pv.expectedDamage
+    const bt = boxesTotal(t)
+    if (Math.min(combined, bt) > Math.min(apart, bt) * 1.15 + 0.2 && (!best || combined > best.v)) best = { a, v: combined + 1e6 }
+  }
+  return best
 }
 
 function chooseCombatAction(env: Env, legal: Action[], brain: Brain): Action {
@@ -264,8 +336,8 @@ function chooseCombatAction(env: Env, legal: Action[], brain: Brain): Action {
   const m = pd.context.modelId ? env.s.models[pd.context.modelId] : undefined
   if (!live(m)) return legal[0]!
   refreshLine(env, brain)
-  if (m.type === 'leader') {
-    const pick = anytimePick(env, legal, leaderReserve(env))
+  if (m.type === 'leader' || isBeast(m)) {
+    const pick = anytimePick(env, legal, m.type === 'leader' ? leaderReserve(env) : 0)
     if (pick) return pick
   }
   const focus = focusFor(env, m)
@@ -279,12 +351,22 @@ function chooseCombatAction(env: Env, legal: Action[], brain: Brain): Action {
       case 'ranged': v = rv.v; break
       case 'dual': v = mv.v + rv.v * 0.8 - (mv.v > 0 && rv.v > 0 ? 0 : 0.5); break
       case 'specialAttack': v = rv.v * 0.85 - 0.1; break
-      case 'powerAttack': v = mv.v * 0.3 - 0.2; break
+      case 'powerAttack': {
+        const k = ((pd.options ?? []).find((o) => o.action === a)?.cost?.forced) ?? 0
+        v = mv.v * (isBeast(m) ? 0.55 : 0.3) - 0.2 - (isBeast(m) ? forcePen(env, m, k || 1) : 0)
+        break
+      }
       case 'standUp': v = 0.05; break
       case 'specialAction': v = 0.02; break
       case 'forfeit': v = 0; break
     }
     if (v > bv) { bv = v; best = a }
+  }
+  // nothing to attack with: the warlock may shed fury to leave leech room, a beast may rile
+  const chosen = best as Action | null
+  if (!chosen || (chosen.type === 'chooseCombatAction' && (chosen.choice === 'forfeit' || bv <= 0.05))) {
+    const wrap = furyWrapUp(env.s, m, m.type === 'leader' ? leaderReserve(env) : 0, !env.tier.knapsack)
+    if (wrap) return wrap
   }
   return best ?? legal[0]!
 }
@@ -295,17 +377,18 @@ function chooseAttack(env: Env, legal: Action[], brain: Brain): Action {
   const m = pd.context.modelId ? s.models[pd.context.modelId] : undefined
   if (!live(m)) return legal[0]!
   refreshLine(env, brain)
-  if (m.type === 'leader') {
-    const pick = anytimePick(env, legal, leaderReserve(env))
+  if (m.type === 'leader' || isBeast(m)) {
+    const pick = anytimePick(env, legal, m.type === 'leader' ? leaderReserve(env) : 0)
     if (pick) return pick
   }
   const reserve = m.type === 'leader' && !leaderAllIn(env, m) ? leaderReserve(env) : 0
   let best: Action | null = null, bv = 0.0001
+  const extra = spendCost(s, m, 1, reserve)
   for (const a of legal) {
     if (a.type !== 'chooseAttack') continue
     const t = s.models[a.targetId]
     if (!live(t)) continue
-    if (a.additional && m.focus - 1 < reserve) continue
+    if (a.additional && !extra.ok) continue
     let pv
     try { pv = query.attackPreview(s, m.id, a.weaponId, a.targetId, { additional: a.additional, ...(a.attackType ? { attackType: a.attackType } : {}) }) } catch { continue }
     if (pv.legal) continue
@@ -315,10 +398,14 @@ function chooseAttack(env: Env, legal: Action[], brain: Brain): Action {
     if (env.committed && env.line?.targetId === t.id) val *= 1.8
     // finish damaged targets
     val *= 1 + 0.3 * (1 - boxesLeft(t) / bt)
-    if (a.additional) val -= m.type === 'leader' ? 0.25 : 0.05
+    if (a.additional) val -= (m.type === 'leader' ? 0.25 : 0.05) + extra.pen
     if (val > bv) { bv = val; best = a }
   }
+  const comb = combinedPick(env, legal)
+  if (comb && (!best || comb.v > bv)) return comb.a
   if (best) return best
+  const wrap = furyWrapUp(s, m, reserve, !env.tier.knapsack)
+  if (wrap) return wrap
   return legal.find((a) => a.type === 'endAttacks') ?? legal[0]!
 }
 
@@ -342,6 +429,13 @@ function focusOpportunity(env: Env, m: ModelState): number {
   return best
 }
 
+/** How much of a model's boost budget one more point competes with: scarce pools hold out for better uses. */
+function poolScale(m: ModelState): number {
+  if (isBeast(m)) return 0.6
+  const r = resourceOf(m)
+  return r <= 1 ? 1 : r === 2 ? 0.6 : 0.35
+}
+
 function boostAttack(env: Env, legal: Action[]): Action {
   const s = env.s
   const pd = s.pending
@@ -351,16 +445,18 @@ function boostAttack(env: Env, legal: Action[]): Action {
   const t = pd.context.targetId ? s.models[pd.context.targetId] : undefined
   if (!yes || !live(m) || !t) return no
   const reserve = m.type === 'leader' && !leaderAllIn(env, m) ? leaderReserve(env) : 0
-  if (m.focus - 1 < reserve) return no
+  const sc = spendCost(s, m, 1, reserve)
+  if (!sc.ok) return no
   const p0 = pd.context.odds?.pHit ?? 0, p1 = pd.context.odds?.pHitBoosted ?? p0
-  if (!env.tier.knapsack) return p0 < 0.6 && p1 > p0 ? yes : no
+  // easy forces a beast only while it keeps a point of room under its FURY
+  if (!env.tier.knapsack) return p0 < 0.6 && p1 > p0 && (!isBeast(m) || query.fury(s, m.id).room >= 2) ? yes : no
   const atk = s.attack
   const k = 2 + (atk?.chargeAttack ? 1 : 0)
   const x = (atk?.powDirect ?? 10) - (atk?.damageTarget ?? 15)
   const onHit = damageDist(k, x)
   const gain = seqValue(env, t, [{ p: p1, onHit }], p1 * expected(onHit)) - seqValue(env, t, [{ p: p0, onHit }], p0 * expected(onHit))
-  const opp = focusOpportunity(env, m) * (m.focus <= 1 ? 1 : m.focus === 2 ? 0.6 : 0.35)
-  return gain > opp && gain > 0.05 ? yes : no
+  const opp = focusOpportunity(env, m) * poolScale(m)
+  return gain > opp + sc.pen && gain > 0.05 ? yes : no
 }
 
 function boostDamage(env: Env, legal: Action[]): Action {
@@ -373,16 +469,17 @@ function boostDamage(env: Env, legal: Action[]): Action {
   const t = pd.context.targetId ? s.models[pd.context.targetId] : undefined
   if (!yesO || !live(m) || !t || !legal.includes(yesO.action)) return no
   const reserve = m.type === 'leader' && !leaderAllIn(env, m) ? leaderReserve(env) : 0
-  if (m.focus - 1 < reserve) return no
-  if (!env.tier.knapsack) return t.type === 'leader' || boxesLeft(t) <= 6 ? yesO.action : no
+  const sc = spendCost(s, m, 1, reserve)
+  if (!sc.ok) return no
+  if (!env.tier.knapsack) return (t.type === 'leader' || boxesLeft(t) <= 6) && (!isBeast(m) || query.fury(s, m.id).room >= 2) ? yesO.action : no
   const v = valueOf(s, t), bt = boxesTotal(t), H = boxesLeft(t)
   const e0 = noO?.odds?.expectedDamage ?? 0, e1 = yesO.odds?.expectedDamage ?? e0
   // pKill against the real remaining boxes (the engine's option odds use a fixed count for grids)
   const k0 = t.damage.track === 'single' ? (noO?.odds?.pKill ?? 0) : 0, k1 = t.damage.track === 'single' ? (yesO.odds?.pKill ?? 0) : 0
   const isL = t.type === 'leader'
   const gain = ((e1 - e0) / bt) * v + (k1 - k0) * (isL ? 400 : v * 0.7) + (H <= e1 + 3 ? 0.2 : 0)
-  const opp = focusOpportunity(env, m) * (m.focus <= 1 ? 1 : m.focus === 2 ? 0.6 : 0.35)
-  return gain > opp && gain > 0.05 ? yesO.action : no
+  const opp = focusOpportunity(env, m) * poolScale(m)
+  return gain > opp + sc.pen && gain > 0.05 ? yesO.action : no
 }
 
 function powerField(env: Env, legal: Action[]): Action {
@@ -445,8 +542,8 @@ function payUpkeep(env: Env, legal: Action[]): Action {
     if (!e?.upkeep) continue
     const c = s.models[e.upkeep.casterId]
     if (!c) continue
-    const reserve = c.type === 'leader' ? env.tier.minReserve : 0
-    const left = budget.get(c.id) ?? c.focus
+    const reserve = c.type === 'leader' ? (isWarlock(c) ? leaderReserve(env) : env.tier.minReserve) : 0
+    const left = budget.get(c.id) ?? resourceOf(c)
     const tgtAlive = e.targetIds.some((t) => live(s.models[t]))
     if (tgtAlive && left - 1 >= reserve) { keep.push(id); budget.set(c.id, left - 1) }
   }
@@ -493,7 +590,45 @@ function abilityChoice(env: Env, legal: Action[]): Action {
     }
     return best
   }
+  if (code === 'startTrigger') return startTrigger(env, legal)
+  if (code === 'declOpt') return legal.find((a) => a.type === 'abilityChoice' && a.optionId === 'use') ?? legal[0]!
   return legal[0]!
+}
+
+/** Optional activation.start abilities: Warp picks, Battle Plan, Soul Generator, heals. Free or token-paid, so use them. */
+function startTrigger(env: Env, legal: Action[]): Action {
+  const s = env.s
+  const m = s.pending.context.modelId ? s.models[s.pending.context.modelId] : undefined
+  const ids = legal.filter((a) => a.type === 'abilityChoice').map((a) => (a as { optionId: string }).optionId)
+  const pick = (id: string): Action | undefined => legal.find((a) => a.type === 'abilityChoice' && a.optionId === id)
+  if (!m) return legal[0]!
+  if (ids.includes('strength') && ids.includes('ghostly')) {
+    // Warp: Strength adds melee damage; Ghostly only when the model is far from anything it could hit
+    const near = Math.min(...enemiesOf(s, m.owner).map((e) => query.distance(s, m.id, e.id)), 99)
+    const shooters = enemiesOf(s, m.owner).filter((e) => rangedWeapons(e).length && !e.inert && dist(e.pos, m.pos) < 24).length
+    if (near > 14 && meleeWeapons(m).length === 0) return pick('ghostly') ?? legal[0]!
+    if (near > 12 && shooters >= 3) return pick('spellWard') ?? pick('strength') ?? legal[0]!
+    return pick('strength') ?? legal[0]!
+  }
+  const plans = ids.filter((i) => i.startsWith('plan:'))
+  if (plans.length) {
+    // Battle Plan: Stir the Blood on the group nearest the enemy that has not acted, else Fight to the Last, else Precision Strike
+    let best: string | null = null, bv = 0
+    for (const id of plans) {
+      const [planId, key] = id.slice(5).split('|') as [string, string]
+      const group = key === 'all' ? modelsOf(s, m.owner).filter((x) => dist(x.pos, m.pos) <= 10) : (s.units[key]?.troopers ?? [key]).map((t) => s.models[t]).filter(live)
+      if (!group.length) continue
+      const foe = Math.min(...group.map((g) => Math.min(...enemiesOf(s, m.owner).map((e) => dist(e.pos, g.pos)), 99)), 99)
+      const fresh = group.filter((g) => !(g.unitId ? s.units[g.unitId]?.activated : g.activated)).length
+      let v = 0
+      if (planId.endsWith('stir-the-blood')) v = fresh * (foe < 14 ? 1.6 : 0.6)
+      else if (planId.endsWith('fight-to-the-last')) v = group.length * (foe < 12 ? 1.0 : 0.3)
+      else v = fresh * (foe < 12 ? 0.8 : 0.2)
+      if (v > bv) { bv = v; best = id }
+    }
+    return (best ? pick(best) : undefined) ?? pick('skip') ?? legal[0]!
+  }
+  return pick('use') ?? legal[0]!
 }
 
 // ---------- entry ----------
@@ -515,6 +650,10 @@ function route(env: Env, pd: PendingDecision, legal: Action[], brain: Brain): Ac
     case 'payUpkeep': return payUpkeep(env, legal)
     case 'shake': return legal.find((a) => a.type === 'shake' && a.shake.length > 0) ?? legal[0]!
     case 'chooseBoxes': return chooseBoxes(env, legal)
+    case 'leech': return (leechAction(env.s, env.tier.knapsack) ?? legal.find((a) => a.type === 'leech') ?? legal[0]!)
+    case 'transferDamage': return transferAction(env.s, legal, !env.tier.knapsack)
+    case 'adjustFury': return ventAction(env.s, legal, !env.tier.knapsack)
+    case 'reave': return legal.find((a) => a.type === 'reave' && a.reaverId !== null) ?? legal[0]!
     case 'abilityChoice': return abilityChoice(env, legal)
     case 'triggerWindow': return legal.find((a) => a.type === 'triggerWindow') ?? legal[0]!
     case 'placeTroopers': return legal[0]!

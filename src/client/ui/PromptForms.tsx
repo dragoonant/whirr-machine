@@ -8,6 +8,12 @@ import './hud.css'
 import { niceName, typeWord } from './format'
 import type { OptionView, PromptView } from './promptView'
 
+export { LeechForm, TransferForm, VentForm } from './fury/FuryForms'
+
+/** "focus" for casters and war-engines, "fury" for warlocks (their upkeep and shakes cost fury). */
+const resourceWord = (state: GameState, id: ModelId | undefined): 'focus' | 'fury' => (id && state.models[id]?.fury !== undefined ? 'fury' : 'focus')
+const onHand = (state: GameState, id: ModelId | undefined): number => { const m = id ? state.models[id] : undefined; return m ? (m.fury !== undefined ? m.fury : m.focus) : 0 }
+
 const CONDITION_WORD: Record<string, string> = { knockedDown: 'knocked down', stationary: 'held in place' }
 
 export function UpkeepForm({ state, pd }: { state: GameState; pd: PendingDecision }) {
@@ -21,24 +27,33 @@ export function UpkeepForm({ state, pd }: { state: GameState; pd: PendingDecisio
       <ul className="prow-list">
         {rows.map((e) => {
           const caster = e.upkeep?.casterId
-          const have = caster ? state.models[caster]?.focus ?? 0 : 0
+          const have = onHand(state, caster)
+          const unit = resourceWord(state, caster)
           return (
             <li key={e.id}>
               <label className="prow">
                 <input type="checkbox" data-testid={`upkeep-keep-${e.id}`} checked={!!keep[e.id]} onChange={(ev) => setKeep((k) => ({ ...k, [e.id]: ev.target.checked }))} />
                 <span><b>{e.name}</b> on {e.targetIds.map((t) => modelName(state, t)).join(', ')}</span>
-                <span className="hud-dim">1 focus from {caster ? modelName(state, caster) : '?'} ({have} on hand)</span>
+                <span className="hud-dim">1 {unit} from {caster ? modelName(state, caster) : '?'} ({have} on hand)</span>
               </label>
             </li>
           )
         })}
       </ul>
-      <div className="hud-dim">{Object.entries(spent).map(([c, n]) => `${modelName(state, c)}: ${n} focus kept for upkeep, ${Math.max(0, (state.models[c]?.focus ?? 0) - n)} left`).join('; ')}</div>
+      <div className="hud-dim">{Object.entries(spent).map(([c, n]) => `${modelName(state, c)}: ${n} ${resourceWord(state, c)} kept for upkeep, ${Math.max(0, onHand(state, c) - n)} left`).join('; ')}</div>
       <div className="pbtns">
         <button type="button" className="hud-btn hud-btn-primary" data-testid="upkeep-confirm" onClick={() => game.answer({ type: 'payUpkeep', keep: rows.filter((e) => keep[e.id]).map((e) => e.id) })}>Confirm upkeep</button>
       </div>
     </div>
   )
+}
+
+/** What a shake costs this model: focus, warlock fury, or fury the warbeast gains when forced. */
+function shakeCost(state: GameState, id: ModelId): string {
+  const m = state.models[id]
+  if (m?.fury === undefined) return `1 focus (${m?.focus ?? 0} on hand)`
+  if (m.type === 'beast') return `forces +1 fury on it (holds ${m.fury})`
+  return `1 fury (${m.fury} on hand)`
 }
 
 interface ShakeOpt { modelId: ModelId; condition?: StoredConditionId; effectId?: string }
@@ -58,7 +73,7 @@ export function ShakeForm({ state, pd }: { state: GameState; pd: PendingDecision
               <label className="prow">
                 <input type="checkbox" data-testid={`shake-pick-${i}`} checked={!!on[i]} onChange={(ev) => setOn((s) => ({ ...s, [i]: ev.target.checked }))} />
                 <span><b>{modelName(state, o.modelId)}</b>: shake off {what}</span>
-                <span className="hud-dim">{state.models[o.modelId]?.focus ?? 0} focus on hand</span>
+                <span className="hud-dim" data-testid={`shake-cost-${i}`}>{shakeCost(state, o.modelId)}</span>
               </label>
             </li>
           )

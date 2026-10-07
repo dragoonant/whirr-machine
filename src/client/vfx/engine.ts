@@ -3,20 +3,27 @@
 // meshes (streak, ring), no particles.
 import { AdditiveBlending, BoxGeometry, Group, Mesh, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from 'three'
 import { COLOURS, flash, glowPool, mote, puff, smokePool, sparks } from './particles'
-import type { FxSpec, TracerStyle, V3 } from './effects'
+import type { FxLook, FxSpec, TracerStyle, V3 } from './effects'
 
 const STREAK = new BoxGeometry(0.05, 0.05, 1)
 const ORB = new SphereGeometry(0.5, 10, 8)
 const RING = new RingGeometry(0.9, 1, 48)
 const mat = (hex: number, opacity = 1) => new MeshBasicMaterial({ color: hex, transparent: true, opacity, blending: AdditiveBlending, depthWrite: false })
 
-interface Shot { mesh: Mesh; from: V3; to: V3; t0: number; dur: number; style: TracerStyle; arcane: boolean; live: boolean; trailAt: number }
+interface Shot { mesh: Mesh; from: V3; to: V3; t0: number; dur: number; style: TracerStyle; arcane: boolean; live: boolean; trailAt: number; look?: FxLook }
 interface RingFx { mesh: Mesh; t0: number; dur: number; radius: number; live: boolean }
 interface Pending { at: number; spec: FxSpec }
 
 const SHOTS = 10
 const RINGS = 8
 const ARCANE_HEX = 0x9aa8ff
+/** Projectile and lite-ring colour of each M9 look. */
+const LOOK_HEX: Record<FxLook, number> = {
+  claws: 0xff9a8a, bite: 0xe8e0c8, chain: 0xffd9a0, soul: 0x6bffa0, flame: 0xff7a2a, 'holy-fire': 0xffd24a, lightning: 0x9ae6ff, thorn: 0x8ad04a, thresher: 0xd8c890,
+}
+const LOOK_RGB: Record<FxLook, readonly [number, number, number]> = {
+  claws: [1, 0.55, 0.5], bite: [0.9, 0.88, 0.78], chain: [1, 0.85, 0.6], soul: [0.42, 1, 0.63], flame: COLOURS.flame, 'holy-fire': [1, 0.82, 0.3], lightning: COLOURS.electric, thorn: [0.54, 0.82, 0.3], thresher: [0.85, 0.78, 0.55],
+}
 
 export class VfxEngine {
   readonly group = new Group()
@@ -93,7 +100,8 @@ export class VfxEngine {
         s.arcane = spec.arcane
         s.trailAt = 0
         const m = s.mesh.material as MeshBasicMaterial
-        m.color.setHex(spec.arcane ? ARCANE_HEX : spec.style === 'arc' ? 0xffc070 : 0xffe9a8)
+        m.color.setHex(spec.look ? LOOK_HEX[spec.look] : spec.arcane ? ARCANE_HEX : spec.style === 'arc' ? 0xffc070 : 0xffe9a8)
+        s.look = spec.look
         if (spec.style === 'tracer') {
           s.mesh.geometry = STREAK
           s.mesh.scale.set(1, 1, 0.9)
@@ -108,9 +116,10 @@ export class VfxEngine {
       case 'impact': {
         const { at } = spec
         if (this.lite) {
-          this.ringAt(at, spec.mode === 'blast' ? 1.2 : 0.5, spec.mode === 'arcane' ? ARCANE_HEX : 0xffb060, 300, now)
+          this.ringAt(at, spec.mode === 'blast' ? 1.2 : spec.look === 'thresher' ? 1.1 : 0.5, spec.look ? LOOK_HEX[spec.look] : spec.mode === 'arcane' ? ARCANE_HEX : 0xffb060, 300, now)
           break
         }
+        if (spec.look) { this.lookImpact(spec.look, at, now); break }
         if (spec.mode === 'arcane') {
           flash(at.x, at.y, at.z, 1.3, COLOURS.arcaneCore, 0.22)
           sparks(at.x, at.y, at.z, 10, COLOURS.arcane, 3)
@@ -138,6 +147,52 @@ export class VfxEngine {
       case 'down':
         if (this.lite) break
         for (let i = 0; i < 3; i++) puff(spec.at.x, spec.at.y - 0.3 + i * 0.2, spec.at.z, COLOURS.smoke, 0.7, 1.3, 0.6)
+        break
+    }
+  }
+
+  /** The impact of an M9 weapon look: claw rakes, a jaw snap, chain sparks, soul wisps, flame, holy fire, lightning, thorns, a thresher sweep. */
+  private lookImpact(look: FxLook, at: V3, now: number): void {
+    const c = LOOK_RGB[look]
+    switch (look) {
+      case 'claws':
+        for (let i = -1; i <= 1; i++) for (let k = 0; k < 4; k++) {
+          glowPool.emit({ x: at.x + i * 0.22 - 0.25 + k * 0.12, y: at.y + 0.3 - k * 0.2, z: at.z, vx: 1.2, vy: -1.6, vz: 0, life: 0.22, size0: 0.14, size1: 0.03, r: c[0], g: c[1], b: c[2], drag: 0.5 })
+        }
+        flash(at.x, at.y, at.z, 0.6, COLOURS.hot, 0.1)
+        break
+      case 'bite':
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2
+          glowPool.emit({ x: at.x + Math.cos(a) * 0.5, y: at.y, z: at.z + Math.sin(a) * 0.5, vx: -Math.cos(a) * 3, vy: 0.2, vz: -Math.sin(a) * 3, life: 0.2, size0: 0.14, size1: 0.03, r: c[0], g: c[1], b: c[2] })
+        }
+        flash(at.x, at.y, at.z, 0.7, COLOURS.hot, 0.1)
+        break
+      case 'chain':
+        sparks(at.x, at.y, at.z, 18, c, 6)
+        flash(at.x, at.y, at.z, 0.9, COLOURS.hot, 0.1)
+        puff(at.x, at.y, at.z, COLOURS.smoke, 0.5, 0.8, 0.5)
+        break
+      case 'soul':
+        flash(at.x, at.y, at.z, 1.3, c, 0.22)
+        for (let i = 0; i < 8; i++) mote(at.x, at.y - 0.2, at.z, c, 0.24, 0.8)
+        break
+      case 'flame': case 'holy-fire':
+        flash(at.x, at.y, at.z, 1.2, look === 'holy-fire' ? COLOURS.hot : COLOURS.flame, 0.2)
+        for (let i = 0; i < 10; i++) mote(at.x, at.y - 0.3 + i * 0.05, at.z, c, 0.3, 0.7)
+        if (look === 'flame') puff(at.x, at.y + 0.2, at.z, COLOURS.smoke, 0.7, 1.1)
+        break
+      case 'lightning':
+        flash(at.x, at.y, at.z, 1.4, COLOURS.arcaneCore, 0.16)
+        sparks(at.x, at.y, at.z, 14, c, 5)
+        break
+      case 'thorn':
+        sparks(at.x, at.y - 0.4, at.z, 12, c, 3.5)
+        puff(at.x, at.y - 0.4, at.z, [0.4, 0.33, 0.22], 0.6, 0.9, 0.4)
+        break
+      case 'thresher':
+        this.ringAt(at, 1.2, LOOK_HEX.thresher, 320, now)
+        sparks(at.x, at.y, at.z, 12, c, 5)
         break
     }
   }
@@ -180,6 +235,7 @@ export class VfxEngine {
           s.trailAt = 0.025
           if (s.arcane) mote(x, y, z, COLOURS.arcane, 0.22, 0.45)
           else if (s.style === 'arc') puff(x, y, z, COLOURS.smoke, 0.3, 0.6, 0.2)
+          else if (s.look) mote(x, y, z, LOOK_RGB[s.look], 0.2, 0.3)
           else if (s.style === 'bolt') mote(x, y, z, COLOURS.hot, 0.14, 0.2)
         }
       }

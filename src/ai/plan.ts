@@ -11,10 +11,11 @@ import { legalMoveCandidates, type MoveCand } from './moves'
 import type { SeqAttack } from './prob'
 import { edgeGap, roleGap, rolesFor } from './roles'
 import { nearestOpenElement, scenarioValue } from './scenario'
+import { forcePenalty } from './fury'
 import { exposureValue, threatAt, type ThreatReport } from './threat'
 import type { TierParams } from './tiers'
 import {
-  baseRadius, boxesTotal, dist, distToElement, hazardCost, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
+  baseRadius, boxesTotal, dist, distToElement, isBeast, resourceOf, hazardCost, elementsOf, enemiesOf, threatView, leaderOf, live, meleeWeapons, modelsOf, other, rangedWeapons, unitMates, valueOf, withPositions,
 } from './world'
 
 export interface ActPlan {
@@ -194,7 +195,7 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
       const r = env.tier.knapsack ? smartReserve(m, rep.seqs, env.tier.tauSafe, env.tier.minReserve) : null
       if (r) { reserve = r.reserve; risk = r.risk }
       else {
-        while (reserve < m.focus && killChance(m, rep.seqs, reserve) > env.tier.tauSafe) reserve++
+        while (reserve < resourceOf(m) && killChance(m, rep.seqs, reserve) > env.tier.tauSafe) reserve++
         risk = killChance(m, rep.seqs, reserve)
       }
     }
@@ -203,9 +204,11 @@ export function evalPosition(env: Env, m: ModelState, p: Vec2, modes: { melee: b
     const rep = fastThreat(env, m, p)
     exposure = exposureValue(s, m, rep) * (mates > 1 ? Math.min(2, 0.7 * mates) : 1) * (rep.attackers > 2 ? 0.8 : 1)
   }
-  const usable = Math.max(0, m.focus - reserve)
+  // a beast's boosts are forced onto it: plan with up to two points of room (the decisions price the frenzy risk)
+  const pool = isBeast(m) && env.tier.knapsack ? Math.min(2, query.fury(s, m.id).room) : resourceOf(m)
+  const usable = Math.max(0, pool - reserve)
   const committedAll = env.committed && env.line?.steps.some((x) => x.modelId === m.id) && (!isLeader || env.line.useLeader)
-  const off = offenseAt(env, m, p, modes, committedAll ? m.focus : usable, mates)
+  const off = offenseAt(env, m, p, modes, committedAll ? resourceOf(m) : usable, mates)
   // scenario: the engine's control on a hypothetical board with the unit shifted
   const hs = withPositions(s, shiftedMates(s, m, p))
   const scen = scenarioValue(hs, hs.models[m.id]!, p)
@@ -269,6 +272,8 @@ export function planMovement(env: Env, lead: ModelState, legal: Action[]): { act
   const options = legal.filter((a) => a.type === 'chooseMovement') as Extract<Action, { type: 'chooseMovement' }>[]
   const all: { action: Action; plan: ActPlan }[] = []
   const consider = (action: Action, plan: ActPlan): void => { all.push({ action, plan }) }
+  // a beast pays the frenzy risk of the fury a run or charge puts on it (81 F5.1)
+  const forced = (k: number): number => (lead.type === 'beast' && lead.fury !== undefined ? forcePenalty(s, lead, k) : 0)
   for (const o of options) {
     const opt = o.option
     if (opt === 'slam' || opt === 'trample') continue
@@ -295,7 +300,7 @@ export function planMovement(env: Env, lead: ModelState, legal: Action[]): { act
         const gap = dist(end, t.pos) - baseRadius(lead.base) - baseRadius(t.base)
         if (gap > reach + 0.02) continue // a failed charge: never planned
         const e = evalPosition(env, lead, end, { melee: true, ranged: false, charge: t.id })
-        consider(o, { key, lead: lead.id, option: 'charge', dest: end, targetId: t.id, mode: 'melee', score: e.score + 0.2, risk: e.risk })
+        consider(o, { key, lead: lead.id, option: 'charge', dest: end, targetId: t.id, mode: 'melee', score: e.score + 0.2 - forced(1), risk: e.risk })
       }
       continue
     }
@@ -304,7 +309,7 @@ export function planMovement(env: Env, lead: ModelState, legal: Action[]): { act
     const cands: MoveCand[] = s1.pending.kind === 'moveModel' ? legalMoveCandidates(s1, s1.models[lead.id]!, maxDist, env.tier.moveSamples) : [{ pos: lead.pos, tag: 'stay' }]
     const evals = cands.map((c) => evalPosition(env, lead, c.pos, { melee: opt === 'advance', ranged: opt === 'advance' }))
     const pick = pickBest(env, lead, evals)
-    if (pick) consider(o, { key, lead: lead.id, option: opt, dest: pick.pos, targetId: pick.targetId, mode: opt === 'run' ? 'none' : pick.mode, score: pick.score - (opt === 'run' && lead.type === 'warEngine' ? 0.4 : 0), risk: pick.risk })
+    if (pick) consider(o, { key, lead: lead.id, option: opt, dest: pick.pos, targetId: pick.targetId, mode: opt === 'run' ? 'none' : pick.mode, score: pick.score - (opt === 'run' && lead.type === 'warEngine' ? 0.4 : 0) - (opt === 'run' ? forced(1) : 0), risk: pick.risk })
   }
   if (!all.length) return null
   let pool = all

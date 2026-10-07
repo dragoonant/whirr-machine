@@ -10,6 +10,8 @@ export interface Flavour {
   sfxAlt?: string
   /** VFX hint for the projectile layer. */
   vfx: 'bolt' | 'spark-burst' | 'spray' | 'shell' | 'lob' | 'rocket' | 'tracer' | 'thrown' | 'slash' | 'smash'
+    // M9 looks (vfx/effects.ts FxLook): the new weapons' own impact and projectile styles
+    | 'claws' | 'bite' | 'chain' | 'soul' | 'flame' | 'holy-fire' | 'lightning' | 'thorn' | 'thresher'
   melee: boolean
 }
 
@@ -23,15 +25,27 @@ export const FLAVOURS: readonly Flavour[] = [
   { id: 'cannon', slugs: ['cannon'], sfx: 'gun-cannon', sfxAlt: 'gun-cannon-blast', vfx: 'shell', melee: false },
   { id: 'slug-cannon', slugs: ['slug-cannon'], sfx: 'gun-slug-cannon', vfx: 'shell', melee: false },
   { id: 'assault-cannon', slugs: ['assault-cannon'], sfx: 'gun-assault-cannon', vfx: 'tracer', melee: false },
-  { id: 'grenade-launcher', slugs: ['grenade-launcher'], sfx: 'gun-grenade-launcher', vfx: 'lob', melee: false },
-  { id: 'rocket', slugs: ['jack-buster', 'rocket'], sfx: 'gun-jack-buster', vfx: 'rocket', melee: false },
-  { id: 'carbine', slugs: ['carbine'], sfx: 'gun-carbine', vfx: 'tracer', melee: false },
-  { id: 'thrown-axe', slugs: ['thrown-axe'], sfx: 'gun-thrown-axe', vfx: 'thrown', melee: false },
+  { id: 'grenade-launcher', slugs: ['grenade-launcher', 'powder-bomb'], sfx: 'gun-grenade-launcher', vfx: 'lob', melee: false },
+  { id: 'rocket', slugs: ['jack-buster', 'rocket', 'bazooka'], sfx: 'gun-jack-buster', vfx: 'rocket', melee: false },
+  { id: 'carbine', slugs: ['carbine', 'spiker'], sfx: 'gun-carbine', vfx: 'tracer', melee: false },
+  { id: 'thrown-axe', slugs: ['thrown-axe', 'raven'], sfx: 'gun-thrown-axe', vfx: 'thrown', melee: false },
   { id: 'blade', slugs: ['blade', 'sword'], sfx: 'melee-blade', vfx: 'slash', melee: true },
   { id: 'axe', slugs: ['axe'], sfx: 'melee-axe', vfx: 'slash', melee: true },
   { id: 'knife', slugs: ['knife'], sfx: 'melee-knife', vfx: 'slash', melee: true },
-  { id: 'club', slugs: ['rifle-butt', 'butt', 'club'], sfx: 'melee-club', vfx: 'smash', melee: true },
+  { id: 'club', slugs: ['rifle-butt', 'butt', 'club', 'staff'], sfx: 'melee-club', vfx: 'smash', melee: true },
   { id: 'shield', slugs: ['shield'], sfx: 'melee-shield', vfx: 'smash', melee: true },
+  { id: 'claws', slugs: ['claw', 'wraith-strike'], sfx: 'melee-knife', vfx: 'claws', melee: true },
+  { id: 'bite', slugs: ['tusk', 'bite', 'jaw'], sfx: 'melee-fist', vfx: 'bite', melee: true },
+  { id: 'chain-weapon', slugs: ['eviscerator', 'chain', 'scythe'], sfx: 'melee-axe', vfx: 'chain', melee: true },
+  { id: 'thresher', slugs: ['thresher'], sfx: 'melee-axe', vfx: 'thresher', melee: true },
+  { id: 'holy-fire-melee', slugs: ['blazing-star', 'flame-spear', 'pyrrhus-spear'], sfx: 'melee-blade', vfx: 'holy-fire', melee: true },
+  { id: 'spear', slugs: ['spear', 'hellspike'], sfx: 'melee-blade', vfx: 'slash', melee: true },
+  { id: 'soul-cannon', slugs: ['soul-cannon', 'stygian-abyss', 'marionette', 'rune-thrower'], sfx: 'gun-spellstorm-cannon', vfx: 'soul', melee: false },
+  { id: 'flame', slugs: ['flame-belcher', 'flamethrower', 'belcher'], sfx: 'fire-crackle', vfx: 'flame', melee: false },
+  { id: 'holy-fire', slugs: ['truth-consequence-flame', 'holy-fire'], sfx: 'fire-crackle', vfx: 'holy-fire', melee: false },
+  { id: 'lightning', slugs: ['death-howler', 'lightning'], sfx: 'spell-lightning', vfx: 'lightning', melee: false },
+  { id: 'thorn', slugs: ['jaws-of-the-earth', 'thorn'], sfx: 'spell-arcane-bolt', vfx: 'thorn', melee: false },
+  { id: 'bow', slugs: ['bow'], sfx: 'gun-magelock-rifle', vfx: 'tracer', melee: false },
   { id: 'fist', slugs: ['fist'], sfx: 'melee-fist', vfx: 'smash', melee: true },
 ]
 

@@ -5,7 +5,7 @@ import type { GameState, ModelId, ModelState, PlayerId } from '../engine/index'
 import { query } from '../engine/index'
 import { killChance, planSequence, type Ctx } from './damage'
 import { threatAt } from './threat'
-import { baseRadius, boxesTotal, dist, enemiesOf, leaderOf, live, meleeWeapons, rangedWeapons, valueOf } from './world'
+import { baseRadius, boxesTotal, dist, enemiesOf, leaderOf, live, meleeWeapons, rangedWeapons, resourceOf, valueOf } from './world'
 import { contactPoint, rangePoint } from './damage'
 
 export interface Group { id: string; options: { cost: number; value: number; tag: string }[] }
@@ -68,9 +68,10 @@ export const LEADER_LOSS = 120
  * the drop in risk is worth more than a marginal attack (0.6 value units).
  */
 export function smartReserve(L: ModelState, seqs: import('./prob').SeqAttack[], tau: number, minReserve = 0, marginal = true): { reserve: number; risk: number } {
-  let r = Math.min(minReserve, L.focus)
+  const pool = resourceOf(L)
+  let r = Math.min(minReserve, pool)
   if (!seqs.length) return { reserve: r, risk: 0 }
-  while (r < L.focus) {
+  while (r < pool) {
     const cur = killChance(L, seqs, r)
     if (cur > tau) { r++; continue }
     if (!marginal) break

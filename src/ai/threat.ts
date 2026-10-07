@@ -17,6 +17,14 @@ const statOf = (id: string, k: string): number => {
 /** Focus an enemy model can expect to have on its next turn. */
 export function nextTurnFocus(s: GameState, e: ModelState): number {
   if (e.type === 'leader') return statOf(e.profileId, 'ARC') || e.focus
+  if (e.type === 'beast' && e.fury !== undefined) {
+    // a forced beast: its warlock leeches it down at Control, then it may take a boost, an extra attack and a charge (FURY caps it)
+    const w = e.controllerId ? s.models[e.controllerId] : undefined
+    if (!w || w.life !== 'active' || e.wild || e.crippled.includes('s')) return 0
+    const ctrl = statOf(w.profileId, 'CTRL') || 12
+    const room = statOf(e.profileId, 'FURY')
+    return dist(w.pos, e.pos) <= ctrl + 6 ? Math.min(room, 3) : 0
+  }
   if (e.type === 'warEngine') {
     if (e.crippled.includes('C')) return 0
     const c = e.controllerId ? s.models[e.controllerId] : undefined

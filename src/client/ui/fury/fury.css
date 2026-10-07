@@ -1,0 +1,91 @@
+/* Fury UI (81 G): flame pips, battlegroup strip, spiral, leech and transfer forms. Scoped to fury-/bg-/spiral-/aspect-/xfer- names.
+   Aspect colours are theme tokens (--aspect-mind / --aspect-body / --aspect-spirit); no art from any publisher. */
+:root {
+  --aspect-mind: #6a9fd8; --aspect-body: #d68a4a; --aspect-spirit: #a47ad6;
+  --fury-flame: #ff7a3a; --fury-flame-hi: #ffd08a;
+}
+.flame { display: inline-block; fill: none; stroke: #6a5a4e; stroke-width: 0.9; vertical-align: -2px; }
+.flame-lit { fill: var(--fury-flame); stroke: var(--fury-flame-hi); filter: drop-shadow(0 0 3px var(--fury-flame)); }
+.fury-pips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.fury-flames { display: inline-flex; gap: 1px; align-items: center; }
+.fury-n { color: var(--dim); font-size: 11px; }
+.fury-thr { font-size: 11px; font-weight: 700; color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+.fury-frenzy { font-size: 11px; border-radius: 10px; padding: 0 7px; border: 1px solid var(--line); background: #272b33; color: var(--dim); }
+.fury-warn { color: var(--accent); border-color: var(--accent); }
+.fury-hot { color: #fff1ee; background: #8a2c22; border-color: var(--bad); font-weight: 700; }
+.fury-wild .flame { opacity: 0.4; }
+.fury-block { font-size: 11px; }
+.fury-label {
+  display: inline-flex; align-items: center; gap: 3px; background: #1e2127cc; color: #ffd08a; border: 1px solid #b8551f; border-radius: 8px; padding: 0 5px;
+  font: 600 11px system-ui; white-space: nowrap; pointer-events: none;
+}
+.fury-label.fury-warn { border-color: var(--accent); }
+.fury-label.fury-hot { background: #8a2c22cc; border-color: var(--bad); color: #fff1ee; }
+.fury-label.fury-wild { color: #b9b4aa; border-color: #6d6a63; }
+
+/* battlegroup strip */
+.bgstrip { margin: 4px 0; }
+.bg-head { font-size: 11px; margin-bottom: 2px; }
+.bg-list { list-style: none; margin: 0; padding: 0; }
+.bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; padding: 2px 0; border-bottom: 1px solid #2a2e36; }
+.bg-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #6d6a63; background: transparent; flex: none; }
+.bg-dot-on { background: var(--good); border-color: var(--good); }
+.bg-name { all: unset; cursor: pointer; font-weight: 600; }
+.bg-name:hover, .bg-name:focus-visible { color: var(--accent); }
+.bg-bar { display: inline-flex; gap: 2px; }
+.bg-seg { width: 8px; height: 10px; border-radius: 2px; background: #15171b; border: 1px solid #5a5e68; }
+.bg-seg-on { background: var(--fury-flame); border-color: var(--fury-flame-hi); }
+.bg-n { font-size: 11px; color: var(--dim); }
+.bg-block { font-size: 11px; flex-basis: 100%; padding-left: 15px; }
+
+/* life spiral */
+.spiral-wrap { display: grid; gap: 4px; justify-items: center; }
+.spiral { width: min(100%, 240px); height: auto; }
+.spiral-ray { stroke: #2f333b; stroke-width: 1; }
+.spiral-num { fill: var(--dim); font-size: 9px; }
+.spiral-box circle { fill: #15171b; stroke: #5a5e68; stroke-width: 1; }
+.spiral-box text { fill: var(--dim); font-weight: 700; pointer-events: none; }
+.spiral-mind circle { stroke: var(--aspect-mind); fill: color-mix(in srgb, var(--aspect-mind) 18%, #15171b); }
+.spiral-body circle { stroke: var(--aspect-body); fill: color-mix(in srgb, var(--aspect-body) 18%, #15171b); }
+.spiral-spirit circle { stroke: var(--aspect-spirit); fill: color-mix(in srgb, var(--aspect-spirit) 18%, #15171b); }
+.spiral-filled circle { fill: #7a2c24; }
+.spiral-filled.spiral-mind circle { fill: var(--aspect-mind); }
+.spiral-filled.spiral-body circle { fill: var(--aspect-body); }
+.spiral-filled.spiral-spirit circle { fill: var(--aspect-spirit); }
+.spiral-filled.spiral-none circle { stroke: var(--bad); }
+.spiral-filled text { fill: #14161a; }
+.spiral-flash circle { animation: spiral-flash 900ms ease-out; }
+@keyframes spiral-flash { 0% { fill: #fff; stroke-width: 3; } 100% { stroke-width: 1; } }
+.aspects { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.aspect { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px 1px 2px; font-size: 12px; }
+.aspect-swatch { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #14161a; }
+.aspect-mind .aspect-swatch { background: var(--aspect-mind); } .aspect-body .aspect-swatch { background: var(--aspect-body); } .aspect-spirit .aspect-swatch { background: var(--aspect-spirit); }
+.aspect-n { color: var(--dim); }
+.aspect-crippled { border-color: var(--bad); background: #3b1c18; }
+.aspect-crippled .aspect-n { color: var(--bad); font-weight: 700; }
+.aspect-banner { margin: 0; font-size: 12px; border-left: 3px solid var(--bad); padding: 1px 0 1px 7px; width: 100%; }
+.aspect-banner-mind { border-left-color: var(--aspect-mind); } .aspect-banner-body { border-left-color: var(--aspect-body); } .aspect-banner-spirit { border-left-color: var(--aspect-spirit); }
+
+/* forced costs are fury the beast gains: red */
+.btn-forced { color: var(--bad); font-weight: 600; }
+
+/* leech form */
+.leech-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.leech-name { min-width: 130px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper-n { min-width: 18px; text-align: center; font-weight: 700; }
+.leech-warn { color: var(--bad); font-size: 12px; flex-basis: 100%; }
+.leech-sum { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+
+/* transfer form */
+.xfer-cards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.xfer-card { min-width: 150px; }
+.xfer-line { font-size: 12px; }
+.xfer-risk { font-size: 11px; border-radius: 8px; padding: 0 6px; }
+
+/* frenzy beat */
+.frenzy-flash { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 150px;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(170, 30, 20, 0.5) 100%); animation: frenzy-pulse ease-out both; }
+.frenzy-card { background: #3b1c18ee; border: 1px solid var(--bad); border-radius: 8px; padding: 8px 14px; max-width: 520px; text-align: center; font-size: 14px; }
+.frenzy-friendly { border-width: 2px; box-shadow: 0 0 14px rgba(214, 104, 90, 0.7); }
+@keyframes frenzy-pulse { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }

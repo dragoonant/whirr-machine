@@ -107,6 +107,27 @@ export const HELP_TABS: HelpTab[] = [
     ],
   },
   {
+    id: 'fury', title: 'Warlocks and fury', blurb: 'Warlocks, warbeasts and the fire that passes between them.',
+    blocks: [
+      { kind: 'p', text: 'Some armies are led by a warlock instead of a warcaster. A warlock fights beside a battlegroup of warbeasts, and the resource that matters is fury rather than focus. Flame pips on a card and over a figure show how much fury a model is holding.' },
+      { kind: 'list', items: [
+        'Warlock fury: a warlock starts the game holding fury equal to its ARC. It spends fury the way a caster spends focus: boosting rolls, casting spells, paying for extra attacks and keeping spells running.',
+        'Warbeasts do not spend fury, they gather it. Whenever you ask a beast for something extra (to run, charge, boost a roll, make an extra attack, use a power attack or cast its own animus) it is forced, which piles fury onto it. Forced costs show in red as fury the beast gains.',
+        'A beast can only be forced while it is inside its warlock\'s control range, is not wild or already frenzied, has its Spirit intact, and has room left under its FURY limit. The battlegroup strip on the warlock\'s card says why a beast cannot be forced right now.',
+        'Rile and shed: a beast can take on extra fury for nothing, and a warlock can throw away its own.',
+      ] },
+      { kind: 'h', text: 'Control phase: leeching' },
+      { kind: 'p', text: 'At the start of Control, each warlock can pull fury off its beasts that are inside its control range, up to its ARC. Use the steppers: every beast row shows its chance of frenzying afterwards. You may also draw fury from the warlock\'s own life at the price of one damage each, but that damage can never be moved to a beast.' },
+      { kind: 'h', text: 'Threshold and frenzy' },
+      { kind: 'p', text: 'Later in Control, every beast still holding fury rolls 2d6 and adds its fury. If the total is above its THR the beast frenzies at once. It charges the closest model it can see, friend or foe, and attacks it for free. The flash on screen names its target. Afterwards you may vent any of its fury before the next check. Constructs never frenzy. The card badge goes red when the chance passes about a third.' },
+      { kind: 'h', text: 'Transferring damage' },
+      { kind: 'p', text: 'When a hit is about to land on a warlock that holds fury, you may pay 1 fury to move it onto a beast in control range that has room for more fury. Each candidate card shows how much it takes, how much still hits the warlock, and the chance it goes down or loses an aspect. Pick Keep to take the hit yourself.' },
+      { kind: 'h', text: 'The life spiral' },
+      { kind: 'p', text: 'A beast tracks damage on a spiral of six branches. Damage lands on the outer box first and works inward. Boxes are tinted by aspect: Mind (blue), Body (orange), Spirit (violet). When every box of an aspect is marked, that aspect is crippled. Mind costs it a die on attacks and its special attacks, Body costs it a die on damage rolls, and Spirit means it can no longer be forced.' },
+      { kind: 'tip', text: 'Without its warlock a beast goes wild: it loses its fury and stops acting. A friendly warlock standing next to it can pay 1 fury to take control.' },
+    ],
+  },
+  {
     id: 'terrain', title: 'Terrain and LOS', blurb: 'What blocks shots and what slows you.',
     blocks: [
       { kind: 'list', items: [

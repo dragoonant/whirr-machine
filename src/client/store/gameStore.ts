@@ -9,6 +9,7 @@ import {
   type Rejection, type RejectionCode, type SaveFile,
 } from '../../engine/index'
 import { enqueueBatch, resetPresentation } from '../presentation/director'
+import { applySideColours } from '../presentation/labels'
 import type { SeqEvent } from '../presentation/beats'
 import { boardForLoad, pickBattlefield } from '../board/boardPick'
 import { setBoardId, getBoardId } from '../board/boardStore'
@@ -159,6 +160,7 @@ function commitStep(before: GameState, after: GameState, events: readonly GameEv
 
 function startFrom(state: GameState, events: readonly GameEvent[], controllers: Record<PlayerId, Controller>, bot: BotConfig, animate: boolean): void {
   useGameStore.setState({ ...INITIAL, controllers, bot, version: useGameStore.getState().version + 1 })
+  applySideColours(state) // side colours follow the factions in play
   ui.reset()
   if (animate) {
     resetPresentation(state, 0)

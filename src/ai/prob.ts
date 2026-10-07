@@ -134,7 +134,7 @@ export interface SeqAttack { p: number; onHit: Dist; melee?: boolean; knockdown?
  * to stay at 1 box; a Tough save leaves the model knocked down, so later melee attacks auto-hit).
  * Exact DP over (damage taken, pf left, knocked down).
  */
-export function pKillSequence(attacks: readonly SeqAttack[], boxes: number, pf = 0, tough = false): number {
+export function pKillSequence(attacks: readonly SeqAttack[], boxes: number, pf = 0, tough = false, absorb = 5): number {
   const H = Math.max(1, boxes)
   // state key: dmg * (pf+1) * 2 + pfLeft * 2 + kd; dmg in [0, H] where H = dead
   const W = (pf + 1) * 2
@@ -156,7 +156,7 @@ export function pKillSequence(attacks: readonly SeqAttack[], boxes: number, pf =
             const pv = a.onHit[v]!
             if (!pv) continue
             let pts = v, f2 = f
-            if (pts > 0 && f2 > 0) { pts = Math.max(0, pts - 5); f2-- }
+            if (pts > 0 && f2 > 0) { pts = Math.max(0, pts - absorb); f2-- }
             const d2 = Math.min(H, d + pts)
             const q = pr * ph * pv
             if (d2 >= H && tough) {

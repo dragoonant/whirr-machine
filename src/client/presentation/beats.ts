@@ -5,6 +5,7 @@ import type { DiceRolled, GameEvent, GameState, ModelId, Vec2 } from '../../engi
 export interface SeqEvent { seq: number; event: GameEvent }
 
 export type BeatKind = 'apply' | 'move' | 'dice' | 'attack' | 'damage' | 'death' | 'banner' | 'score' | 'spell'
+  | 'fury' | 'frenzy' | 'transfer' // M9: leech, force and reave; a beast going berserk; damage moved to a beast
 export type BannerKind = 'round' | 'turn' | 'feat' | 'game' | 'info'
 
 export interface TweenSpec { modelId: ModelId; points: Vec2[] } // polyline from the start position to the end
@@ -28,7 +29,10 @@ export const BEAT_MS = {
   moveBase: 150, movePerInch: 110, moveMax: 1400, deploy: 450, place: 500,
   dice: 850, diceBoosted: 1000, attack: 320, damage: 550, death: 750, spell: 500,
   round: 1400, turn: 1000, feat: 1300, game: 2400, score: 900, charge: 300,
+  leech: 800, force: 380, threshold: 520, frenzy: 1300, transfer: 750, aspect: 650, wild: 700,
 } as const
+
+const ASPECT_WORD = { mind: 'Mind', body: 'Body', spirit: 'Spirit' } as const
 
 const samePoint = (a: Vec2, b: Vec2) => Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.z - b.z) < 1e-6
 
@@ -146,6 +150,54 @@ export function buildBeats(before: GameState, events: readonly SeqEvent[], opts:
         break
       case 'SpellCast':
         push({ kind: 'spell', events: [se], baseMs: BEAT_MS.spell, applyAt: 'start' })
+        break
+      // ---------- M9 fury beats (81 G): numbers come straight from the event payloads ----------
+      case 'FuryLeeched': {
+        const total = ev.sources.reduce((a, s) => a + s.points, 0) + ev.selfPoints + ev.spiritBond
+        if (total <= 0) { pending.push(se); break }
+        const pops: PopSpec[] = ev.sources.filter((s) => s.points > 0).map((s) => ({ modelId: s.modelId, text: `-${s.points} fury`, kind: 'focus' as const }))
+        pops.push({ modelId: ev.warlockId, text: `+${total} fury`, kind: 'focus' })
+        if (ev.selfPoints > 0) pops.push({ modelId: ev.warlockId, text: `${ev.selfPoints} from itself`, kind: 'damage' })
+        push({ kind: 'fury', events: [se], baseMs: BEAT_MS.leech, applyAt: 'start', pops })
+        break
+      }
+      case 'BeastForced':
+        push({ kind: 'fury', events: [se], baseMs: BEAT_MS.force, applyAt: 'start', pops: [{ modelId: ev.beastId, text: `+${ev.gained} fury`, kind: 'focus' }] })
+        break
+      case 'FuryReaved':
+        if (ev.points > 0) push({ kind: 'fury', events: [se], baseMs: BEAT_MS.force, applyAt: 'start', pops: [{ modelId: ev.reaverId, text: `+${ev.points} fury (reaved)`, kind: 'focus' }] })
+        else pending.push(se)
+        break
+      case 'ThresholdChecked':
+        push({ kind: 'fury', events: [se], baseMs: ev.frenzied ? BEAT_MS.threshold : BEAT_MS.threshold * 0.6, applyAt: 'start', pops: [{ modelId: ev.beastId, text: ev.frenzied ? 'Frenzy!' : 'Holds', kind: ev.frenzied ? 'crit' : 'info' }] })
+        break
+      case 'Frenzied': {
+        const who = opts.modelName(ev.beastId)
+        const text = ev.targetId ? `${who} frenzies at ${opts.modelName(ev.targetId)}` : `${who} frenzies with nothing to hit`
+        push({ kind: 'frenzy', events: [se], baseMs: BEAT_MS.frenzy, applyAt: 'start', banner: { text, kind: 'info' } })
+        break
+      }
+      case 'FrenzyEnded':
+        if (ev.vented > 0) push({ kind: 'fury', events: [se], baseMs: BEAT_MS.force, applyAt: 'start', pops: [{ modelId: ev.beastId, text: `vents ${ev.vented}`, kind: 'info' }] })
+        else pending.push(se)
+        break
+      case 'DamageTransferred':
+        push({ kind: 'transfer', events: [se], baseMs: BEAT_MS.transfer, applyAt: 'start', pops: [
+          { modelId: ev.warlockId, text: ev.overflow > 0 ? `moves ${ev.absorbed}, ${ev.overflow} stay` : `moves ${ev.absorbed}`, kind: 'info' },
+          { modelId: ev.beastId, text: `takes ${ev.absorbed}`, kind: 'info' },
+        ] })
+        break
+      case 'AspectCrippled':
+        push({ kind: 'damage', events: [se], baseMs: BEAT_MS.aspect, applyAt: 'start', pops: [{ modelId: ev.modelId, text: `${ASPECT_WORD[ev.aspect]} crippled`, kind: 'crit' }] })
+        break
+      case 'AspectRestored':
+        push({ kind: 'damage', events: [se], baseMs: BEAT_MS.aspect, applyAt: 'start', pops: [{ modelId: ev.modelId, text: `${ASPECT_WORD[ev.aspect]} restored`, kind: 'heal' }] })
+        break
+      case 'BeastWild':
+        push({ kind: 'fury', events: [se], baseMs: BEAT_MS.wild, applyAt: 'start', pops: [{ modelId: ev.modelId, text: 'Wild!', kind: 'crit' }] })
+        break
+      case 'BeastControlTaken':
+        push({ kind: 'fury', events: [se], baseMs: BEAT_MS.wild, applyAt: 'start', pops: [{ modelId: ev.modelId, text: 'Under control', kind: 'heal' }] })
         break
       case 'RoundStarted':
         push({ kind: 'banner', events: [se], baseMs: BEAT_MS.round, applyAt: 'start', banner: { text: `Round ${ev.round}`, kind: 'round' } })

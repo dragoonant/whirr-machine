@@ -3,8 +3,10 @@ import type { GameState, ModelState } from '../../engine/index'
 import { game, modelName, uiActions, usePresentedState, usePrompt, usePromptLegal, useSelectedId } from '../contract'
 import './hud.css'
 import { groupActions, type ActionGroups, type Button } from './activationView'
-import { niceName, typeWord } from './format'
-import { FocusPips, StatRow, WeaponList, Conditions } from './ModelBits'
+import { niceName } from './format'
+import { StatRow, WeaponList, Conditions } from './ModelBits'
+import { BattlegroupStrip, ResourcePips } from './fury/FuryPips'
+import { kindWord } from './fury/furyView'
 
 function Btn({ b }: { b: Button }) {
   return (
@@ -15,7 +17,7 @@ function Btn({ b }: { b: Button }) {
       onFocus={() => b.hoverId && uiActions.hover(b.hoverId)} onBlur={() => b.hoverId && uiActions.hover(null)}
     >
       <span className="btn-label">{b.label}</span>
-      {b.cost && <span className="btn-cost">{b.cost}</span>}
+      {b.cost && <span className={`btn-cost${b.forced ? ' btn-forced' : ''}`}>{b.cost}</span>}
       {b.note && <span className="btn-note">{b.note}</span>}
     </button>
   )
@@ -48,15 +50,26 @@ function Actions({ g }: { g: ActionGroups }) {
   )
 }
 
+/** Warlock and warbeast options: rile, shed, heal, take control, animi. Costs in fury; a forced cost is fury the beast gains. */
+function FuryActions({ g }: { g: ActionGroups }) {
+  if (!g.fury.length && !g.forceNote) return null
+  return (
+    <Section title="Fury and warbeasts" testid="act-fury">
+      {g.forceNote && <p className="hud-dim" data-testid="act-force-note">{g.forceNote}</p>}
+      <div className="pbtns pbtns-wrap">{g.fury.map((b) => <Btn key={b.id} b={b} />)}</div>
+    </Section>
+  )
+}
+
 function Spells({ g }: { g: ActionGroups }) {
   if (!g.spells.length && !g.feat && !g.featSpent) return null
   return (
     <Section title="Spells and feat" testid="act-spells">
       {g.spells.map((s) => (
         <div key={s.spellId} className={`spell${s.casts.length ? '' : ' spell-off'}`} data-testid={`act-spell-${s.spellId}`}>
-          <div className="spell-head"><b>{s.name}</b> <span className="spell-cost">{s.cost} focus</span>{s.reach && <span className="hud-dim">{` · range ${s.reach}`}</span>}</div>
+          <div className="spell-head"><b>{s.name}</b> <span className="spell-cost">{s.cost} {s.unit}</span>{s.reach && <span className="hud-dim">{` · range ${s.reach}`}</span>}</div>
           {s.text && <p className="spell-text">{s.text}</p>}
-          <div className="pbtns pbtns-wrap">{s.casts.map((c) => <Btn key={c.id} b={{ ...c, cost: c.cost ?? `${s.cost} focus` }} />)}</div>
+          <div className="pbtns pbtns-wrap">{s.casts.map((c) => <Btn key={c.id} b={{ ...c, cost: c.cost ?? `${s.cost} ${s.unit}` }} />)}</div>
         </div>
       ))}
       {g.feat && <div className="pbtns"><Btn b={g.feat} /></div>}
@@ -70,12 +83,14 @@ function Body({ state, model, g }: { state: GameState; model: ModelState; g: Act
     <>
       <header className="card-head">
         <h3 className="hud-h card-name">{modelName(state, model.id)}</h3>
-        <span className="hud-dim">{typeWord(model.type)}{model.activated ? ' — activated' : ''}{model.life !== 'active' ? ` — ${model.life}` : ''}</span>
-        <FocusPips model={model} />
+        <span className="hud-dim">{kindWord(model)}{model.activated ? ' — activated' : ''}{model.life !== 'active' ? ` — ${model.life}` : ''}</span>
+        <ResourcePips state={state} model={model} />
       </header>
       <StatRow state={state} model={model} />
+      <BattlegroupStrip state={state} model={model} />
       <Conditions state={state} model={model} />
       <Actions g={g} />
+      <FuryActions g={g} />
       <Spells g={g} />
       <Section title="Weapons" testid="act-weapons"><WeaponList state={state} model={model} /></Section>
     </>

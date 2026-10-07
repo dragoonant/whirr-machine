@@ -22,7 +22,34 @@ export interface AttackProfile {
 
 /** Per-decision memo. */
 export interface Ctx { s: GameState; memo: Map<string, AttackProfile | null>; seqMemo: Map<string, number> }
-export const newCtx = (s: GameState): Ctx => ({ s, memo: new Map(), seqMemo: new Map() })
+let worldState: GameState | null = null
+export const newCtx = (s: GameState): Ctx => { worldState = s; return { s, memo: new Map(), seqMemo: new Map() } }
+
+/**
+ * Transfer model for a warlock (81 F8): each fury it holds moves one damage instance to a battlegroup beast that has room
+ * (fury below its FURY) and boxes to take it. Like Power Field, but the reduction is the beast's unmarked boxes, not 5.
+ */
+const transferMemo = new WeakMap<GameState, Map<string, { n: number; absorb: number }>>()
+export function transferModel(t: ModelState): { n: number; absorb: number } {
+  const s = worldState
+  if (!s || t.type !== 'leader' || t.fury === undefined) return { n: 0, absorb: 0 }
+  let m = transferMemo.get(s)
+  if (!m) { m = new Map(); transferMemo.set(s, m) }
+  const hit = m.get(t.id)
+  if (hit) return hit
+  let n = 0, absorb = 0
+  for (const b of Object.values(s.models)) {
+    if (b.type !== 'beast' || b.controllerId !== t.id || b.wild || b.offTable || b.life !== 'active') continue
+    let fi
+    try { fi = query.fury(s, b.id) } catch { continue }
+    if (!fi.inCtrl || fi.fury >= fi.cap) continue
+    n++
+    absorb = Math.max(absorb, boxesLeft(b))
+  }
+  const out = { n, absorb }
+  m.set(t.id, out)
+  return out
+}
 
 const round1 = (v: number): number => Math.round(v * 4) / 4
 
@@ -100,8 +127,8 @@ export function planSequence(ctx: Ctx, s: GameState, a: ModelState, t: ModelStat
     }
   }
   if (!items.length) return null
-  const canFocus = opts.canFocus ?? (a.type === 'warEngine' || a.type === 'leader')
-  let focus = canFocus ? Math.max(0, opts.focus ?? a.focus) : 0
+  const canFocus = opts.canFocus ?? (a.type === 'warEngine' || a.type === 'leader' || a.type === 'beast')
+  let focus = canFocus ? Math.max(0, opts.focus ?? (a.type === 'beast' ? 0 : a.focus)) : 0
   let used = 0
   const ev = (it: { prof: AttackProfile; boostHit: boolean; boostDmg: boolean }): number =>
     (it.boostHit ? it.prof.pB : it.prof.p) * expected(it.boostDmg ? it.prof.onHitB : (it.prof.autoBoostDamage ? it.prof.onHitB : damageDist(it.prof.k, it.prof.x)))
@@ -150,6 +177,11 @@ export function planSequence(ctx: Ctx, s: GameState, a: ModelState, t: ModelStat
 
 /** pKill of a target from a set of sequences (its Power Field reserve and Tough applied). */
 export function killChance(t: ModelState, seqs: SeqAttack[], pfOverride?: number): number {
+  if (t.type === 'leader' && t.fury !== undefined) {
+    const tm = transferModel(t)
+    const pfw = tm.n > 0 ? Math.min(8, pfOverride ?? t.fury) : 0
+    return pKillSequence(seqs, boxesLeft(t), pfw, hasAbility(t, 'core.a.tough'), Math.max(1, tm.absorb))
+  }
   const pf = hasAbility(t, 'core.a.power-field') && !t.crippled.includes('C') ? (pfOverride ?? t.focus) : 0
   return pKillSequence(seqs, boxesLeft(t), Math.min(8, pf), hasAbility(t, 'core.a.tough'))
 }

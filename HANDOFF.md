@@ -1,11 +1,23 @@
 # Handoff
 
-**Current state:** M3 to M8 are done (M4 AI, M5 figures, M6 audio, M7 polish, M8 battlefields). The playable vertical slice is on Pages (https://dragoonant.github.io/whirr-machine/):
-pick Cygnar or Khador, a scenario (Ashwall Divide or the Quick Start demo) and an animation speed, read How to Play
-(9 tabs), then play a whole game against the sensible random bot: roll-off, edges, deployment, Prey, focus
-allocation, activations (advance, run, charge, aim), ranged and melee attacks with boosts, Powerful Attack, spells,
-feats, triggered moves (Reposition, Avenging Force), scoring and the game-over screen. The bottom dock always says
-what the game is waiting for, with the engine's numbers. `npm run e2e` plays Cygnar to round 3 through UI clicks.
+**Current state:** M3 to M9 are done. The game is on Pages (https://dragoonant.github.io/whirr-machine/): pick one of
+**six factions** (Cygnar, Khador, Trollbloods, Circle Orboros, Cryx, Protectorate of Menoth), an opponent army (any
+of the six or Random), the bot strength, a scenario, a battlefield and an animation speed, then play a whole game
+against the bot: roll-off, deployment, focus or fury, activations, attacks, spells, feats, scoring and game over.
+
+**M9 factions (done):** Trollbloods and Circle are led by warlocks: fury, leeching, forcing warbeasts, frenzy,
+damage transfer, life spirals (spec `docs/spec/81-warlocks-fury.md`). Cryx and Menoth are warcaster armies with
+soul and corpse tokens, Fire and their own feats. Sides take faction colours. The warlock UI (flame pips, battlegroup
+strip, spiral card, leech/transfer/shed forms, frenzy flash) is in `src/client/ui/fury/`; the bot plays fury
+(`src/ai/fury.ts`). The new figures are procedural until their GLBs are listed in
+`public/assets/models/manifest.json`. See STATUS.md "Factions (M9)" and `e2e-out/m9-*.png`.
+
+**Owner: verify the M9 stats in the app.** No MK4 card for the four new factions could be read from the app, so every
+stat, cost, spell and rule is marked U-cd. Open each starter in the official app and compare: Gunnbjorn, Dire Troll
+Bomber, Braylen, Highwaymen; Tanith, Pureblood Warpwolf, Lord of the Feast, Tharn Ravagers; Nekane, Hades,
+Chatterbane, The Furies; Feora, Crusader, Valeria, Pyrrhus, Defenders. Then read the M9 RULINGs in
+`docs/needs-rules-check.md` ("M9 factions" section: starter box choices, unit sizes, box counts, base sizes, spiral
+aspects, the Menoth profiles copied from older ones) and name any to change.
 
 **M4 AI (done):** easy/normal utility bot tiers in `src/ai/` (start screen default Normal), slam/trample and exact previews in the engine; normal beat random 20/20 (`npm run bench:ai -- --games 20 --seed 1`).
 
@@ -29,7 +41,7 @@ The trench and the ash flats are procedural now (no GLB). Ground mats are rebuil
 `art/board-textures/gen.py` (Hunyuan venv python: numpy, scipy, Pillow; bases in `%TEMP%/ph` from `fetch.py`).
 
 **Next, in order:**
-1. **Owner veto of the terrain pieces** (above), then the **owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
+1. **Owner check of the M9 stats** (above), the **owner veto of the terrain pieces** (above), then the **owner playtest.** Play a few games on Pages (desktop browser) and list what is confusing, slow or wrong. Fix the
    top items before new features. For repeatable bug reports, add `?seed=<word>` to the URL before Start.
 2. **Owner veto of the figure concept picks.** The candidates for each figure are in
    `C:/Users/antho/Hunyuan3D-2/outputs/wm-<slug>/concepts/` (`s0.png`..`s5.png` plus `sheet.png`). Name any figure

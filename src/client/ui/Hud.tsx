@@ -7,6 +7,7 @@ import { ActivationPanel } from './ActivationPanel'
 import { EventFeed } from './EventFeed'
 import { GameOver } from './GameOver'
 import { GridCard } from './GridCard'
+import { FrenzyFlash } from './fury/FrenzyFlash'
 import { PromptDock } from './Prompt'
 import { TopBar } from './TopBar'
 
@@ -60,6 +61,7 @@ export function Hud({ onExit }: { onExit?: () => void }) {
         <DiceLog />
         <DiceTray />
       </div>
+      <FrenzyFlash />
       <PromptDock />
       <Toast />
       <GameOver onExit={onExit} />

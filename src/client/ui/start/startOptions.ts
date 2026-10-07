@@ -8,10 +8,10 @@ export interface ArmyCard { profileId: Id; name: string; role: string; count: nu
 export interface SideChoice { listId: Id; factionId: Id; factionName: string; listName: string; points: number; models: ArmyCard[] }
 export interface ScenarioChoice { id: Id; name: string; text: string }
 
-type Rec = { id: string; recordType?: string; name?: string; faction?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
+type Rec = { id: string; recordType?: string; name?: string; faction?: string; resource?: string; points?: number; leader?: string; entries?: { profile: string; size?: number }[]; type?: string; text?: string; levels?: string[] }
 
 const ROLE_WORDS: Record<string, string> = {
-  leader: 'Warcaster', warEngine: 'War-engine', solo: 'Solo', unit: 'Unit', trooper: 'Trooper', battleEngine: 'Battle engine',
+  leader: 'Warcaster', warEngine: 'War-engine', beast: 'Warbeast', solo: 'Solo', unit: 'Unit', trooper: 'Trooper', battleEngine: 'Battle engine',
 }
 
 const records = (): Rec[] => Object.values(loadBundle().byId as Record<string, Rec>)
@@ -25,7 +25,8 @@ export function sideChoices(): SideChoice[] {
     const models: ArmyCard[] = [r.leader, ...(r.entries ?? []).map((e) => e.profile)].map((pid, i) => {
       const p = byId(pid)
       const size = i === 0 ? 1 : (r.entries?.[i - 1]?.size ?? 1)
-      return { profileId: pid, name: (p?.name ?? pid).replace(/\s*\(.*\)$/, ''), role: ROLE_WORDS[p?.type ?? ''] ?? 'Model', count: size }
+      const role = p?.type === 'leader' && p.resource === 'fury' ? 'Warlock' : (ROLE_WORDS[p?.type ?? ''] ?? 'Model')
+      return { profileId: pid, name: (p?.name ?? pid).replace(/\s*\(.*\)$/, ''), role, count: size }
     })
     // a leader that is also listed as an entry would be doubled: drop repeats
     const seen = new Set<string>()
@@ -51,25 +52,39 @@ export const BOT_TIERS = [
 export type BotTierChoice = (typeof BOT_TIERS)[number]['id']
 export const DEFAULT_BOT_TIER: BotTierChoice = 'normal'
 
-export interface StartChoices { listId: Id; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice; board?: Id | 'random' }
+export interface StartChoices { listId: Id; /** Opponent's army: a list id, or 'random' / omitted for a random pick (any faction, mirrors allowed). */ opponentListId?: Id | 'random'; scenario: Id; speed?: number; seed?: string; tier?: BotTierChoice; board?: Id | 'random' }
 
 /** Battlefield choices for the start screen: Random first, then each board's display name. */
 export const battlefieldChoices = (): { id: Id | 'random'; name: string }[] => [{ id: 'random', name: 'Random' }, ...BOARDS.map((b) => ({ id: b.id, name: b.name }))]
 
 const makeSeed = (): string => Math.random().toString(36).slice(2, 10)
 
-/** The side the player picked is A (human); the first other faction's list is B (bot). */
+/** Small string hash (cyrb-style) so a seeded game picks the same random opponent every time. */
+function hashSeed(str: string): number {
+  let h = 1779033703 ^ str.length
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19) }
+  return (Math.imul(h ^ (h >>> 16), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)) >>> 0
+}
+
+/** The opponent's list: the one named, else a random one from every side (same faction as the player's allowed). */
+export function pickOpponent(sides: SideChoice[], opponentListId: Id | 'random' | undefined, seed: string): SideChoice | undefined {
+  const named = opponentListId && opponentListId !== 'random' ? sides.find((s) => s.listId === opponentListId) : undefined
+  return named ?? sides[hashSeed(seed + ':opponent') % Math.max(1, sides.length)]
+}
+
+/** The side the player picked is A (human); B (bot) is the chosen army, or a random one by default. */
 export function buildNewGame(choices: StartChoices, sides = sideChoices()): NewGameOptions | null {
   const mine = sides.find((s) => s.listId === choices.listId)
   if (!mine) return null
-  const theirs = sides.find((s) => s.factionId !== mine.factionId) ?? sides.find((s) => s.listId !== mine.listId) ?? mine
+  // the seed is made here (not in the engine call) so the battlefield pick and the game share it: ?seed=X gives the same table
+  const seed = choices.seed ?? makeSeed()
+  const theirs = pickOpponent(sides, choices.opponentListId, seed) ?? mine
   return {
     scenario: choices.scenario,
     lists: { A: mine.listId, B: theirs.listId },
     controllers: { A: 'human', B: 'bot' },
     bot: { tier: choices.tier ?? DEFAULT_BOT_TIER },
-    // the seed is made here (not in the engine call) so the battlefield pick and the game share it: ?seed=X gives the same table
-    seed: choices.seed ?? makeSeed(),
+    seed,
     board: choices.board ?? 'random',
   }
 }

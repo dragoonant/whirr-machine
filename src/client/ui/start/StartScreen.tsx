@@ -26,6 +26,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
   const [listId, setListId] = useState(sides[0]?.listId ?? '')
   const [scenario, setScenario] = useState(scenarios[0]?.id ?? '')
   const [error, setError] = useState<string | null>(null)
+  const [opponent, setOpponent] = useState<string>('random')
   const [tier, setTier] = useState<BotTierChoice>(BOT_TIERS[0].id)
   const side = sides.find((s) => s.listId === listId)
   const scn = scenarios.find((s) => s.id === scenario)
@@ -38,7 +39,7 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
     // ?seed= gives a repeatable game (tests, bug reports)
     const seed = new URLSearchParams(location.search).get('seed') ?? undefined
     const urlBoard = boardFromUrl() // ?board= beats the selector
-    const opts = buildNewGame({ listId, scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
+    const opts = buildNewGame({ listId, opponentListId: opponent, scenario, tier, board: urlBoard ?? board, ...(seed ? { seed } : {}) }, sides)
     if (!opts) { setError('Pick a side first.'); return }
     setError(onStart(opts))
   }
@@ -90,6 +91,12 @@ export function StartScreen({ onStart, onContinue, continueLabel }: StartScreenP
           <label>Opponent
             <select data-testid="start-opponent" defaultValue={BOT_TIERS[0].id} onChange={(e) => setTier(e.target.value as BotTierChoice)}>
               {BOT_TIERS.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
+            </select>
+          </label>
+          <label>Opponent army
+            <select data-testid="start-opponent-army" value={opponent} onChange={(e) => setOpponent(e.target.value)}>
+              <option value="random">Random army</option>
+              {sides.map((s) => <option key={s.listId} value={s.listId}>{s.factionName}: {s.listName}</option>)}
             </select>
           </label>
           <p className="start-note" data-testid="start-opponent-note">{BOT_TIERS.find((b) => b.id === tier)?.note}</p>

@@ -21,6 +21,10 @@ export const live = (m: ModelState | undefined): m is ModelState => !!m && !m.of
 export const modelsOf = (s: GameState, p: PlayerId): ModelState[] => Object.values(s.models).filter((m) => m.owner === p && live(m))
 export const enemiesOf = (s: GameState, p: PlayerId): ModelState[] => modelsOf(s, other(p))
 export const leaderOf = (s: GameState, p: PlayerId): ModelState | undefined => s.models[s.players[p].leaderId]
+/** The pool a model spends from: fury for warlocks, focus for everything else (beasts hold fury but are forced, not spent from). */
+export const resourceOf = (m: ModelState): number => (m.type === 'leader' && m.fury !== undefined ? m.fury : m.focus)
+export const isWarlock = (m: ModelState): boolean => m.type === 'leader' && m.fury !== undefined
+export const isBeast = (m: ModelState): boolean => m.type === 'beast' && m.fury !== undefined
 export const edgeDist = (s: GameState, a: ModelId, b: ModelId | Vec2): number => query.distance(s, a, b)
 /** Edge-to-edge distance if model `a` stood at `pa` and `b` at `pb` (default: where it stands). */
 export function edgeDistAt(a: ModelState, pa: Vec2, b: ModelState, pb: Vec2 = b.pos): number {

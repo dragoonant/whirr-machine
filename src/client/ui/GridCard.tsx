@@ -3,9 +3,12 @@ import type { ModelState } from '../../engine/index'
 import { modelName, useEventFeed, useHoverId, usePresentedState, useSelectedId } from '../contract'
 import './hud.css'
 import { dataText, profileOf } from './data'
-import { niceName, typeWord } from './format'
+import { niceName } from './format'
 import { cardDamage, lastDamageKey, systemsOf, type BoxView } from './gridView'
-import { Conditions, FocusPips, StatRow, WeaponList } from './ModelBits'
+import { Conditions, StatRow, WeaponList } from './ModelBits'
+import { BattlegroupStrip, ResourcePips } from './fury/FuryPips'
+import { kindWord } from './fury/furyView'
+import { SpiralCard } from './fury/SpiralCard'
 
 const LIFE_WORD: Record<ModelState['life'], string> = { active: '', disabled: 'Down', boxed: 'Destroyed', destroyed: 'Destroyed' }
 
@@ -31,14 +34,17 @@ export function GridCardFor({ model }: { model: ModelState }) {
   const p = profileOf(model)
   const abilities = p?.abilities ?? []
   const life = LIFE_WORD[model.life]
+  const spiral = model.type === 'beast' || (p?.damage as { track?: string } | undefined)?.track === 'spiral'
   return (
     <section className="hud-card card" data-testid={`card-${model.id}`} data-life={model.life}>
       <header className="card-head">
         <h3 className="hud-h card-name">{modelName(state, model.id)}</h3>
-        <span className="hud-dim">{typeWord(model.type)}{life ? ` — ${life}` : ''}</span>
-        <FocusPips model={model} />
+        <span className="hud-dim">{kindWord(model)}{life ? ` — ${life}` : ''}</span>
+        <ResourcePips state={state} model={model} />
       </header>
       <StatRow state={state} model={model} />
+      <BattlegroupStrip state={state} model={model} />
+      {spiral ? <SpiralCard state={state} model={model} /> : (
       <div className="card-damage" data-testid={`card-grid-${model.id}`} data-track={cd.track}>
         {cd.track === 'single' ? (
           <div className="boxrow" aria-label={`${cd.filled} of ${cd.total} boxes filled`}>
@@ -58,6 +64,7 @@ export function GridCardFor({ model }: { model: ModelState }) {
         )}
         <div className="hud-dim card-count">{cd.filled}/{cd.total} boxes</div>
       </div>
+      )}
       {systems.length > 0 && (
         <ul className="systems" data-testid={`card-systems-${model.id}`}>
           {systems.map((s) => (

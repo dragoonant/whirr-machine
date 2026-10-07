@@ -6,6 +6,7 @@ import type { GameState } from '../../engine/index'
 import { getSettings, scaled } from '../store/settingsStore'
 import { addNarration, clearBanner, resetAnnouncements, showBanner, type NarrationLine } from './announceStore'
 import { playBeatAudio } from '../audio/beatAudio'
+import { furyFeedLine } from '../ui/fury/feedLines'
 import { applyEvent } from './apply'
 import { buildBeats, type Beat, type SeqEvent } from './beats'
 import { modelName, narrate, playerName, rollLabel, rollVerdict } from './labels'
@@ -89,7 +90,7 @@ function startBeat(beat: Beat, dur: number): void {
   const now = clock.now()
   for (const se of beat.events) {
     draft.feed.push({ seq: se.seq, event: se.event })
-    const line = narrate(cur.state, se.event)
+    const line = narrate(cur.state, se.event) ?? furyFeedLine(cur.state, se.event)?.text ?? null
     if (line) draft.lines.push({ seq: se.seq, text: line })
   }
   if (!fastForward && getSettings().speed > 0) playBeatAudio(beat.events.map((se) => se.event), cur.state)

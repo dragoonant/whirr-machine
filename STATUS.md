@@ -43,9 +43,43 @@
 - E2E (`npm run e2e`, vite preview at /whirr-machine/): `tests/e2e/play.spec.ts` plays Cygnar vs the bot through UI
   clicks to round 3 (How to Play tabs checked, screenshots in `e2e-out/`), and Khador on the Quick Start demo for a round
   with attacks made by clicking the enemy. Shared click policy in `tests/e2e/policy.ts`.
-- Tests: 285 unit tests in 39 files (M8 adds terrain, boards and procedural-piece tests); earlier count: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
+- Tests: 619 unit tests in 61 files (M9 adds fury engine, faction data, AI fury, fury UI, picker and figure tests); M8 count 285 in 39; earlier count: 234 unit tests in 33 files (engine, data, AI, client store/board/HUD/start/prompts/figures/audio/M7 UI), including
   `tests/engine/golden.test.ts` (GOLD-001: the QS worked turns replayed through `step` with forced dice, 18 steps, all passing) and `tests/engine/index.test.ts` (API, invariants, a short sim).
 - Starter data in `src/data/`; `npm run validate:data` checks the code-hook registry directly.
+
+## Factions (M9)
+- **Army picker** (start screen "Your side"): six factions, each with one starter list at recon level; the card lists
+  the leader (Warcaster or Warlock), warjacks or warbeasts, solos and units. "Opponent army" picks any of the six (or
+  Random, mirrors allowed). `?lists=trl,cry&control=bot,bot` also takes faction ids. Screenshot `e2e-out/m9-picker.png`.
+- **Faction colours:** rings, zones, procedural figures and objective control take each faction's palette
+  (`presentation/labels.ts` `sideColoursFor`); a mirror match gives side B a contrasting palette.
+
+| Faction | Starter list (pts) | Leader | Rest |
+|---|---|---|---|
+| Cygnar | Quick Start Cygnar (30) | Captain Caine (warcaster) | Deuce, Falk, Black 13th x3 |
+| Khador | Quick Start Khador (30) | Vilkul (warcaster) | Razor, Lazarenko, Hounds x3 |
+| Trollbloods | Trollbloods Starter (28) | Captain Gunnbjorn (**warlock**) | Dire Troll Bomber, Braylen, Highwaymen x3 |
+| Circle Orboros | Circle Orboros Starter (29) | Tanith (**warlock**) | Pureblood Warpwolf, Lord of the Feast, Tharn Ravagers x3 |
+| Cryx | Necrofactorium Command (30) | Nekane (warcaster) | Hades, Chatterbane, The Furies x3 |
+| Protectorate of Menoth | Defenders of the Flame Starter (30) | Feora (warcaster) | Crusader, Valeria, Pyrrhus, Defenders x5 |
+
+- **Fury (engine, spec `docs/spec/81-warlocks-fury.md`):** warlocks hold fury (start at ARC), leech in Control, spend
+  it on boosts, spells, upkeep and extra attacks; warbeasts are forced (run, charge, boost, power attacks, animus) and
+  gain fury, threshold checks and frenzy, damage transfer, rile and shed, life spirals with crippled aspects, soul and
+  corpse tokens (Cryx, Circle).
+- **Warlock UI** (`src/client/ui/fury/`): flame pips on cards and over figures, battlegroup strip with frenzy odds,
+  life-spiral card with aspects, leech form (per-beast steppers, frenzy odds after the leech, take-from-self warning),
+  transfer and shed forms, forced costs shown as fury on the beast, frenzy flash, fury feed lines, a How to Play tab
+  "Warlocks and fury". Screenshot `e2e-out/m9-fury.png` (leech form, round 2).
+- **AI fury** (`src/ai/fury.ts`): leech plan by frenzy risk and reserve, forcing priced by frenzy cost, transfers,
+  shed/rile wrap-up; easy keeps a point of room on each beast. `npm run bench:ai -- --xlist <list> --ylist <list>`
+  tallies fury events per side.
+- **Figures:** the 21 new models map to `wm-<slug>` GLBs that switch on when listed in
+  `public/assets/models/manifest.json`; until then they draw as refined procedural archetypes (beasts, warpwolves,
+  bone-jacks, robed crusader jacks, wraith Furies). Placeholders: every M9 figure is procedural today, and every M9
+  stat stays "U-cd" (unverified against the app; see the M9 RULINGs in `docs/needs-rules-check.md`).
+- `tests/e2e/factions.spec.ts`: the picker shot; each new faction bot vs bot (Normal) against a random other faction
+  to round 2 with no page errors (`e2e-out/m9-<trl|cir|cry|men>.png`); a human Trollbloods game to the leech form.
 
 ## Figures and VFX (M5)
 - Eight Hunyuan SD figure GLBs in `public/assets/models/` (wm-caine, wm-falk, wm-black13 for all three Black 13th,
@@ -115,6 +149,7 @@
 | `30-figures`, `40-ai`, `50-client`, `60-testing` | done |
 | `13-golden-first-turn` | done; GOLD-001 passes with 3 recorded deviations (R8.6 one upkeep per model, Take Down, see RULINGs) |
 | `factions/cygnar.md`, `factions/khador.md` | QS-2025 values marked; open: app version, spell stats, trooper box counts |
+| `81-warlocks-fury`, `factions/{trollbloods,circle,cryx,menoth}.md` | done (M9); every card value unverified, RULINGs in `docs/needs-rules-check.md` |
 
 ## Known gaps (engine)
 - (M4 closed: slam and trample are Normal Movement options per R7.12/R7.14; `query.attackPreview` takes `attackType`
@@ -128,10 +163,10 @@
   `query.attackPreview` has no attackType option (engine change needed). Charge-attack previews do not pass
   `chargeAttack` (the client cannot tell a charge attack apart; the engine could infer it).
 - Movement is click-to-place (single waypoint); multi-waypoint paths need Shift-click. No drag yet.
-- Side colours are fixed by seat (A blue, B orange), not by faction. Left activation panel repeats some card stats.
+- Left activation panel repeats some card stats.
 - Game chunks total ~1.1 MB (three.js, board, figures); the start chunk is ~0.55 MB. At 1280 wide the side panels
   cover much of the board.
 - The army painter has no in-game control yet (gallery only).
 
-Next: owner veto of the terrain pieces (`art/terrain-sheets/*.png`; three flagged for a GPU redo in HANDOFF.md), owner
+Next: owner check of the M9 faction stats in the app, then owner veto of the terrain pieces (`art/terrain-sheets/*.png`; three flagged for a GPU redo in HANDOFF.md), owner
 playtest on Pages, and the figure concept veto. See HANDOFF.md.
