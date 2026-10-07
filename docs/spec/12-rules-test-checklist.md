@@ -410,6 +410,13 @@ the dice show 3 and 4.
 | FAC-CYG-010 | Decrepitation vs Razor (construct) → +1 damage die; vs Vilkul → none | cygnar.md |
 | FAC-CYG-011 | Blast attack type → the cannon shot is AOE 2, POW 12/6 | cygnar.md |
 | FAC-CYG-012 | Banish damages a Hound → it is placed completely within 1" of its spot; vs Vilkul (Leader) → no effect | cygnar.md |
+| FAC-CYG-013 | Smite (★Attack): the model hit is slammed d6" away, half if its base is larger, then knocked down | cygnar.md (M12 skirmish) |
+| FAC-CYG-013a | card values of the three new models | cygnar.md (M12 skirmish) |
+| FAC-CYG-014 | Repulsor Field: an enemy that hits an Assailer in melee is pushed 1" directly away from it | cygnar.md (M12 skirmish) |
+| FAC-CYG-015 | Plasma Nimbus: a Vane hit in melee may fry the attacker with a POW 10 electrical roll | cygnar.md (M12 skirmish) |
+| FAC-CYG-016 | Resistance: Electricity, Shield Wall and Critical Armor-Piercing on the new models | cygnar.md (M12 skirmish) |
+| FAC-CYG-017 | Shield Guard (Courser): a ranged direct hit on a friend within 3" lands on the Courser instead | cygnar.md (M12 skirmish) |
+| FAC-CYG-018 | Galvanic Capacitor: the Vanes pick distinct effects; Lightning Wreath gives a friend Electro Leap | cygnar.md (M12 skirmish) |
 | FAC-KHA-001 | Razor in Vilkul's battlegroup completely inside a forest → Stealth (Prowl via Field Marshal) | khador.md |
 | FAC-KHA-002 | Vilkul vs a target completely inside a forest → no concealment | khador.md |
 | FAC-KHA-003 | Hound B2B with Razor hit by a Critical Knockdown → not knocked down (Anchor) | khador.md |
@@ -419,6 +426,15 @@ the dice show 3 and 4.
 | FAC-KHA-007 | Volume Fire vs Deuce (50 mm) → +2 attack and damage | khador.md |
 | FAC-KHA-008 | Superiority on Razor → SPD 7, MAT 8, DEF 13; a Thunderbolt crit doesn't knock it down | khador.md |
 | FAC-KHA-009 | Avenging Force in play, Lazarenko damaged in the Cygnar turn → at the start of Khador Maintenance Razor advances 3" and makes one basic attack with no focus spending | khador.md |
+| FAC-KHA-020 | Accuracy: the Dire Wolf shoots at RAT 5 while its Head works and RAT 4 once the Head is crippled | khador.md (M12 skirmish) |
+| FAC-KHA-021 | Volley Fire: a Heavy Chain Gun attack roll against a warrior model is boosted for free and no boost is offered | khador.md (M12 skirmish) |
+| FAC-KHA-021b | Volley Fire is skipped against a battle engine (not a warrior model), and so is the Cannon (no such rule) | khador.md (M12 skirmish) |
+| FAC-KHA-022 | Sniper: a Sniper hit on a high-ARM warjack inflicts exactly 1 point instead of a roll that cannot beat ARM (loop seeds for a hit) | khador.md (M12 skirmish) |
+| FAC-KHA-023 | Sniper rule seams: 1 point replaces the roll on a one-box target or below 1 expected damage; Tough is denied on a ranged boxing | khador.md (M12 skirmish) |
+| FAC-KHA-024 | Magic Ability: an Arkanist offers Razor Wind as a star attack and resolves it as an arcane attack at AAT 4 | khador.md (M12 skirmish) |
+| FAC-KHA-025 | Empower: an Arkanist action gives the nearest-in-range warjack with the least focus 1 focus and ends its Disruption | khador.md (M12 skirmish) |
+| FAC-KHA-026 | Sigil of Power: the friendly unit nearest an enemy makes magical damage for the turn; others do not | khador.md (M12 skirmish) |
+| FAC-KHA-027 | Razor Wind critical: a crit on a warjack fills the unmarked boxes of the last column damaged; no crit, no fill | khador.md (M12 skirmish) |
 
 ## GOLD
 
@@ -600,3 +616,60 @@ Spec: `91-cards-steamroller-clock.md` part C.
 | CLK-013 | Continue restores both remaining times from `wm.save.<slot>.clock`, paused until the first decision shows | C.2 |
 | CLK-014 | Custom +30 s per turn: a player's pool gains 30 s when their turn ends | C.2 |
 | CLK-015 | E2E: `?clock=20&test=1`, `__clock.set('A', 500)` on the human's decision → "Out of time" banner, game-over screen names the clock | C.2 |
+
+
+## M12 Skirmish shared rules (SKC)
+
+| ID | Case | Ref |
+|---|---|---|
+| SKC-001 | a Wolf Rider (flag cavalry) rolls 3 dice on its charge attack, 2 on any other melee attack | 91 skirmish shared rules |
+| SKC-002 | the flag marker reaches the shared core ability; a model without the flag does not get it | 91 skirmish shared rules |
+| SKC-003 | Night Terrors keep their own Cavalry hook and are boosted exactly once (no double boost from the core one) | 91 skirmish shared rules |
+| SKC-004 | core.a.arc-node exists and flag-only records (Raptor, Revenger) get it | 91 skirmish shared rules |
+| SKC-005 | Feora may channel Conflagration through the Revenger in her CTRL (the channel option is offered) | 91 skirmish shared rules |
+| SKC-006 | a living enemy within 1" of a Wolf Rider takes -1 on its attack roll, once however many riders stand there | 91 skirmish shared rules |
+| SKC-007 | Annoyance does not touch constructs, the carrier\'s own side, or the carrier\'s own rolls | 91 skirmish shared rules |
+| SKC-008 | Ashen Veil: living enemies within 2" of a Revenger take -2; a crippled right arm switches it off; fire resistance ignores it | 91 skirmish shared rules |
+| SKC-009 | Wind Weaver: Cygnar models within 3" of the Vane resist blast while they stay there, not after they walk away | 91 skirmish shared rules |
+| SKC-010 | Sky Shaker: Circle Faction models within 3" of the Shaman resist blast, live, and models of another faction do not | 91 skirmish shared rules |
+| SKC-011 | an effect that carries magicalWeapons adds the magical damage type to weapon attacks, not to spells | 91 skirmish shared rules |
+| SKC-012 | a condition code only a faction registers (wholeUnit) is evaluated, an unknown one is false | 91 skirmish shared rules |
+| SKC-013 | a target 6" away is in reach of an RNG 8 gun, and out of reach (an automatic miss) once a Vane near it has used Wind Weaver | 91 skirmish shared rules |
+| SKC-014 | the penalty is for the Faction models near the carrier only: a model 10" away or of another faction keeps its full range | 91 skirmish shared rules |
+
+## M12 follow-ups: engine (SKF) and AI (AIF)
+
+| ID | Case | Ref |
+|---|---|---|
+| SKF-001 | the general targeted-action flag (needsTarget replaced by targetedSpec) | m12-followups |
+| SKF-002 | Khador Arkanists: Empower and Sigil of Power ask for a target | m12-followups |
+| SKF-003 | Storm Vanes: Lightning Wreath names its model, and a Vane uses one capacitor effect a turn (Galvanic Capacitor) | m12-followups |
+| SKF-004 | Cryx Initiates: Grim Returns and Empower are offered only when they can do something | m12-followups |
+| SKF-005 | Trollbloods Runebearer: Guidance names its model and the weapons it gives are magical | m12-followups |
+| SKF-006 | Polarity Field Generator: a construct cannot pick the unit as a charge or slam target | m12-followups |
+| SKF-007 | Warping Winds: the target list loses 3 RNG at a protected model | m12-followups |
+| SKF-008 | Insulated Cortex: this warjack cannot be disrupted | m12-followups |
+| SKF-009 | Shield Guard is general: any friendly model, ended by a crippled Head | m12-followups |
+| SKF-010 | solos name their Leader (setup gives them a controllerId) | m12-followups |
+| SKF-011 | Serenity is called from the Control Phase (before the leech) | m12-followups |
+| SKF-012 | Harmonious Exaltation costs 1 less on the next spell and is then spent | m12-followups |
+| SKF-013 | an animus with a range is offered with targets (Lucky Shot, Wraithbane) | m12-followups |
+| SKF-014 | a power attack needs no weapon: the Raptor (no melee weapon) may Headbutt | m12-followups |
+| SKF-015 | Assault: after a successful charge a Wolf Rider may shoot the charged model, ignoring Target in Melee | m12-followups |
+| SKF-016 | Unpredictable Movement: the rest of the unit is placed within 4", not 2 | m12-followups |
+| SKF-017 | Doppler Bark forbids run, charge, slam and trample for the round | m12-followups |
+| SKF-018 | Unyielding shows in the attack preview (+2 ARM against melee, not against shots) | m12-followups |
+| SKF-019 | an Incorporeal model takes no non-magical damage, and the preview says so | m12-followups |
+| SKF-020 | Ashen Veil gives its carrier concealment against ranged and arcane attacks | m12-followups |
+| SKF-021 | Razor Wind is a spray: it rolls AAT at every model along its line | m12-followups |
+| SKF-022 | the Kill Box chip needs the Kill Box in force (query.control reports killBoxActive) | m12-followups |
+| SKF-023 | tools/sim.ts: a destroyed Grunt may come back active only through Grim Returns | m12-followups |
+| SKF-024 | Righteous Intervention: arming it, and the reaction to a friendly death | m12-followups |
+| SKF-025 | Penance of the Corrupted: damage paid for focus in the allocation | m12-followups |
+| SKF-026 | Enliven lets the model advance its own SPD, not a flat 5" | m12-followups |
+| AIF-001 | a free boost (Cavalry on a charge) is not bought a second time | m12-followups, 40-ai |
+| AIF-002 | Incorporeal: threat from attackers that cannot hurt it is nothing | m12-followups, 40-ai |
+| AIF-003 | Warping Winds shortens the shots the AI expects against the protected model | m12-followups, 40-ai |
+| AIF-004 | targeted special actions are valued per target | m12-followups, 40-ai |
+| AIF-006 | the focus allocation uses Penance when a Vassal has boxes to spare | m12-followups, 40-ai |
+| AIF-007 | ai-bench list options: mirror and rotation | m12-followups, 40-ai |

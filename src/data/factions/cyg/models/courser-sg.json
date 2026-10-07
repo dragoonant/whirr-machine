@@ -53,6 +53,7 @@
   "cost": 6,
   "fa": 4,
   "figure": {
+    "slug": "wm-courser",
     "archetype": "lightEngine"
   },
   "verify": "Fixed build Shield Guard head (1) + Heavy Stormthrower (2) + Voltaic Punching Spike (3) = 6. Chassis, grid, option costs: CD app dump 2026-07-10, WA 2026-06-06, Jan and June 2026 changelogs. The Voltaic Blade POW is 10 in CD and 12 in WA (CD used). Base 40 from the WA light-warjack entry."

@@ -30,6 +30,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-krielstone-bearer",
     "archetype": "infantry"
   },
   "verify": "Card values agree in S1 and S10 (SPD 5 DEF 12 ARM 13, no weapon, no health track so 1 box, Tough, 40 mm base). The wiki page (S2, rev 2026-02-21) shows SPD 3 and ARM 14, an obvious placeholder, not used."

@@ -16,7 +16,8 @@ import { within } from '../measure'
 import { leechNeeded, raise, raiseGameOver, raiseLeech, raiseVent } from '../pending'
 import { afterDeaths } from '../scenario'
 import { runFrenzy } from './frenzy'
-import { resourcefulFree } from '../factions/trollbloods'
+import { resourcefulFree, serenityStep } from '../factions/trollbloods'
+import { penanceGivers, penanceTargets, type PenanceGiver } from '../factions/menoth'
 import { applyAmbush, raiseAmbush, validateAmbush } from '../ambush'
 import { applyApparition, raiseApparition, validateApparition } from '../factions/cryx'
 import type {
@@ -79,14 +80,79 @@ function withOptions(r: { state: GameState; pending: PendingDecision }, options:
   return { state: { ...r.state, pending }, pending }
 }
 
+// ---------- Penance of the Corrupted (menoth): damage paid for focus, while the Leader allocates ----------
+type PenanceEntry = NonNullable<AllocateFocusAction['penance']>[number]
+/** Carriers inside their Leader's CTRL that could pay, and the Faction warjacks in that CTRL that could take focus. */
+function penanceRoom(s: GameState, b: DataBundle, p: P): { givers: PenanceGiver[]; targets: ModelState[] } {
+  const givers = penanceGivers(s, b, p)
+  if (!givers.length) return { givers, targets: [] }
+  return { givers, targets: penanceTargets(s, b, givers[0]!.leaderId).filter((w) => canHoldFocus(s, w) && w.focus < focusCap(w)) }
+}
+/** A sample answer: after the Leader's own allocation, top each warjack up to 3 with damage, sparing every giver its last unmarked box. */
+function penanceSample(s: GameState, b: DataBundle, p: P, alloc: Record<ModelId, number>): PenanceEntry[] {
+  const { givers, targets } = penanceRoom(s, b, p)
+  const spare = new Map(givers.map((g) => [g.giverId, g.unmarked - 1]))
+  const out: PenanceEntry[] = []
+  for (const w of targets) {
+    let need = WAR_ENGINE_FOCUS_CAP - w.focus - (alloc[w.id] ?? 0)
+    for (const g of givers) {
+      if (need <= 0) break
+      const give = Math.min(need, spare.get(g.giverId) ?? 0)
+      if (give > 0) { out.push({ giverId: g.giverId, toId: w.id, points: give }); spare.set(g.giverId, (spare.get(g.giverId) ?? 0) - give); need -= give }
+    }
+  }
+  return out
+}
+function validatePenance(s: GameState, b: DataBundle, a: AllocateFocusAction): Rejection | null {
+  const { givers, targets } = penanceRoom(s, b, a.player)
+  const paid = new Map<ModelId, number>()
+  const into = new Map<ModelId, number>()
+  for (const e of a.penance ?? []) {
+    if (!Number.isInteger(e.points) || e.points < 1) return { code: 'E_BAD_PAYLOAD', message: 'penance points must be whole numbers >= 1' }
+    const g = givers.find((x) => x.giverId === e.giverId)
+    if (!g) return { code: 'E_TARGET_INVALID', message: `${e.giverId} cannot pay Penance now` }
+    const w = targets.find((x) => x.id === e.toId)
+    if (!w) return { code: 'E_TARGET_INVALID', message: `${e.toId} cannot take Penance focus` }
+    const spent = (paid.get(g.giverId) ?? 0) + e.points
+    if (spent > g.unmarked) return { code: 'E_NOT_AN_OPTION', message: `${g.giverId} has only ${g.unmarked} unmarked boxes` }
+    paid.set(g.giverId, spent)
+    const got = (into.get(w.id) ?? 0) + e.points
+    if (w.focus + (a.allocation[w.id] ?? 0) + got > WAR_ENGINE_FOCUS_CAP) return { code: 'E_FOCUS_CAP', message: `${w.id} would exceed ${WAR_ENGINE_FOCUS_CAP} focus` }
+    into.set(w.id, got)
+  }
+  return null
+}
+/** The giver takes the damage (it may die, Tough allowed), then the warjack gets the focus. */
+function payPenance(state: GameState, b: DataBundle, e: PenanceEntry): { state: GameState; events: GameEvent[] } {
+  let s = state
+  const events: GameEvent[] = []
+  const giver = s.models[e.giverId]!
+  const layouts = layoutsFor(profileOf(b, giver))
+  const ap = applyDamage(s, e.giverId, e.points, { layouts, source: 'other' })
+  s = ap.state; events.push(...ap.events)
+  if (s.models[e.giverId]!.life === 'disabled') {
+    const tough = (profileOf(b, giver).abilities as string[] | undefined)?.includes('core.a.tough') ?? false
+    const d = resolveDeath(s, e.giverId, { tough, layouts, cause: 'penance' })
+    s = d.state; events.push(...d.events)
+  }
+  const g = gainFocus(s, e.toId, e.points, 'gain', e.giverId)
+  return { state: g.state, events: [...events, ...g.events] }
+}
+
 function raiseAllocate(s: GameState, b: DataBundle, p: P): { state: GameState; pending: PendingDecision } {
   const targets = allocTargets(s, b, p).map((t) => ({ casterId: t.caster.id, modelId: t.to.id, focus: t.to.focus }))
-  const r = raise(s, { player: p, kind: 'allocateFocus', window: 'control.allocate', context: { data: { targets } }, canPass: true })
+  const pen = penanceRoom(s, b, p)
+  const penance = pen.givers.length && pen.targets.length ? { givers: pen.givers.map((g) => ({ giverId: g.giverId, unmarked: g.unmarked })), targets: pen.targets.map((w) => ({ modelId: w.id, focus: w.focus })) } : undefined
+  const r = raise(s, { player: p, kind: 'allocateFocus', window: 'control.allocate', context: { data: { targets, ...(penance ? { penance } : {}) } }, canPass: true })
   const id = r.pending.id
-  return withOptions(r, [
-    { id: 'default', label: 'Fill cohorts to 3', action: { type: 'allocateFocus', decisionId: id, player: p, allocation: defaultAllocation(s, b, p) } },
+  const alloc = defaultAllocation(s, b, p)
+  const options: DecisionOption[] = [
+    { id: 'default', label: 'Fill cohorts to 3', action: { type: 'allocateFocus', decisionId: id, player: p, allocation: alloc } },
     { id: 'none', label: 'Keep all focus', action: { type: 'allocateFocus', decisionId: id, player: p, allocation: {} } },
-  ])
+  ]
+  const sample = penance ? penanceSample(s, b, p, alloc) : []
+  if (sample.length) options.push({ id: 'penance', label: 'Fill cohorts to 3, the Vassals paying with damage for what the Leader cannot give', action: { type: 'allocateFocus', decisionId: id, player: p, allocation: alloc, penance: sample } })
+  return withOptions(r, options)
 }
 
 /** Resourceful (Trollbloods): keeping an upkeep on the caster or one of its own beasts costs nothing. */
@@ -131,6 +197,7 @@ export function runControl(state: GameState, b: DataBundle): ControlOut {
   const events: GameEvent[] = [{ type: 'PhaseChanged', phase: 'control', window: 'control.refill' }]
   const p = s.activePlayer
   const r = refillCasters(s, b, p); s = r.state; events.push(...r.events)
+  const sr = serenityStep(s, b, p); s = sr.state; events.push(...sr.events) // Serenity (Stone Bearers) calms a warbeast before the leech
   return continueControl(s, b, 'leech', events)
 }
 
@@ -183,7 +250,7 @@ export function continueControl(state: GameState, b: DataBundle, from: ControlSt
   if (from === 'start') {
     s = { ...s, window: 'control.allocate' }
     events.push({ type: 'WindowOpened', window: 'control.allocate' })
-    if (allocTargets(s, b, p).length > 0) {
+    if (allocTargets(s, b, p).length > 0 || penanceRoom(s, b, p).targets.length > 0) {
       const r = raiseAllocate(s, b, p)
       return { state: r.state, events, pending: r.pending }
     }
@@ -261,6 +328,8 @@ export function continueControl(state: GameState, b: DataBundle, from: ControlSt
 // ---------- validation and application of the answers ----------
 function validateAllocate(s: GameState, b: DataBundle, a: AllocateFocusAction): Rejection | null {
   const spent = new Map<ModelId, number>()
+  const pen = validatePenance(s, b, a)
+  if (pen) return pen
   for (const [id, n] of Object.entries(a.allocation)) {
     if (!Number.isInteger(n) || n < 0) return { code: 'E_BAD_PAYLOAD', message: 'allocation must be whole numbers >= 0' }
     if (n === 0) continue
@@ -384,6 +453,7 @@ export function answerControl(state: GameState, b: DataBundle, a: Action): Contr
   }
   if (kind === 'allocateFocus') {
     if (a.type === 'allocateFocus') {
+      for (const e of a.penance ?? []) { const r = payPenance(s, b, e); s = r.state; events.push(...r.events) }
       for (const [id, n] of Object.entries(a.allocation)) {
         if (n <= 0) continue
         const t = transferFocus(s, s.models[id]!.controllerId!, id, n, 'allocate'); s = t.state; events.push(...t.events)

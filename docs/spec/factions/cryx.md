@@ -102,14 +102,14 @@ Test ids `FAC-CRY-*` are new.
 | Soul Taker: Collector | `death.destroyed` | code `hook.soulTaker` (living enemy destroyed within 10 → nearest eligible taker +1 soul, cap 3; not from friendly attacks) | FAC-CRY-006 |
 | Shadow Gate | `attack.resolved` [A1:11] | when `{all:[hit, attackKind melee, isEnemy target]}`; cost 1 corpse or soul token; `{op:'place', dist:2}`; once per turn; optional | FAC-CRY-007 |
 | Soul Generator | `activation.start` | optional; code `hook.spendTokens` → `{op:'gainFocus', value:n}` (cap 3) | FAC-CRY-008 |
-| Soul Phase | `activation.start`, `movement.start`, `combat.choose` (own activation) | optional, cost 1 soul; `{op:'grantAbility', ability:'incorporeal'}` duration turn | FAC-CRY-009 |
+| Soul Phase | any-time self special action (before Normal Movement, at the Combat Action choice, between attacks) | optional, cost 1 soul; grants Incorporeal for the turn; refused while already Incorporeal | FAC-CRY-009 |
 | Unstoppable | passive | existing `unstoppable` movement flag | MOVE-0xx |
 | Ancillary Attack | `combat.chooseAttack` (★Action) | target friendly cohort RNG 3; `{op:'makeAttack', target:'target', basic:true}` on the cohort, out of its activation; once per turn per target | FAC-CRY-010 |
 | Enliven | ★Action + `attack.resolved` | grant effect on cohort (round); when it took damage from an enemy attack: `{op:'advance', dist:'SPD', direction:'any'}` then expire | FAC-CRY-011 |
 | Repair [d3+3] | ★Action | target friendly construct RNG 1; `{op:'heal', value:'d3+3'}` | FAC-CRY-012 |
 | Exhaust Fumes | `movement.end` (Normal Movement, advanced) | aura 3", other friendly models; grant concealment, duration round | FAC-CRY-013 |
 | Magic Ability | passive | ★Attacks/★Actions marked `magic: true` count as a spell cast (Banishing Ward-style immunity, "cast a spell" triggers) | FAC-CRY-014 |
-| Marionette | ★Attack (arcane) | arcane attack roll vs DEF, no damage; on hit apply effect (round) to the model/unit; the Furies' player may make one affected enemy model reroll one of its own attack or damage rolls, then expire (not offered yet: no reroll engine) | FAC-CRY-015 |
+| Marionette | ★Attack (arcane) | arcane attack roll vs DEF, no damage; on hit apply effect (round) to the model/unit; the Furies' player may make one affected enemy model reroll one of its own attack or damage rolls, then expire (built: the effect carries a `rerollRight`, and the core reroll decision serves it) | FAC-CRY-015 |
 | Power of Death | ★Action | aura 10" friendly undead; `{op:'modRoll', roll:'damage', value:2}` melee only, duration turn | FAC-CRY-016 |
 | Stygian Abyss | ★Attack (arcane) | POW 12 magical; on crit `{op:'applyCondition', condition:'blind'}` (new condition) | FAC-CRY-017 |
 | Mortal Fear | passive | aura 8" living enemies; `{op:'modRoll', roll:'damage', value:-2}` | FAC-CRY-018 |
@@ -229,9 +229,9 @@ green glow near 100° is left alone as an emissive).
 Marking name for the army painter: **`grave-lantern`** (an original sigil: a hooded lantern with three teardrop
 flames; no SFG iconography).
 
-## New mechanics needed
+## Mechanics the engine had to add (all built)
 
-Per STATUS.md the engine runs the Cygnar and Khador starters only; none of these exist today.
+This was the M9 build list. Every row below is built (`src/engine/factions/cryx.ts` and core).
 
 | Mechanic | Used by | Sketch |
 |---|---|---|
@@ -270,7 +270,7 @@ Per STATUS.md the engine runs the Cygnar and Khador starters only; none of these
 - RULING: Venom range | `SP10` spray from Nekane, using her AAT 7 for each model in the spray | spells use AAT for magic attacks
 - RULING: card values checked | every card value carries a source tag (cryx-sources.md); single-source values: Hades grid layout and Dual Attack (S1), Chatterbane base, Fury health and names (S2) | 2026-10-07 web audit; the official app itself was not read
 - RULING: Nekane spell rack | not modelled: she casts only her five card spells | MK4 lets a warcaster rack extra army spells (RB p101), but no reliable source gives her rack slot count (S6 says 3 on a copied entry) and the starter is played without racks, as the Quick Start does
-- RULING: Marionette | the Furies' player makes one affected enemy model reroll one of its own attack or damage rolls; still not offered (no reroll engine) | S1 and S2 word it that way; the 2026-10-06 text had it helping a friendly attacker
+- RULING: Marionette | the Furies' player makes one affected enemy model reroll one of its own attack or damage rolls, through the core reroll decision | S1 and S2 word it that way; the 2026-10-06 text had it helping a friendly attacker
 
 ## Skirmish (50 points): WP-D-cry (2026-10-07)
 
@@ -331,15 +331,14 @@ within 10" of Nekane while they are Incorporeal, through the existing aura.
 
 ### Open points handed to other packages
 
-- **Arc Node channelling is not live.** `spells.ts` looks for the ability id `core.a.arc-node`, which `core/abilities.json` does not define, so
-  the profile carries `cry.a.arc-node` (a `coreFlag arcNode`). WP-CORE: add `core.a.arc-node`, put it in `cry.raptor-arc` abilities, drop `cry.a.arc-node`.
-- **Targeted star Actions use a marker.** `needsTarget` in `phases/activation.ts` is true only for makeAttack, advance and `repair`; Empower
-  and Grim Returns carry a no-op `{op: 'advance', dist: 0}` node so core offers a chosen friendly target, then run their code hook. Replace
-  with a real "targeted" notion when core is next touched. Grim Returns is offered even when the unit has no destroyed Grunt (harmless).
-- **Headbutt needs a melee weapon.** `combatChoices` offers Headbutt only when the model has a melee weapon, so the Doomspitter Raptor has none.
-- **sim invariant.** `tools/sim.ts` flags `destroyed -> active`; Grim Returns emits `LifeStateChanged` with `cause: 'cry.a.grim-returns'` and must be allowed.
-- Faction `conditions` in a registry are not read by `evalCond` (only core code conditions are), so Finisher is a plugin and not a `when: {code}`.
-- Figures are not made: slugs `wm-night-terror`, `wm-initiate`, `wm-raptor` (procedural stand-ins draw until WP-FIG).
+- **Arc Node channelling is live.** Core defines `core.a.arc-node`; `cry.a.arc-node` (a `coreFlag arcNode`) reaches it through the flag marker, so
+  the Raptor can carry spells. The duplicate record can go whenever the data owner likes (harmless).
+- **Targeted star Actions** use the general targeted-action flag (`src/engine/targeted.ts`): Empower and Grim Returns name their model, and Grim Returns
+  is offered only when the unit has lost a Grunt.
+- **Headbutt** needs no weapon (MK4 power attacks), so the Doomspitter Raptor may make it.
+- **sim invariant.** `tools/sim.ts` lets a destroyed Grunt return to active only when it carries the Grim Returns effect.
+- Faction `conditions` in a registry are read by `evalCond`; Finisher stays a plugin because it changes damage dice.
+- Figures: the GLBs `wm-night-terror`, `wm-initiate` and `wm-raptor` exist; WP-FIG wires them.
 
 ### Sources used (Skirmish pass)
 

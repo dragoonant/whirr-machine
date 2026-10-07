@@ -18,6 +18,7 @@ export interface MoverInfo {
   aggressive?: boolean // Aggressive: run and charge cost no focus (cryx.md)
   blind?: boolean // Blind: no run, charge, slam or trample
   noAdvance?: boolean // Shadow Bind: cannot advance (no Normal Movement but forfeit and aim)
+  forbidMoves?: string[] // an effect that forbids run, charge, slam or trample (Doppler Bark)
   passIds?: ModelId[] // friendly models this mover may pass through (Precision Strike)
   ghostly?: boolean // Incorporeal / Warp: Ghostly: moves through models and terrain it can clear
   hasMelee?: boolean
@@ -69,8 +70,11 @@ export function movementOptions(
   const beastWhy = info.forceBlock === 'outOfCtrl' ? 'out of CTRL' : info.forceBlock === 'cap' ? 'at its FURY cap' : info.forceBlock === 'spirit' ? 'Spirit crippled' : 'cannot be forced'
   const canPay = info.aggressive || (info.beast ? !info.forceBlock : !info.warEngine || (m.focus >= 1 && !m.crippled.includes('C')))
   const standing = !!opts.standingUp || !!info.blind || !!info.noAdvance // blind: no run, charge, slam or trample; bound: none of them either
-  const mk = (option: MovementOption, maxDist: number, focusCost: number, ok: boolean, reason: string): OptionInfo =>
-    ({ option, maxDist, focusCost, allowed: ok, reason: ok ? undefined : reason })
+  const barred = (option: MovementOption): boolean => !!info.forbidMoves?.includes(option)
+  const mk = (option: MovementOption, maxDist: number, focusCost: number, ok0: boolean, reason: string): OptionInfo => {
+    const ok = ok0 && !barred(option)
+    return { option, maxDist, focusCost, allowed: ok, reason: ok ? undefined : barred(option) && ok0 ? 'an effect forbids it' : reason }
+  }
   const why = (fallback: string) => blocked ?? (engaged ? 'engaged' : noMove ? 'movement crippled' : fallback)
   return [
     mk('forfeit', 0, 0, true, ''),

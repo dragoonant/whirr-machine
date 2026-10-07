@@ -17,6 +17,7 @@ import { rollD3 } from './dice'
 import { circleAnimusCostForWarlock, circleSpellCost, ritesChannelers, vitalMagicKeep, vitalMagicOffer } from './factions/circle'
 import { wrathActive } from './factions/cryx'
 import { giftBlock, menothSpellEffect, stokeFreeVictim, teleportCheck, teleportSamples, useIllumination } from './factions/menoth'
+import { harmoniousDiscount, useHarmoniousExaltation } from './factions/trollbloods'
 import type {
   Cloud, DataBundle, DecisionOption, EffectDuration, GameState, Id, ModelId, ModelState, Rejection, StatMod, Vec2,
 } from './types'
@@ -96,12 +97,17 @@ export function forceExpire(state: GameState, b: DataBundle, effectIds: string[]
   return { state: s, events }
 }
 
-/** Spell COST for this caster: Rites of the Wurm discounts, Stoke the Pyre makes it free, Wrath pays it with damage. */
-function castCost(state: GameState, b: DataBundle, caster: ModelState, sp: Rec, a: CastSpellAction): { cost: number; stoke?: ModelId; wrath: boolean } {
+/**
+ * Spell COST for this caster: Rites of the Wurm discounts, Harmonious Exaltation takes 1 off, Stoke the Pyre makes it free, Wrath pays it with damage.
+ * `harmony` says the Harmonious Exaltation marker is on the caster: castSpell spends it once the cast is paid (it covers "the next spell", whatever it costs).
+ */
+function castCost(state: GameState, b: DataBundle, caster: ModelState, sp: Rec, a: CastSpellAction): { cost: number; stoke?: ModelId; wrath: boolean; harmony: boolean } {
   const base = sp.cost as number
   let cost = base
   if (a.animusOf) cost = circleAnimusCostForWarlock(state, b, caster.id, base)
   else cost = circleSpellCost(state, b, caster.id, a.spellId, base)
+  const harmony = harmoniousDiscount(state, caster.id) > 0
+  if (harmony) cost = Math.max(0, cost - harmoniousDiscount(state, caster.id))
   let stoke: ModelId | undefined
   if (cost > 0 && !isFuryModel(caster)) {
     const v = stokeFreeVictim(state, b, caster.id)
@@ -113,7 +119,7 @@ function castCost(state: GameState, b: DataBundle, caster: ModelState, sp: Rec, 
     // paying 1 damage instead of the focus: when the focus is short, or a dear spell while the caster has plenty of boxes
     if (caster.focus < cost || (cost >= 2 && unmarkedBoxes(caster.damage) >= 10)) wrath = true
   }
-  return { cost, stoke, wrath }
+  return { cost, stoke, wrath, harmony }
 }
 
 export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): SpellResult {
@@ -139,11 +145,13 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
   if (!isFuryModel(caster) && !cc.wrath && caster.focus < cost) return rej('E_INSUFFICIENT_FOCUS', `needs ${cost} focus`)
   if (isFuryModel(caster)) { const pb = payBlock(state, b, caster, cost, 'spell'); if (pb) return { rejection: pb } }
   const via = act.x.channelVia
-  const originId = via ?? a.casterId
+  const originId = via ?? (lender ? lender.id : a.casterId) // an animus a warlock casts reaches from the beast it belongs to
   const witch = a.targetId ? state.effects.some((e) => e.sourceId === 'cyg.a.witch-mark' && e.targetIds.includes(a.targetId!) && e.casterId === a.casterId) : false
   const tgt = affected(state, b, a.casterId, sp, a.targetId)
   if (tgt.code) return { rejection: tgt.code }
   if (a.targetId && spellWarded(state, caster.owner, a.targetId)) return rej('E_TARGET_INVALID', 'a ward stops spells targeting that model')
+  // an animus aimed at "a friendly Faction model" (Lucky Shot, Wraithbane) names one of the caster's own faction
+  if (sp.animus && sp.rng !== 'SELF' && sp.rng !== 'CTRL' && sp.scope?.who === 'friendly' && a.targetId && state.models[a.targetId] && prof(b, state.models[a.targetId]!).faction !== prof(b, caster).faction) return rej('E_TARGET_INVALID', 'that animus works on a model of the caster\'s own faction')
   { const gb = a.targetId ? giftBlock(state, b, a.casterId, a.targetId, ['spell']) : null; if (gb) return rej('E_TARGET_INVALID', gb) } // menoth: the Gift of Law
   if (a.targetId && a.targetId !== originId && sp.rng !== 'CTRL' && sp.rng !== 'SELF' && !witch && !losReport(state, originId, a.targetId, losOptsFor(state, b, originId)).visible) return rej('E_NO_LOS', 'no line of sight to the target')
   if (via && sp.rng === 'SELF') return rej('E_TARGET_INVALID', 'a SELF spell cannot be channelled')
@@ -166,6 +174,7 @@ export function castSpell(state: GameState, b: DataBundle, a: CastSpellAction): 
     s = pay.state; events.push(...pay.events)
   }
   if (cc.stoke) { const r = useIllumination(s, cc.stoke); s = r.state; events.push(...r.events) } // Illumination: the fire goes out, once per turn
+  if (cc.harmony) { const r = useHarmoniousExaltation(s, a.casterId); s = r.state; events.push(...r.events) } // Harmonious Exaltation: spent on this cast
   const act2 = actOf(s)!
   const point: Vec2 | undefined = a.point
   events.push({ type: 'SpellCast', casterId: a.casterId, spellId: a.spellId, originId, targetId: a.targetId, point, cost: cc.cost, ...(sp.animus ? { animus: true } : {}), ...(isBeast(caster) ? { forced: true } : {}) })
@@ -391,7 +400,7 @@ export function anytimeOptions(state: GameState, b: DataBundle, casterId: ModelI
     if (isFuryModel(m) ? (m.fury ?? 0) < circleSpellCost(state, b, casterId, spId, sp.cost) : false) continue
     const mk = (targetId?: ModelId, point?: Vec2) => {
       const action: CastSpellAction = { type: 'castSpell', decisionId, player, casterId, spellId: spId, ...(targetId ? { targetId } : {}), ...(point ? { point } : {}) }
-      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${spId}${targetId ? ':' + targetId : ''}${point ? `:${point.x.toFixed(1)},${point.z.toFixed(1)}` : ''}`, label: `Cast ${sp.name}`, action, cost: costFor(m, circleSpellCost(state, b, casterId, spId, sp.cost)) })
+      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${spId}${targetId ? ':' + targetId : ''}${point ? `:${point.x.toFixed(1)},${point.z.toFixed(1)}` : ''}`, label: `Cast ${sp.name}`, action, cost: costFor(m, castCost(state, b, m, sp, action).cost) })
     }
     if (sp.scope?.who === 'friendly' && sp.scope?.range === 'CTRL' && sp.rng === 'CTRL') mk()
     else if (spId === 'men.s.teleport') { for (const p of teleportSamples(state, casterId)) mk(undefined, p) } // menoth: a few landing spots to pick from
@@ -438,10 +447,27 @@ function beastOptions(state: GameState, b: DataBundle, m: ModelState, did: strin
   }
   const an = prof(b, m).animus as Id | undefined
   if (an && !state.activation?.limitsUsed.includes(`animus:${m.id}`)) {
-    const action: CastSpellAction = { type: 'castSpell', decisionId: did, player: m.owner, casterId: m.id, spellId: an }
-    if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${an}`, label: `Animus: ${rec(b, an).name}`, action, cost: costFor(m, circleSpellCost(state, b, m.id, an, rec(b, an).cost as number)) })
+    // an animus with a range (Lucky Shot, Wraithbane) is offered once per model it could be aimed at; a SELF one has no target to name
+    for (const targetId of animusTargets(state, b, m, m, rec(b, an))) {
+      const action: CastSpellAction = { type: 'castSpell', decisionId: did, player: m.owner, casterId: m.id, spellId: an, ...(targetId ? { targetId } : {}) }
+      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `cast:${an}${targetId ? ':' + targetId : ''}`, label: `Animus: ${rec(b, an).name}${targetId ? ` on ${targetId}` : ''}`, action, cost: costFor(m, castCost(state, b, m, rec(b, an), action).cost) })
+    }
   }
   return out
+}
+
+/**
+ * Who an animus may be aimed at, listed for the any-time options: `[undefined]` for an animus with no target (SELF, CTRL or point), else every friendly model of the
+ * caster's faction within the animus RNG of `origin` (the beast the animus belongs to), nearest first. castSpell has the last word.
+ */
+function animusTargets(state: GameState, b: DataBundle, caster: ModelState, origin: ModelState, sp: Rec): (ModelId | undefined)[] {
+  const who = sp.scope?.who
+  if (sp.rng === 'SELF' || sp.rng === 'CTRL' || who === 'point' || who === 'self' || typeof sp.rng !== 'number') return [undefined]
+  const faction = prof(b, caster).faction
+  return Object.values(state.models)
+    .filter((t) => t.owner === caster.owner && t.life === 'active' && !t.offTable && !t.inert && prof(b, t).faction === faction && modelDistance(origin, t) <= (sp.rng as number) + 0.5)
+    .sort((x, y) => modelDistance(origin, x) - modelDistance(origin, y) || x.id.localeCompare(y.id))
+    .map((t) => t.id)
 }
 const validateRile = (state: GameState, b: DataBundle, a: AdjustFuryAction): Rejection | null => fury.validateAdjustFury(state, b, a)
 function warlockOptions(state: GameState, b: DataBundle, w: ModelState, did: string): DecisionOption[] {
@@ -453,8 +479,10 @@ function warlockOptions(state: GameState, b: DataBundle, w: ModelState, did: str
     const an = prof(b, beast).animus as Id | undefined
     const anCost = an ? circleAnimusCostForWarlock(state, b, w.id, rec(b, an).cost as number) : 0
     if (an && (w.fury ?? 0) >= anCost) {
-      const action: CastSpellAction = { type: 'castSpell', decisionId: did, player, casterId: w.id, spellId: an, animusOf: beast.id }
-      if (!('rejection' in castSpell(state, b, action))) out.push({ id: `animus:${beast.id}`, label: `Cast ${rec(b, an).name} (${beast.id})`, action, cost: costFor(w, anCost) })
+      for (const targetId of animusTargets(state, b, w, beast, rec(b, an))) {
+        const action: CastSpellAction = { type: 'castSpell', decisionId: did, player, casterId: w.id, spellId: an, animusOf: beast.id, ...(targetId ? { targetId } : {}) }
+        if (!('rejection' in castSpell(state, b, action))) out.push({ id: `animus:${beast.id}${targetId ? ':' + targetId : ''}`, label: `Cast ${rec(b, an).name} (${beast.id})${targetId ? ` on ${targetId}` : ''}`, action, cost: costFor(w, castCost(state, b, w, rec(b, an), action).cost) })
+      }
     }
     if ((w.fury ?? 0) >= 1 && beast.damage.track === 'grid' && !isConstructBeast(b, beast)) {
       const marked = beast.damage.grids[0]!.cols.flat().filter(Boolean).length

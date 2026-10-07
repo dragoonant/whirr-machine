@@ -76,7 +76,8 @@ export function threatAt(ctx: Ctx, s0: GameState, me: ModelState, pos: Vec2, opt
     // ranged: SPD + RNG
     const rws = rangedWeapons(e)
     if (rws.length && th.ranged !== null) {
-      const maxRng = Math.max(...rws.map((w) => w.rng))
+      // Warping Winds: a shot at a protected model loses 3 RNG
+      const maxRng = Math.max(0, Math.max(...rws.map((w) => w.rng)) - query.rangePenalty(s, me.id))
       if (d <= th.advance + maxRng + 0.25) {
         const step = Math.min(th.advance, Math.max(0, d - maxRng + 0.5))
         const dd = dist(e.pos, pos)

@@ -48,6 +48,7 @@
   "cost": 11,
   "fa": 4,
   "figure": {
+    "slug": "wm-dire-wolf",
     "archetype": "heavyEngine"
   },
   "verify": "Fixed build: Accuracy head 1 + Cannon 5 + Heavy Chain Gun 5 = 11 (CD hardpoints; WA 2026-04-13 hardpoints; LS 38172 list). Chassis SPD 5 MAT 6 RAT 4 DEF 10 ARM 19, 30 boxes, FA 4 (CD, WA agree). Grid from CD (two Head boxes). Base 50 by heavy class (WA gives no mm)."

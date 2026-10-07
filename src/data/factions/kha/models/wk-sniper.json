@@ -32,6 +32,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-wk-sniper",
     "archetype": "infantry"
   },
   "verify": "CD and WA agree: SPD 6 MAT 4 RAT 6 DEF 13 ARM 13, Hunting Rifle RNG 14 POW 10, Hand Weapon POW 9, 1 box, small base 30 mm, Advance Deployment, Sniper."

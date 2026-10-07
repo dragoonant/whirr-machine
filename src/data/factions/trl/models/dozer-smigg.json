@@ -59,6 +59,7 @@
   "cost": 14,
   "fa": "C",
   "figure": {
+    "slug": "wm-dozer-smigg",
     "archetype": "beast"
   },
   "verify": "Card values agree in S1 and S10 (app dumps) and S2 (wiki, rev 2026-02-08) except Bond: both app dumps say boosted ranged attack DAMAGE rolls, the wiki says attack rolls (RULING: app wording). Base 50 (S10 z_50mm). Spiral branches 6/3/7/5/6/3 (S1) = aspect totals 9/12/9 (S10); Mind, Body, Spirit order is our RULING, as for the Bomber. Skirmish list evidence: S-LS 3 of 4 Captain Gunnbjorn lists."

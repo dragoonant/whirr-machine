@@ -31,6 +31,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-tempest-assailer",
     "archetype": "infantry"
   },
   "verify": "Stats and abilities WA 2026-01-18 and CD (app dump 2026-07-10) agree; Repulsor Field replaced the Repulsor Shield attack in the Jan 2026 changelog. Boxes (8) are WA only."

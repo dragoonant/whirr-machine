@@ -21,7 +21,11 @@ export interface AdvanceDeployAction extends Base<'advanceDeploy'> { placements:
 
 // ---------- maintenance / control ----------
 export interface MaintenanceOrderAction extends Base<'maintenanceOrder'> { order: EffectId[] }
-export interface AllocateFocusAction extends Base<'allocateFocus'> { allocation: Record<ModelId, number> }
+export interface AllocateFocusAction extends Base<'allocateFocus'> {
+  allocation: Record<ModelId, number>
+  /** M12: Penance of the Corrupted: each entry makes `giverId` suffer `points` damage to give the warjack `toId` that much focus (paid before the Leader's own allocation) */
+  penance?: { giverId: ModelId; toId: ModelId; points: number }[]
+}
 export interface PayUpkeepAction extends Base<'payUpkeep'> { keep: EffectId[] } // unlisted upkeeps drop
 export interface ShakeAction extends Base<'shake'> { shake: { modelId: ModelId; condition?: StoredConditionId; effectId?: EffectId }[] }
 

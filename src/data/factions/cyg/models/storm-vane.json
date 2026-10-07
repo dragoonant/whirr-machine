@@ -33,6 +33,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-storm-vane",
     "archetype": "infantry"
   },
   "verify": "Stats and abilities WA 2026-09-30 and CD agree; RAT 6 to 5 and the Galvanic Capacitor rewrite are in the Jan 2026 changelog. Boxes (5) are WA only. No melee weapon (MAT 0)."

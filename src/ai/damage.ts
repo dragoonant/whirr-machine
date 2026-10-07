@@ -74,11 +74,14 @@ export function profileOf(ctx: Ctx, s: GameState, attacker: ModelState, weapon: 
     need = best
   }
   const dice = Math.max(0, pv.dice)
-  const pB = pv.autoHit ? 1 : pv.autoMiss ? 0 : pHit(dice + 1, need)
+  // the engine's own boosted chance: when a rule already boosted the roll for free (Cavalry on a charge, Volley Fire, Guided Fire) it equals the plain one,
+  // so the planner never pays focus for a second boost (an extra die on top of `dice` would overrate those attacks)
+  const pB = pv.autoHit ? 1 : pv.autoMiss ? 0 : Math.max(p, Number.isFinite(pv.pHitBoosted) ? pv.pHitBoosted : pHit(dice + 1, need))
   const auto = !!opts.charge
   const k = Math.max(1, pv.damageDice - (auto ? 1 : 0))
   const guess = weapon.pow - pv.damageTarget
-  const x = weapon.aoe ? guess : invertDamageOffset(pv.damageDice, Math.max(1e-9, p), pv.expectedDamage, guess)
+  // the engine says the attack does nothing (a non-magical weapon against an Incorporeal model): no POW guess may bring damage back, blast included
+  const x = pv.expectedDamage < 1e-9 ? -60 : weapon.aoe ? guess : invertDamageOffset(pv.damageDice, Math.max(1e-9, p), pv.expectedDamage, guess)
   const onHitPlain = damageDist(k, x)
   const onHitB = damageDist(k + 1, x)
   if (pv.autoHit) p = 1

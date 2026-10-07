@@ -1,5 +1,7 @@
 // AI bench (40-ai §9): tier vs tier on the starter lists, both sides and both factions alternated.
-// Run: npm run bench:ai -- --games N --seed S [--size recon|skirmish] [--pairs normal:random,normal:easy] [--scenario id] [--json]
+// Run: npm run bench:ai -- --games N --seed S [--size recon|skirmish] [--pairs normal:random,normal:easy] [--scenario id] [--json] [--mirror] [--rotate cyg,kha,trl,cir,cry,men]
+// --mirror: both tiers play the same list (--xlist, else the first default list), so the result is AI skill and not list balance.
+// --rotate a,b,c: game g plays an ordered pair of those lists (every pair, each also swapped), so every list is used for and against the tier alike.
 // --size skirmish (90-skirmish E6): the 50-point *-skirmish lists on Copperline Crossing; --xlist/--ylist take list ids or faction ids.
 // Prints win rates by cause, own-Leader losses, assassination lines found/committed, mean and p95 ms per decision,
 // and engine rejections/stalls/cap hits (all must be 0). Writes tools/out/bench-<date>.json.
@@ -12,10 +14,10 @@ import { GAME_SIZES, SIZE_DEFAULTS, resolveList, sizeProblem, type GameSize } fr
 import { createGame, legalActions, step, type Action, type GameSetup, type GameState, type PlayerId } from '../src/engine/index'
 
 type Tier = 'random' | 'easy' | 'normal'
-interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean; xList?: string; yList?: string; size: GameSize; scenarioGiven: boolean }
+interface Args { games: number; seed: string; pairs: [Tier, Tier][]; scenario: string; cap: number; json: boolean; quiet: boolean; xList?: string; yList?: string; size: GameSize; scenarioGiven: boolean; mirror: boolean; rotate?: string[] }
 
 function parseArgs(argv: string[]): Args {
-  const a: Args = { games: 20, seed: '1', pairs: [['normal', 'random'], ['normal', 'easy']], scenario: SIZE_DEFAULTS.recon.scenario, cap: 4000, json: false, quiet: false, size: 'recon', scenarioGiven: false }
+  const a: Args = { games: 20, seed: '1', pairs: [['normal', 'random'], ['normal', 'easy']], scenario: SIZE_DEFAULTS.recon.scenario, cap: 4000, json: false, quiet: false, size: 'recon', scenarioGiven: false, mirror: false }
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i]!, v = argv[i + 1]
     if (k === '--games' && v) { a.games = Number(v); i++ }
@@ -28,17 +30,35 @@ function parseArgs(argv: string[]): Args {
     else if (k === '--ylist' && v) { a.yList = v; i++ }
     else if (k === '--json') a.json = true
     else if (k === '--quiet') a.quiet = true
+    else if (k === '--mirror') a.mirror = true
+    else if (k === '--rotate' && v) { a.rotate = v.split(',').filter(Boolean); i++ }
   }
   if (!a.scenarioGiven) a.scenario = SIZE_DEFAULTS[a.size].scenario
   if (a.xList) a.xList = resolveList(a.xList, a.size)
   if (a.yList) a.yList = resolveList(a.yList, a.size)
+  if (a.rotate) a.rotate = a.rotate.map((t) => resolveList(t, a.size))
   return a
+}
+
+/** Ordered pairs of the rotation: (i, j) then (j, i) for every unordered pair, so a run of games is balanced between the lists. */
+export function rotationPairs(lists: readonly string[]): [string, string][] {
+  const out: [string, string][] = []
+  for (let i = 0; i < lists.length; i++) for (let j = i + 1; j < lists.length; j++) out.push([lists[i]!, lists[j]!], [lists[j]!, lists[i]!])
+  return out
+}
+/** The lists tier x and tier y play in game g: the mirror (one list for both), the rotation, the --xlist/--ylist pair, or nothing (the default pair, alternated by side). */
+export function listsForGame(args: Pick<Args, 'mirror' | 'rotate' | 'xList' | 'yList' | 'size'>, g: number): { xList?: string; yList?: string } {
+  if (args.rotate && args.rotate.length > 1) { const p = rotationPairs(args.rotate); const [x, y] = p[g % p.length]!; return { xList: x, yList: y } }
+  if (args.mirror) { const l = args.xList ?? SIZE_DEFAULTS[args.size].lists[0]; return { xList: l, yList: l } }
+  return { xList: args.xList, yList: args.yList }
 }
 
 export interface GameResult {
   pair: string; game: number; seed: string; xSide: PlayerId; winner: 'x' | 'y' | 'draw' | 'unfinished'; reason: string; rounds: number
   decisions: number; rejected: number; stall: boolean; cap: boolean; xLeaderLost: boolean; yLeaderLost: boolean
   ms: { x: number[]; y: number[] }; brains: { x?: Brain; y?: Brain }
+  /** the lists the two tiers played (x's and y's) */
+  lists: { x: string; y: string }
   /** fury events by the side that owns the model (x / y): frenzies, transfers, leeches, forced points, reaves */
   fury: { x: Record<string, number>; y: Record<string, number> }
 }
@@ -97,7 +117,7 @@ export function playGame(x: Tier, y: Tier, xSide: PlayerId, swapLists: boolean, 
     pair: `${x}:${y}`, game: 0, seed, xSide,
     winner: !res ? 'unfinished' : res.winner === null ? 'draw' : res.winner === xSide ? 'x' : 'y',
     reason: res?.reason ?? 'unfinished', rounds: s.round, decisions: i, rejected, stall, cap: i >= cap,
-    xLeaderLost: lost(xSide), yLeaderLost: lost(yS), fury,
+    xLeaderLost: lost(xSide), yLeaderLost: lost(yS), fury, lists: { x: lists[xSide], y: lists[yS] },
     ms: { x: x === 'random' ? [] : ms[xSide], y: y === 'random' ? [] : ms[yS] },
     brains: { ...(x !== 'random' ? { x: brains[xSide] } : {}), ...(y !== 'random' ? { y: brains[yS] } : {}) },
   }
@@ -118,7 +138,8 @@ function main(): void {
     for (let g = 0; g < args.games; g++) {
       const xSide: PlayerId = g % 2 === 0 ? 'A' : 'B'
       const swap = Math.floor(g / 2) % 2 === 1
-      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap, args.xList, args.yList, args.size)
+      const gl = listsForGame(args, g)
+      const r = playGame(x, y, xSide, swap, `${args.seed}:${x}-${y}:g${g}`, args.scenario, args.cap, gl.xList, gl.yList, args.size)
       r.game = g
       rs.push(r)
       if (!args.quiet && !args.json) console.log(`${x} vs ${y} game ${g} (${x} as ${xSide}${swap ? ', lists swapped' : ''}): ${r.winner === 'x' ? x : r.winner === 'y' ? y : r.winner} by ${r.reason}, round ${r.rounds}, ${r.decisions} decisions${r.rejected ? `, ${r.rejected} REJECTED` : ''}${r.stall ? ', STALL' : ''}`)
@@ -138,9 +159,11 @@ function main(): void {
     for (const r of rs) for (const b of [r.brains.x, r.brains.y]) if (b) for (const [k, v] of Object.entries(b.stats.byKind)) {
       const e = (kinds[k] ??= { n: 0, ms: 0, max: 0 }); e.n += v.n; e.ms += v.ms; e.max = Math.max(e.max, v.max)
     }
+    const byXList: Record<string, { games: number; wins: number }> = {}
+    for (const r of rs) { const e = (byXList[r.lists.x] ??= { games: 0, wins: 0 }); e.games++; if (r.winner === 'x') e.wins++ }
     const furyTot = (k: 'x' | 'y'): Record<string, number> => { const o: Record<string, number> = {}; for (const r of rs) for (const [n, v] of Object.entries(r.fury[k])) o[n] = (o[n] ?? 0) + v; return o }
     const summary = {
-      games: rs.length, fury: { x: furyTot('x'), y: furyTot('y') }, winRate: wins / Math.max(1, rs.length), byCause,
+      games: rs.length, fury: { x: furyTot('x'), y: furyTot('y') }, winRate: wins / Math.max(1, rs.length), byCause, byXList,
       xLeaderLostPerGame: rs.filter((r) => r.xLeaderLost).length / Math.max(1, rs.length),
       meanMsPerDecision: { [x]: Number(mean(msX).toFixed(2)), ...(y !== 'random' ? { [`${y}(opp)`]: Number(mean(msY).toFixed(2)) } : {}) },
       p95Ms: Number(quant(msX, 0.95).toFixed(1)), maxMs: Number(Math.max(0, ...msX).toFixed(1)),
@@ -153,6 +176,7 @@ function main(): void {
     lines.push(`${x} vs ${y}: ${x} wins ${pct(wins, rs.length)} of ${rs.length} (${Object.entries(byCause).map(([c, v]) => `${c} ${v.x}-${v.y}${v.draw ? `-${v.draw}` : ''}`).join(', ')})`)
     lines.push(`  ${x} ${summary.meanMsPerDecision[x]} ms/decision mean, p95 ${summary.p95Ms}, max ${summary.maxMs}; own Leader lost ${pct(rs.filter((r) => r.xLeaderLost).length, rs.length)} of games; lines found ${linesFound}, committed ${linesCommitted}`)
     if (Object.keys(summary.fury.x).length + Object.keys(summary.fury.y).length) lines.push(`  fury events per game: ${x} ${JSON.stringify(Object.fromEntries(Object.entries(summary.fury.x).map(([n, v]) => [n, Number((v / rs.length).toFixed(1))])))}; ${y} ${JSON.stringify(Object.fromEntries(Object.entries(summary.fury.y).map(([n, v]) => [n, Number((v / rs.length).toFixed(1))])))}`)
+    if (Object.keys(byXList).length > 1 || args.mirror) lines.push(`  ${x} wins by the list it played: ${Object.entries(byXList).map(([l, v]) => `${l} ${v.wins}/${v.games}`).join(', ')}`)
     lines.push(`  rejected ${summary.rejected}, stalls ${summary.stalls}, cap hits ${summary.capHits}, fallbacks ${fallbacks}, mean rounds ${summary.meanRounds}`)
   }
   try {

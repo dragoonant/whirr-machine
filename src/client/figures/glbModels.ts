@@ -12,6 +12,8 @@ import { dataFigureSlug } from './profile'
 export const ENABLED_GLB_SLUGS: ReadonlySet<string> = new Set([
   'wm-caine', 'wm-falk', 'wm-glover', 'wm-ryan', 'wm-watts', 'wm-deuce',
   'wm-vilkul', 'wm-lazarenko', 'wm-tererya', 'wm-fedyniak', 'wm-skrobala', 'wm-razor',
+  // M10 Skirmish figures (also listed in manifest.json and skirmish-slugs.json)
+  'wm-arkanist', 'wm-courser', 'wm-dire-wolf', 'wm-dozer-smigg', 'wm-initiate', 'wm-krielstone-bearer', 'wm-night-terror', 'wm-raptor', 'wm-ravager-shaman', 'wm-revenger', 'wm-runebearer', 'wm-sanctifier', 'wm-stone-scribe', 'wm-storm-vane', 'wm-tempest-assailer', 'wm-vassal', 'wm-wild-argus', 'wm-wk-sniper', 'wm-wolf-rider',
 ])
 
 /** Slugs of the M9 models whose GLBs are still to come; they switch on when listed in manifest.json. */
@@ -58,6 +60,26 @@ export const GLB_SLUG_BY_MODEL: Readonly<Record<string, string>> = {
   'men.feora': 'wm-feora',
   'men.pyrrhus': 'wm-pyrrhus',
   'men.valeria': 'wm-valeria',
+  // M10 Skirmish (slug -> model per docs/spec/90-skirmish.md section C)
+  'cyg.tempest-assailer': 'wm-tempest-assailer',
+  'cyg.storm-vane': 'wm-storm-vane',
+  'cyg.courser-sg': 'wm-courser',
+  'kha.dire-wolf-gun': 'wm-dire-wolf',
+  'kha.arkanist': 'wm-arkanist',
+  'kha.wk-sniper': 'wm-wk-sniper',
+  'trl.dozer-smigg': 'wm-dozer-smigg',
+  'trl.stone-bearer': 'wm-krielstone-bearer',
+  'trl.stone-scribe': 'wm-stone-scribe',
+  'trl.runebearer': 'wm-runebearer',
+  'cir.wolf-rider': 'wm-wolf-rider',
+  'cir.ravager-shaman': 'wm-ravager-shaman',
+  'cir.wild-argus': 'wm-wild-argus',
+  'cry.night-terror': 'wm-night-terror',
+  'cry.raptor-arc': 'wm-raptor',
+  'cry.initiate': 'wm-initiate',
+  'men.revenger-arc': 'wm-revenger',
+  'men.cleanser-sanctifier': 'wm-sanctifier',
+  'men.vassal': 'wm-vassal',
 }
 
 /** Slugs the manifest says exist on disk (filled once by loadGlbManifest; empty until then or if it cannot be read). */

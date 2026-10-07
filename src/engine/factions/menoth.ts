@@ -17,7 +17,7 @@ import {
   weaponCrippled, weaponsOf, type AtkCtx, type AttackPlugin, type Rec,
 } from '../code-hooks'
 import { applyDamage, healDamage, resolveDeath } from '../damage'
-import { addCondition, applyEffect, hasCondition, removeCondition } from '../effects'
+import { addCondition, applyEffect, hasCondition, removeCondition, removeEffect } from '../effects'
 import type { GameEvent } from '../events'
 import { baseRadius, dist, isLegalPlacement, isOnTable } from '../geometry'
 import { inCtrl, modelDistance, within } from '../measure'
@@ -335,6 +335,9 @@ const VOLLEY_KEY = `${VOLLEY_ID}:oncePerTurn`
 const isRangedKind = (k: string): boolean => k === 'ranged' || k === 'aoe'
 const isMeleeKind = (k: string): boolean => k === 'melee' || k === 'power'
 
+/** May a Shield Guard model step in for this one? Everything but a trooper that carries the rule itself (a Defender shielding a Defender). */
+const shieldGuardCovers = (state: GameState, b: DataBundle, tgt: ModelState): boolean => !(tgt.type === 'trooper' && ownFlag(state, b, tgt.id, 'shieldGuard'))
+
 const REPEL_ID = 'men.a.repel'
 const CHAIN_ID = 'men.a.chain'
 const weaponHas = (w: Rec | undefined, abilityId: Id): boolean => ((w?.abilities ?? []) as Id[]).includes(abilityId)
@@ -409,15 +412,17 @@ export const menothPlugins: AttackPlugin[] = [{
     return []
   },
   beforeHits(state, b, atk) {
-    // Shield Guard: a Defender within 3" of a friendly model that a ranged (not spray) attack hit directly takes the hit in its place, once per round.
-    // RULING: it steps in for a leader, warjack or solo, never for a Defender trooper (they are the cheap bodies)
+    // Shield Guard (Defenders, the Courser and any other model with the shieldGuard flag): a model within 3" of a friendly model that a ranged (not spray)
+    // attack hit directly takes the hit in its place, once per round, unless it is knocked down or stationary or (a warjack) its Head is crippled.
+    // RULING: a trooper that has Shield Guard itself is never covered (a Defender does not shelter a Defender: they are the cheap bodies); every other
+    // friendly model is, troopers of other units included (the Courser may take a Black 13th hit)
     if (!isRangedKind(atk.kind) || !atk.x.results[atk.targetId]?.hit) return null
     const tgt = state.models[atk.targetId]
     const at = state.models[atk.attackerId]
-    if (!tgt || !at || at.owner === tgt.owner || !['leader', 'warEngine', 'solo'].includes(tgt.type)) return null
+    if (!tgt || !at || at.owner === tgt.owner || !shieldGuardCovers(state, b, tgt)) return null
     const guard = Object.values(state.models)
       .filter((g) => g.id !== tgt.id && g.owner === tgt.owner && liveOnTable(g) && ownFlag(state, b, g.id, 'shieldGuard') && !hasCondition(state, g, 'knockedDown')
-        && !hasCondition(state, g, 'stationary') && within(g, tgt, GUARD_RANGE) && !state.effects.some((e) => e.sourceId === GUARD_SRC && e.casterId === g.id))
+        && !hasCondition(state, g, 'stationary') && !g.crippled.includes('H') && within(g, tgt, GUARD_RANGE) && !state.effects.some((e) => e.sourceId === GUARD_SRC && e.casterId === g.id))
       .sort((x, y) => modelDistance(x, tgt) - modelDistance(y, tgt) || x.id.localeCompare(y.id))[0]
     if (!guard) return null
     const used = applyEffect(state, { sourceId: GUARD_SRC, name: 'Shield Guard', owner: guard.owner, casterId: guard.id, targetIds: [guard.id], mods: [], duration: 'round' })
@@ -500,3 +505,92 @@ export const menothPlugins: AttackPlugin[] = [{
     return { state: s, events }
   },
 }]
+
+// ---------- Righteous Intervention (Cleanser Sanctifiers, M12 follow-ups) ----------
+/**
+ * Once per game, in its activation, the unit arms Righteous Intervention for a round (a special action that keeps the Combat Action, like Soul Phase).
+ * While armed, when an enemy attack destroys a friendly Faction model (not a Cleanser Sanctifier) within 6" of a model of the unit, that model advances
+ * up to 2" and makes one basic melee attack, after the attack resolves (phases/activation.ts runs the reaction; the reaction then ends).
+ * RULING: the reaction fires once per arming and the model nearest the fallen one answers | the card says "a model in this unit" and the rules never say
+ * which | the nearest model is the one the move is most likely to matter for. The arming leaves a marker (effect of duration 'game') so it is never used twice.
+ */
+export const RIGHTEOUS_ID = 'men.a.righteous-intervention'
+const RIGHTEOUS_NAME = 'Righteous Intervention'
+const RIGHTEOUS_USED = 'Righteous Intervention (used)'
+const SANCTIFIER = 'men.cleanser-sanctifier'
+
+/** Can this model's unit arm Righteous Intervention now (it carries the rule and the once-per-game marker is not on it)? */
+export function righteousAvailable(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!liveOnTable(m) || !m.unitId || !ownFlag(state, b, id, 'righteousIntervention')) return false
+  return !state.effects.some((e) => e.name === RIGHTEOUS_USED && e.targetIds.includes(id))
+}
+
+/** Arm it: a round-long effect and the game-long used marker, both on the unit's living models. */
+export function armRighteousIntervention(state: GameState, id: ModelId): { state: GameState; events: GameEvent[] } {
+  const m = state.models[id]
+  if (!m || !m.unitId) return { state, events: [] }
+  const ids = (state.units[m.unitId]?.troopers ?? []).filter((t) => liveOnTable(state.models[t]))
+  const armed = applyEffect(state, { sourceId: RIGHTEOUS_ID, name: RIGHTEOUS_NAME, owner: m.owner, casterId: id, targetIds: ids, mods: [], duration: 'round' })
+  const used = applyEffect(armed.state, { sourceId: RIGHTEOUS_ID, name: RIGHTEOUS_USED, owner: m.owner, casterId: id, targetIds: ids, mods: [], duration: 'game' })
+  return { state: used.state, events: [...armed.events, ...used.events] }
+}
+
+/**
+ * The armed model that answers for a friendly model an enemy attack destroyed: Faction models other than Cleanser Sanctifiers, within 6" of the
+ * responder, which must be able to move (not knocked down or stationary). Null when no armed unit qualifies.
+ */
+export function righteousResponder(state: GameState, b: DataBundle, deadId: ModelId): ModelId | null {
+  const dead = state.models[deadId]
+  if (!dead || dead.life === 'active' || prof(b, dead).faction !== 'men' || dead.profileId === SANCTIFIER) return null
+  let best: { id: ModelId; d: number } | null = null
+  for (const e of state.effects) {
+    if (e.name !== RIGHTEOUS_NAME || e.sourceId !== RIGHTEOUS_ID || e.owner !== dead.owner) continue
+    for (const t of e.targetIds) {
+      const m = state.models[t]
+      if (!liveOnTable(m) || hasCondition(state, m, 'knockedDown') || hasCondition(state, m, 'stationary')) continue
+      const d = modelDistance(m, dead)
+      if (d <= 6 + 1e-6 && (!best || d < best.d - 1e-9 || (Math.abs(d - best.d) <= 1e-9 && m.id < best.id))) best = { id: m.id, d }
+    }
+  }
+  return best ? best.id : null
+}
+
+/** The reaction has fired: the armed effect on the responder's unit ends (the used marker stays). */
+export function spendRighteous(state: GameState, responderId: ModelId): { state: GameState; events: GameEvent[] } {
+  let s = state
+  const events: GameEvent[] = []
+  for (const e of state.effects.filter((x) => x.name === RIGHTEOUS_NAME && x.sourceId === RIGHTEOUS_ID && x.targetIds.includes(responderId))) {
+    const r = removeEffect(s, e.id, 'other')
+    s = r.state; events.push(...r.events)
+  }
+  return { state: s, events }
+}
+
+// ---------- Penance of the Corrupted (Vassals of Menoth, M12 follow-ups) ----------
+/**
+ * While the Control Phase allocates focus, a model with the rule that stands in its Leader's CTRL may suffer damage (up to its unmarked boxes) to give a friendly
+ * Faction warjack in that CTRL 1 focus per point. Pure queries here; control.ts validates the answer and pays (damage, then focus).
+ */
+export const PENANCE_FLAG = 'penanceOfTheCorrupted'
+export interface PenanceGiver { giverId: ModelId; leaderId: ModelId; unmarked: number }
+const unmarkedOf = (m: ModelState): number => (m.damage.track === 'single' ? Math.max(0, m.damage.boxes - m.damage.filled) : 0)
+/** Models of `player` that may pay with damage right now: carriers inside the CTRL of a live Leader, with at least one unmarked box. */
+export function penanceGivers(state: GameState, b: DataBundle, player: PlayerId): PenanceGiver[] {
+  const leader = Object.values(state.models).find((m) => m.owner === player && m.type === 'leader' && liveOnTable(m))
+  if (!leader) return []
+  const ctrl = statOf(state, b, leader.id, 'CTRL')
+  return Object.values(state.models)
+    .filter((m) => m.owner === player && liveOnTable(m) && ownFlag(state, b, m.id, PENANCE_FLAG) && unmarkedOf(m) >= 1 && inCtrl(leader, m, ctrl))
+    .map((m) => ({ giverId: m.id, leaderId: leader.id, unmarked: unmarkedOf(m) }))
+    .sort((x, y) => x.giverId.localeCompare(y.giverId))
+}
+/** Friendly Faction warjacks inside the Leader's CTRL that can hold more focus (the caller adds its own focus tests: cap, disruption, crippled cortex). */
+export function penanceTargets(state: GameState, b: DataBundle, leaderId: ModelId): ModelState[] {
+  const leader = state.models[leaderId]
+  if (!leader) return []
+  const ctrl = statOf(state, b, leaderId, 'CTRL')
+  return Object.values(state.models)
+    .filter((m) => m.owner === leader.owner && m.type === 'warEngine' && liveOnTable(m) && prof(b, m).faction === prof(b, leader).faction && inCtrl(leader, m, ctrl))
+    .sort((x, y) => x.id.localeCompare(y.id))
+}

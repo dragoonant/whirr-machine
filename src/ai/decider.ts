@@ -605,8 +605,24 @@ function allocateFocus(env: Env, legal: Action[]): Action {
       return v
     },
   })
-  const a = { type: 'allocateFocus', decisionId: pd.id, player: pd.player, allocation: alloc } as Action
-  return validate(s, a) === null ? a : legal[0]!
+  // Penance of the Corrupted (menoth): a Vassal with boxes to spare pays damage for the focus a warjack is still short of (never below 3 unmarked boxes)
+  const pen = ((pd.context.data ?? {}) as { penance?: { givers: { giverId: ModelId; unmarked: number }[]; targets: { modelId: ModelId; focus: number }[] } }).penance
+  const penance: { giverId: ModelId; toId: ModelId; points: number }[] = []
+  if (pen && env.tier.knapsack) {
+    const spare = new Map(pen.givers.map((g) => [g.giverId, g.unmarked - 3]))
+    for (const t of pen.targets) {
+      let need = Math.min(2, 3 - t.focus - (alloc[t.modelId] ?? 0))
+      for (const g of pen.givers) {
+        if (need <= 0) break
+        const give = Math.min(need, spare.get(g.giverId) ?? 0)
+        if (give > 0) { penance.push({ giverId: g.giverId, toId: t.modelId, points: give }); spare.set(g.giverId, (spare.get(g.giverId) ?? 0) - give); need -= give }
+      }
+    }
+  }
+  const a = { type: 'allocateFocus', decisionId: pd.id, player: pd.player, allocation: alloc, ...(penance.length ? { penance } : {}) } as Action
+  if (validate(s, a) === null) return a
+  const plain = { type: 'allocateFocus', decisionId: pd.id, player: pd.player, allocation: alloc } as Action
+  return validate(s, plain) === null ? plain : legal[0]!
 }
 
 function payUpkeep(env: Env, legal: Action[]): Action {

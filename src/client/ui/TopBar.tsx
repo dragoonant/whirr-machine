@@ -99,7 +99,7 @@ export function TopBar() {
                 <span className="vp-name">{playerName(state, p)}</span>
                 <span className="vp-n" data-testid={`hud-vp-n-${p}`}>{have}</span>
                 {now !== undefined && now !== have && <span className="vp-now" title="VP if the scenario were scored right now" data-testid={`hud-vp-now-${p}`}>{`→ ${now}`}</span>}
-                {control?.killBox[p] && <span className="chip chip-bad" data-testid={`hud-killbox-${p}`} title="This leader is in its kill box">kill box</span>}
+                {control?.killBoxActive && control.killBox[p] && <span className="chip chip-bad" data-testid={`hud-killbox-${p}`} title="This leader is in its kill box">kill box</span>}
               </div>
             )
           })}

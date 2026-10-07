@@ -1,0 +1,25 @@
+{
+  "_note": "M10 Skirmish figure slugs: model profile id -> GLB slug (docs/spec/90-skirmish.md section C). Tanith is redone in place (wm-tanith).",
+  "models": {
+    "cyg.tempest-assailer": "wm-tempest-assailer",
+    "cyg.storm-vane": "wm-storm-vane",
+    "cyg.courser-sg": "wm-courser",
+    "kha.dire-wolf-gun": "wm-dire-wolf",
+    "kha.arkanist": "wm-arkanist",
+    "kha.wk-sniper": "wm-wk-sniper",
+    "trl.dozer-smigg": "wm-dozer-smigg",
+    "trl.stone-bearer": "wm-krielstone-bearer",
+    "trl.stone-scribe": "wm-stone-scribe",
+    "trl.runebearer": "wm-runebearer",
+    "cir.wolf-rider": "wm-wolf-rider",
+    "cir.ravager-shaman": "wm-ravager-shaman",
+    "cir.wild-argus": "wm-wild-argus",
+    "cry.night-terror": "wm-night-terror",
+    "cry.raptor-arc": "wm-raptor",
+    "cry.initiate": "wm-initiate",
+    "men.revenger-arc": "wm-revenger",
+    "men.cleanser-sanctifier": "wm-sanctifier",
+    "men.vassal": "wm-vassal",
+    "cir.tanith": "wm-tanith"
+  }
+}

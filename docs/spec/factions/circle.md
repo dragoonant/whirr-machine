@@ -1,7 +1,3 @@
-| S1, S2 (S4 agrees) |
-| S1, S2 (S4 agrees) |
-| S1, S2 (S4 agrees) |
-| S1, S2 (S4 agrees) |
 # Faction: Circle Orboros (Devourer's Host, Tanith battlegroup) — Recon starter
 
 - **Sources:** listed as S1..S7 in `circle-sources.md` (audit 2026-10-07). The card values come from the official
@@ -83,7 +79,7 @@ an optional command attachment we do not field.
 ## Ability → descriptor / code hook map
 
 Ops and fields from `hooks.ts` (00 §14) and `20-data-schema.md` §5. `[A1:n]` = the "after the attack is resolved" tier
-(R7.18 step 16). Rows marked **new** need an engine addition (see "New mechanics needed").
+(R7.18 step 16). Rows marked **new** needed an engine addition (see "Mechanics added to the engine"); all of them are built now.
 
 | Ability | Hook point | Descriptor (or code hook) | Test |
 |---|---|---|---|
@@ -156,7 +152,7 @@ Tanith's spells (COST is paid in fury). DUR: `UP` upkeep, `RND` one round, `TURN
 
 | Spell | COST | RNG | AOE | POW | DUR | OFF | Effect (our words) | conf |
 |---|---|---|---|---|---|---|---|---|
-| Admonition | 2 | 6 | — | — | UP | no | Cast on a model in her battlegroup (she counts too). The first time an enemy advances and ends its move, or is placed, within 6" of it, it may advance up to 3" at once; then the spell ends | S1, S2; target scope: the engine allows her warbeasts only (RULING) |
+| Admonition | 2 | 6 | — | — | UP | no | Cast on a model in her battlegroup (she counts too). The first time an enemy advances and ends its move, or is placed, within 6" of it, it may advance up to 3" at once; then the spell ends | S1, S2; target scope `battlegroup`: Tanith or a warbeast she controls |
 | Affliction | 2 | 8 | — | — | UP | yes | Enemy model or unit: −2 DEF, and a direct-hit damage roll that fails to beat its ARM still deals 1 damage | S1, S2 (engine: single model only) |
 | Rift | 3 | 10 | — on the card; 3" area from the text | 13 | `*` on the card (the area lasts one round) | yes | Magical attack at one model; on a direct hit a 3" area centred on it becomes rough terrain for one round (no blast damage to others) | S1, S2 |
 | Scything Touch | 2 | 6 | — | — | UP | no | Friendly Faction model gains Dark Shroud: enemies within 2" of it get −2 ARM | S1, S2 |
@@ -188,9 +184,9 @@ Lasts one turn:
 - Marking (original, for the army painter): **thornknot** — a ring of three interlaced thorn stems.
 - shipName: Tanith, Pureblood, Feast Lord, Ravagers (troopers "Ravager 1–3").
 
-## New mechanics needed
+## Mechanics added to the engine (the M9 build list, all built)
 
-The table below was the M9 build list; STATUS.md "Factions (M9)" now reports fury, spirals, animi, corpse tokens and the Circle hooks as built (`src/engine/factions/circle.ts`). Still open: Admonition on Tanith herself and the unit form of Affliction (see the RULINGs).
+The table below was the M9 build list. Every row is built (`src/engine/factions/circle.ts` and core): fury, spirals, animi, corpse tokens, the Circle hooks, and Admonition on Tanith herself (spell scope `battlegroup`). Still open: the unit form of Affliction (see the RULINGs). The M12 skirmish rules (Cavalry, Annoyance, Assault, Unpredictable Movement, Unyielding, Warping Winds) are in the Skirmish section below.
 
 | Mechanic | Used by | Implementation sketch |
 |---|---|---|
@@ -219,7 +215,7 @@ The table below was the M9 build list; STATUS.md "Factions (M9)" now reports fur
 | Dark Shroud aura (−2 ARM within 2") | Scything Touch | Aura `modStat ARM −2` on enemies within 2" of the affected model. |
 | Blessed via Wraithbane | Pureblood animus | Grant `core.q.blessed` and damage type magical to the target's weapons for a turn. |
 
-Engine contract additions these imply (none made here; each needs a 00 §14 entry when built): `DamageState` spiral track,
+Engine contract additions these needed (all made, each with its 00 §14 entry): `DamageState` spiral track,
 `ModelState.fury` and `ModelState.tokens`, `ConditionId` `shadowBind`, `ignore` value `forest`, place mode
 `b2bWithTarget`.
 
@@ -267,7 +263,7 @@ touches (Veil of Mists in place of Bleed, the animus COST floor of 0 under the f
 - RULING: Regeneration [d3] | costs 1 fury (a force) and is a once-per-activation heal, not in an activation it ran | the card says it can be forced (S1)
 - RULING: Rites of the Wurm | one turn; Tanith's spells cost 1 less but never below 1; animi cast by her warbeasts in her CTRL can drop to 0 | the card wording (S1) and the Jan 2024 update note (S3)
 - RULING: corpse tokens | Lord and each Ravager claim only from their own melee kills (Body Snatcher), nearest eligible model claims, cap 3 | rulebook p97 plus the ability (S1)
-- RULING: Admonition target | Warbeasts of her battlegroup only; the card allows any model of her battlegroup, so Tanith herself is a legal target we do not offer | the engine spell scope has no "battlegroup" value yet; adding Tanith needs an engine change (scope or a spells.ts check)
+- RULING: Admonition target | Tanith herself or any warbeast she controls (spell scope `battlegroup`) | the card allows any model of her battlegroup; the scope value was added in M10
 - RULING: Affliction target | single enemy model only | the card allows a model or unit (S1); the unit form is not built
 - RULING: Controlled Warping pick | The player is asked at activation.start (abilityChoice: strength, ghostly, spellWard) and the pick lasts the round; a frenzied beast takes Strength with no question; before the pick there is no warp | the card text says "pick one", so a silent default would take the choice away
 - RULING: Meat for the Beast auto-spend | The window is mandatory (no prompt), so the attack-roll boost is spent only while holding the cap of 3 tokens (a full pile is otherwise wasted) and the damage-roll boost on any direct-hit damage roll when a token is held; an attack with no damage roll (Raven) spends nothing | keeps a token from being lost to the cap without asking every roll
@@ -352,7 +348,7 @@ Weapon locations are not on the cards, so none are stored (as for the Pureblood)
 | Magic Ability | Shaman | its special attacks and actions count as casting | **done** (flag `magicAbility`: the star attack is arcane and rolls AAT) |
 | Chain Lightning (star attack) | Shaman | RNG 10 arcane attack; the model hit takes POW 10 electrical damage, then the lightning arcs to d3 more models, each the nearest untouched model within 3" of the last (the Shaman is skipped); each arc takes a POW 10 electrical roll that is not an attack | **done**: plugin `cir.chain-lightning` (after the attack resolves). RULING: friends can be arced to; ties go to the lower model id; arcs roll 2d6 + 10 against ARM, one die fewer against electricity resistance, magical damage |
 | Hunter's Grace (star action) | Shaman | friendly Tharn models within 5" cannot be knocked down for a round | **done, static**: the Tharn within 5" when the action is used (RULING); uses the Combat Action |
-| Sky Shaker (star action) | Shaman | Warping Winds for a round: ranged attacks at friendly Faction models within 3" lose 3 RNG, and those models resist blast | **half done**: a Warping Winds effect on the Shaman and Resistance: Blast fixed on the Faction models within 3" when used (RULING). The -3 RNG is the helper `warpingWindsRngPenalty()`; **core must call it from the range check** (issue). `warpingWindsBlastResist()` is the live version core can use instead of the static resistance |
+| Sky Shaker (star action) | Shaman | Warping Winds for a round: ranged attacks at friendly Faction models within 3" lose 3 RNG, and those models resist blast | **done**: one Warping Winds effect on the Shaman; the -3 RNG (`weaponRangeFor`) and the blast resistance of Faction models within 3" (`warpingWindsBlastResist`) are read live |
 | Body Snatcher: Heart Eater, Blood Rage, Meat for the Beast, Rapid Healing, Treewalker, Tough, Pathfinder | Shaman | as the Ravagers (see above) | **done** (existing hooks) |
 | Combo Strike (star attack) | Argus | one Bite in place of the initial attacks, +4 to its damage roll | **done** (data only, the Both Barrels pattern) |
 | Headbutt, Slam, Pathfinder | Argus | core abilities | **done** |

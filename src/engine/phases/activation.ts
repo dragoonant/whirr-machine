@@ -10,7 +10,7 @@ import type {
 } from '../actions'
 import { hitProbability, hitProbabilityBoost, rollAttack } from '../attack'
 import {
-  abilitiesOf, actOf, alive, armOf, losOptsFor, isIncorporeal, INCORPOREAL_LOST, atkOf, appliedPassives, cannotKnockDown, cloudsOver, codeHooks, evalCond, hasAb, hasFlag,
+  abilitiesOf, actOf, alive, armOf, grantedConcealmentOf, losOptsFor, isIncorporeal, INCORPOREAL_LOST, atkOf, appliedPassives, cannotKnockDown, cloudsOver, codeHooks, evalCond, hasAb, hasFlag,
   hasIgnore, ignoresGas, inPallCloud, isConstruct, layoutsOf, lookups, meleeReach, plugins, prof, rec, resistsDamageType,
   setAtk, setModel, statOf, weaponCrippled, weaponRange, weaponRangeFor, weaponsOf, isMelee, isSpray, runCodeEffect,
   type AtkCtx, type AtkX, type ActCtx, type ActX, type CondEnv, type DmgJob, type Rec, type WeaponInst,
@@ -32,12 +32,17 @@ import { raise, raiseTransfer, reject, type FlowOut, type FlowResult } from '../
 import { resolvePowerAttack, resolveTrampleAttacks } from '../power-attacks'
 import { afterDeaths } from '../scenario'
 import { canPayCost, costBlock, payCost, type AbilityCost } from '../costs'
-import { activeWarp, admonitionReady, afflictionFloor, wraithbaneOn } from '../factions/circle'
+import { activeWarp, admonitionReady, afflictionFloor, unyieldingArm, wraithbaneOn } from '../factions/circle'
+import { polarityFieldBlocks } from '../factions/cygnar'
+import { needsTarget, sharedLimitKeys, targetCandidates } from '../targeted'
 import { wrathActive } from '../factions/cryx'
 import type { EffectExtras } from '../effects'
 import { circleOverlapsShape, hazardsUnder, terrainPieces, type WorldShape } from '../terrain'
 import { anytimeOptions, castSpell, channel, channelChoices, heal, isAnytimeAction, useFeat } from '../spells'
-import { giftBlock, gladiatorBonus, marshalPassIds, runBonus as boilerBonus, THRESHER_ID, type GiftKind } from '../factions/menoth'
+import {
+  armRighteousIntervention, giftBlock, gladiatorBonus, marshalPassIds, righteousAvailable, righteousResponder, RIGHTEOUS_ID, runBonus as boilerBonus, spendRighteous, THRESHER_ID,
+  type GiftKind,
+} from '../factions/menoth'
 import { raiseChooseActivation } from '../turnflow'
 import { finishFrenzyActivation } from './frenzy'
 import type {
@@ -105,6 +110,7 @@ export function moverInfo(state: GameState, b: B, id: ModelId): MoverInfo {
     aggressive: hasFlag(state, b, id, 'aggressive'),
     blind: hasCondition(state, m, 'blind'),
     noAdvance: hasCondition(state, m, 'shadowBind'),
+    forbidMoves: effectsOn(state, id).flatMap((e) => e.forbid ?? []).filter((f) => f === 'run' || f === 'charge' || f === 'slam' || f === 'trample'),
     ghostly,
     ...(seeFriends ? { passIds: Object.values(state.models).filter((o) => o.owner === m.owner && o.id !== id).map((o) => o.id) } : marshal.length ? { passIds: marshal } : {}),
     ...(boilerBonus(state, b, id) ? { runBonus: boilerBonus(state, b, id) } : {}),
@@ -412,6 +418,14 @@ function movementOptionList(state: GameState, b: B, lead: ModelId, decisionId: s
   return out
 }
 
+/** An any-time special action as a decision option (one per named target for the targeted ones). */
+function anytimeSpecialOption(c: CombatChoiceInfo, did: string, player: PlayerId, modelId: ModelId): DecisionOption {
+  return {
+    id: `sa:${c.abilityId}${c.targetId ? ':' + c.targetId : ''}`, label: c.label,
+    action: { type: 'chooseCombatAction', decisionId: did, player, modelId, choice: 'specialAction', abilityId: c.abilityId, ...(c.targetId ? { targetId: c.targetId } : {}) } as Action,
+  }
+}
+
 function raiseMovement(state0: GameState, b: B, events: GameEvent[]): Out {
   let state = patchX(state0, { stage: 'movement' })
   state = { ...state, window: 'movement.choose' }
@@ -421,7 +435,7 @@ function raiseMovement(state0: GameState, b: B, events: GameEvent[]): Out {
   const id = nextId(state)
   const options = [...movementOptionList(state, b, lead, id), ...(a.modelIds.length === 1 ? anytimeOptions(state, b, lead, id) : [])]
   // a self ability that may be used any time in the activation (Soul Phase) is offered before the move too
-  if (a.modelIds.length === 1) for (const c of specialChoices(state, b, lead, true)) options.push({ id: `sa:${c.abilityId}`, label: c.label, action: { type: 'chooseCombatAction', decisionId: id, player: ownerOf(state, lead), modelId: lead, choice: 'specialAction', abilityId: c.abilityId } as Action })
+  if (a.modelIds.length === 1) for (const c of specialChoices(state, b, lead, true)) options.push(anytimeSpecialOption(c, id, ownerOf(state, lead), lead))
   const r = raise(state, { player: ownerOf(state, lead), kind: 'chooseMovement', window: 'movement.choose', context: { modelId: lead, unitId: state.units[a.activeId]?.id }, options, canPass: false })
   return ok(r.state, events)
 }
@@ -432,6 +446,9 @@ function startCombatFrom(state0: GameState, b: B, events: GameEvent[]): Out {
   if (a.ran) return finishActivation(state, b, events, 'ran')
   if (a.x.failedCharge) return finishActivation(state, b, events, 'failedCharge')
   state = patchX(state, { queue: a.modelIds.filter((id) => alive(state.models[id]) && !a.x.forfeit.includes(id)), cur: null })
+  // Assault: after a successful charge, before the Combat Action, a model with the rule may shoot the model it charged
+  const ct = a.charge?.success ? a.charge.targetId : undefined
+  state = patchX(state, { assault: ct ? a.modelIds.filter((id) => !a.x.forfeit.includes(id) && assaultWeapons(state, b, id, ct).length > 0) : [] })
   return nextCombat(state, b, events)
 }
 
@@ -501,7 +518,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
       }
     }
     const id = nextId(state)
-    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['charge']))
+    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['charge']) && !polarityFieldBlocks(state, b, lead, e.id))
       .map((e) => ({ id: e.id, label: `Charge ${e.id}`, action: { type: 'chargeTarget', decisionId: id, player: m.owner, targetId: e.id } as Action }))
     if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to charge')
     state = setAct(patchX(state, { stage: 'chargeTarget' }), { ...act(patchX(state, { stage: 'chargeTarget' })), movement: 'charge', movedModelId: lead })
@@ -511,7 +528,7 @@ function chooseMovementAnswer(state0: GameState, b: B, a: ChooseMovementAction):
   if (a.option === 'slam') {
     // R7.12: declare a target that is in LOS now (the start of Normal Movement)
     const id = nextId(state)
-    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['special']))
+    const opts: DecisionOption[] = enemiesOf(state, m.owner).filter((e) => hl(state, b, lead, e.id) && !giftBlock(state, b, lead, e.id, ['special']) && !polarityFieldBlocks(state, b, lead, e.id))
       .map((e) => ({ id: e.id, label: `Slam ${e.id}`, action: { type: 'chargeTarget', decisionId: id, player: m.owner, targetId: e.id } as Action }))
     if (!opts.length) return reject('E_TARGET_INVALID', 'no enemy in line of sight to slam')
     state = setAct(patchX(state, { stage: 'slamTarget' }), { ...act(patchX(state, { stage: 'slamTarget' })), movement: 'slam', movedModelId: lead })
@@ -607,7 +624,8 @@ interface PlaceAfter {
   unplaceable?: ModelId[]
   warded?: boolean // the movement.end window (abilities, Admonition wards) has been run for this move
 }
-const PLACE_DIST = 2
+/** R5.8 placement reach: 2" from the moved trooper, 4" for a unit with Unpredictable Movement (Wolf Riders). */
+const placeDist = (state: GameState, b: B, leadId: ModelId): number => (hasFlag(state, b, leadId, 'unpredictableMovement') ? 4 : 2)
 function unitEngagement(state: GameState, unitId: UnitId, info: MoverInfo): Record<ModelId, ModelId[]> {
   const out: Record<ModelId, ModelId[]> = {}
   for (const t of state.units[unitId]!.troopers) if (alive(state.models[t])) out[t] = engagedBy(state, t, info.rangeOf)
@@ -620,7 +638,8 @@ function raisePlaceTroopers(state0: GameState, b: B, events: GameEvent[], cont: 
   const ac = act(state0)
   const u = state0.units[ac.activeId]!
   const others = othersToPlace(state0, u.id, cont.leadId)
-  const sug = placeWithin(state0, cont.leadId, others, { dist: PLACE_DIST, completely: false, visible: (p) => hasLosFromAnchor(state0, cont.leadId, p) })
+  const pd = placeDist(state0, b, cont.leadId)
+  const sug = placeWithin(state0, cont.leadId, others, { dist: pd, completely: false, visible: (p) => hasLosFromAnchor(state0, cont.leadId, p) })
   let state = patchX(state0, { stage: 'place', placeAfter: { ...cont, unplaceable: sug.failed } })
   state = { ...state, window: 'movement.place' }
   const did = nextId(state)
@@ -629,7 +648,7 @@ function raisePlaceTroopers(state0: GameState, b: B, events: GameEvent[], cont: 
   const options: DecisionOption[] = [{ id: 'auto', label: 'Place the unit around the moved trooper', action: { type: 'placeTroopers', decisionId: did, player, placements } as Action }]
   const r = raise(state, {
     player, kind: 'placeTroopers', window: 'movement.place', context: { modelId: cont.leadId, unitId: u.id, data: { modelIds: others, unplaceable: sug.failed } },
-    constraints: { modelId: others[0] ?? cont.leadId, from: state.models[cont.leadId]!.pos, maxDist: PLACE_DIST, placeWithin: { anchorId: cont.leadId, dist: PLACE_DIST, completely: false, los: true } },
+    constraints: { modelId: others[0] ?? cont.leadId, from: state.models[cont.leadId]!.pos, maxDist: pd, placeWithin: { anchorId: cont.leadId, dist: pd, completely: false, los: true } },
     options, canPass: false,
   })
   return ok(r.state, events)
@@ -642,6 +661,7 @@ function placeTroopersAnswer(state0: GameState, b: B, a: import('../actions').Pl
   const u = state0.units[ac.activeId]!
   const others = othersToPlace(state0, u.id, cont.leadId)
   const anchor = state0.models[cont.leadId]!
+  const pd = placeDist(state0, b, cont.leadId)
   const seen = new Set<ModelId>()
   const extra: { pos: Vec2; r: number }[] = [{ pos: anchor.pos, r: baseRadius(anchor.base) }]
   const placed: Record<ModelId, Vec2> = {}
@@ -652,7 +672,7 @@ function placeTroopersAnswer(state0: GameState, b: B, a: import('../actions').Pl
     if (!p.pos || !Number.isFinite(p.pos.x) || !Number.isFinite(p.pos.z)) return reject('E_BAD_PAYLOAD', 'bad position')
     const m = state0.models[p.modelId]!
     const gap = dist(p.pos, anchor.pos) - baseRadius(m.base) - baseRadius(anchor.base)
-    if (gap > PLACE_DIST + 1e-6) return reject('E_TOO_FAR', `${p.modelId} must be within ${PLACE_DIST}" of ${cont.leadId}`)
+    if (gap > pd + 1e-6) return reject('E_TOO_FAR', `${p.modelId} must be within ${pd}" of ${cont.leadId}`)
     const legal = isLegalPlacement(state0, p.modelId, p.pos, m.base, { ignoreIds: others, extra })
     if (!legal.ok) return reject(legal.code ?? 'E_PLACEMENT', legal.message ?? 'illegal placement')
     if (!hasLosFromAnchor(state0, cont.leadId, p.pos)) return reject('E_NO_LOS', `${p.modelId} must be placed in line of sight of ${cont.leadId}`)
@@ -736,6 +756,7 @@ function chargeTargetAnswer(state0: GameState, b: B, a: ChargeTargetAction): Res
   const m = state.models[lead]!
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'charge an enemy model')
   { const gb = giftBlock(state, b, lead, a.targetId, ['charge']); if (gb) return reject('E_TARGET_INVALID', gb) } // menoth: the Gift of Flame
+  if (polarityFieldBlocks(state, b, lead, a.targetId)) return reject('E_TARGET_INVALID', 'a Polarity Field: a construct cannot charge that unit') // cygnar: Galvanic Capacitor
   if (!hl(state, b, lead, a.targetId)) return reject('E_NO_LOS', 'no line of sight to the charge target')
   const info = moverInfo(state, b, lead)
   // the default answer: straight at the target until contact (or SPD+3")
@@ -818,6 +839,7 @@ function slamTargetAnswer(state: GameState, b: B, a: ChargeTargetAction): Result
   const m = state.models[lead]!
   if (!t || !isOnTable(t) || t.owner === m.owner) return reject('E_TARGET_INVALID', 'slam an enemy model')
   { const gb = giftBlock(state, b, lead, a.targetId, ['special']); if (gb) return reject('E_TARGET_INVALID', gb) } // menoth: the Gift of Flame
+  if (polarityFieldBlocks(state, b, lead, a.targetId)) return reject('E_TARGET_INVALID', 'a Polarity Field: a construct cannot slam that unit') // cygnar: Galvanic Capacitor
   if (!hl(state, b, lead, a.targetId)) return reject('E_NO_LOS', 'the slam target must be in line of sight at the start of Normal Movement')
   const info = moverInfo(state, b, lead)
   const range = slamRange(m)
@@ -929,6 +951,16 @@ const ATK_POINTS = new Set(['attack.declared', 'attack.beforeRoll', 'attack.roll
 
 function nextCombat(state0: GameState, b: B, events: GameEvent[]): Out {
   let state = state0
+  // Assault attacks come first (each model with the rule, one at a time), then the Combat Actions
+  const asq = [...(act(state).x.assault ?? [])]
+  const chargeTarget = act(state).charge?.targetId
+  while (asq.length && chargeTarget) {
+    const id = asq.shift()!
+    if (!alive(state.models[id]) || !assaultWeapons(state, b, id, chargeTarget).length) continue
+    state = patchX(state, { assault: asq })
+    return raiseAssault(state, b, events, id, chargeTarget)
+  }
+  if (act(state).x.assault?.length) state = patchX(state, { assault: [] })
   const queue = [...act(state).x.queue]
   let cur: ModelId | undefined
   while (queue.length) {
@@ -943,19 +975,66 @@ function nextCombat(state0: GameState, b: B, events: GameEvent[]): Out {
   return raiseCombatChoice(state, b, events)
 }
 
+// ---------- Assault (Wolf Riders): one ranged attack at the charged model, before the Combat Action ----------
+/** The ranged weapons a model with Assault could shoot the charged model with now (target in LOS and range; the charger is engaged with it, which is fine). */
+function assaultWeapons(state: GameState, b: B, id: ModelId, targetId: ModelId): WeaponInst[] {
+  const m = state.models[id]
+  const t = state.models[targetId]
+  if (!m || !alive(m) || !t || !alive(t) || !hasFlag(state, b, id, 'assault') || kd(state, m) || stat(state, m) || m.inert || hasCondition(state, m, 'blind')) return []
+  const out: WeaponInst[] = []
+  const seen = new Set<Id>()
+  for (const w of weaponsOf(b, m)) {
+    if (isMelee(w.w) || seen.has(w.weaponId)) continue
+    seen.add(w.weaponId)
+    if (candidateTargets(state, b, id, w).includes(targetId)) out.push(w)
+  }
+  return out
+}
+
+function raiseAssault(state0: GameState, b: B, events: GameEvent[], id: ModelId, targetId: ModelId): Out {
+  const state: GameState = { ...state0, window: 'combat.chooseAttack', attack: null }
+  const m = state.models[id]!
+  const did = nextId(state)
+  const options: DecisionOption[] = assaultWeapons(state, b, id, targetId).map((w) => ({
+    id: `atk:${w.weaponId}:${targetId}`, label: `Assault: ${w.w.name} at ${targetId}`,
+    action: { type: 'chooseAttack', decisionId: did, player: m.owner, modelId: id, weaponId: w.weaponId, targetId, additional: false } as Action,
+  }))
+  const r = raise(state, { player: m.owner, kind: 'chooseAttack', window: 'combat.chooseAttack', context: { modelId: id, targetId, data: { code: 'assault' } }, options, canPass: true })
+  return ok(r.state, events)
+}
+
+function assaultAnswer(state0: GameState, b: B, a: ChooseAttackAction): Result {
+  const id = state0.pending.context.modelId
+  const targetId = state0.pending.context.targetId
+  if (!id || !targetId || a.modelId !== id) return reject('E_TARGET_INVALID', `${id} is the model that assaults`)
+  if (a.additional) return reject('E_NOT_AN_OPTION', 'an Assault attack is a single free attack')
+  if (a.targetId !== targetId) return reject('E_TARGET_INVALID', 'Assault goes at the model that was charged')
+  if (!assaultWeapons(state0, b, id, targetId).some((w) => w.weaponId === a.weaponId)) return reject('E_NOT_AN_OPTION', 'that weapon cannot make the Assault attack')
+  const dec = declareAttack({ ...state0, attack: null }, b, { attackerId: id, targetId, weaponId: a.weaponId, additional: false, attackType: a.attackType, noFocus: false, chargeAttack: false, basic: true, flags: { assault: true } })
+  if ('rejection' in dec) return dec
+  return drive(dec.state, b, [...dec.events])
+}
+
 interface CombatChoiceInfo { choice: ChooseCombatActionAction['choice']; abilityId?: Id; powerAttack?: ChooseCombatActionAction['powerAttack']; targetId?: ModelId; label: string }
 
 // ---------- special actions (the star Action abilities and the self abilities that cost something) ----------
 /** An ability on the model itself (Regeneration, Blood Rage) is used any time in the Combat Action and does not use it up. */
 const isAnytimeAbility = (ab: Rec): boolean => (ab.scope?.who ?? 'self') === 'self'
-/** Does the ability need one chosen friendly model (Repair, Enliven, Ancillary Attack) rather than an area? */
-const needsTarget = (ab: Rec): boolean => ((ab.effect ?? []) as Rec[]).some((n) => n.op === 'makeAttack' || n.op === 'advance' || n.code === 'repair')
+/** needsTarget (targeted.ts) is the general targeted-action flag: Repair, Enliven, Ancillary Attack, Empower, Grim Returns, Sigil of Power, Guidance, Lightning Wreath. */
 const specialKey = (abId: Id, ab: Rec, targetId?: ModelId): string => (ab.limit === 'oncePerTurn' && targetId ? `${abId}:${targetId}` : ab.limit ? `${abId}:${ab.limit}` : '')
+/** Righteous Intervention is a passive carrying the coreFlag; the rule makes it a once-per-game action of the unit (no data change needed). */
+const isRighteousAction = (abId: Id): boolean => abId === RIGHTEOUS_ID
+/** Every limit key a special action marks and checks (its own, and the ones several actions share). */
+const limitKeysOf = (state: GameState, b: B, id: ModelId, abId: Id, ab: Rec, targetId?: ModelId): string[] => {
+  const own = specialKey(abId, ab, targetId)
+  return [...(own ? [own] : []), ...sharedLimitKeys(state, b, id, abId)]
+}
 
 /** Friendly models a special action could be aimed at (scope range and filter; not the user). */
 function specialTargets(state: GameState, b: B, id: ModelId, ab: Rec): ModelId[] {
-  const m = state.models[id]!
   const sc = (ab.scope ?? {}) as Rec
+  if (needsTarget(ab)) return targetCandidates(state, b, id, ab, (t) => !sc.filter || evalCond(state, b, sc.filter, { selfId: t, srcId: id }))
+  const m = state.models[id]!
   const range = sc.range === 'CTRL' ? statOf(state, b, id, 'CTRL') : sc.range === 'melee' ? 1 : typeof sc.range === 'number' ? sc.range : 0
   return Object.values(state.models)
     .filter((t) => t.id !== id && t.owner === m.owner && alive(t) && t.life === 'active' && within(m, t, range) && (!sc.filter || evalCond(state, b, sc.filter, { selfId: t.id, srcId: id })))
@@ -987,9 +1066,10 @@ function specialActionOk(state: GameState, b: B, id: ModelId, abId: Id, targetId
   const ab = rec(b, abId)
   const m = state.models[id]
   const a = actOf(state)
-  if (!m || !a || ab.kind !== 'specialAction' || ab.trigger !== 'combat.choose') return false
-  const key = specialKey(abId, ab, targetId)
-  if (key && a.limitsUsed.includes(key)) return false
+  const righteous = isRighteousAction(abId)
+  if (!m || !a || (!righteous && (ab.kind !== 'specialAction' || ab.trigger !== 'combat.choose'))) return false
+  if (limitKeysOf(state, b, id, abId, ab, targetId).some((k) => a.limitsUsed.includes(k))) return false
+  if (righteous && !righteousAvailable(state, b, id)) return false
   if (a.ran || hasCondition(state, m, 'knockedDown') || hasCondition(state, m, 'stationary')) return false
   const nodes = (ab.effect ?? []) as Rec[]
   if (nodes.some((n) => n.code === 'cirBloodRage') && !(m.tokens?.corpse && weaponsOf(b, m).some((w) => isMelee(w.w)))) return false
@@ -1009,7 +1089,7 @@ function specialChoices(state: GameState, b: B, id: ModelId, anytimeOnly = false
   const out: CombatChoiceInfo[] = []
   for (const abId of abilitiesOf(state, b, id)) {
     const ab = rec(b, abId)
-    if (ab.kind !== 'specialAction' || ab.trigger !== 'combat.choose') continue
+    if (!isRighteousAction(abId) && (ab.kind !== 'specialAction' || ab.trigger !== 'combat.choose')) continue
     const anytime = isAnytimeAbility(ab)
     if (anytimeOnly && !anytime) continue
     if (needsTarget(ab)) {
@@ -1062,8 +1142,12 @@ function performSpecialAction(state0: GameState, b: B, id: ModelId, abId: Id, ta
     state = p.state; events.push(...p.events)
   }
   let attack = false
-  if (isAnytimeAbility(ab)) {
-    const r = runAbilityRec(state, b, ab, abId, id, id)
+  if (isRighteousAction(abId)) {
+    const r = armRighteousIntervention(state, id)
+    state = r.state; events.push(...r.events)
+  } else if (isAnytimeAbility(ab)) {
+    // a targeted self action (Lightning Wreath) hands the chosen model to its hook
+    const r = runAbilityRec(state, b, ab, abId, id, targetId ?? id)
     state = r.state; events.push(...r.events)
   } else if (nodes.some((n) => n.op === 'makeAttack')) {
     const pick = bestAllyAttack(state, b, targetId!)
@@ -1083,9 +1167,9 @@ function performSpecialAction(state0: GameState, b: B, id: ModelId, abId: Id, ta
     const r = specialEffect(state, ab, abId, id, filtered)
     state = r.state; events.push(...r.events)
   }
-  const key = specialKey(abId, ab, targetId)
   const a2 = actOf(state)
-  if (key && a2 && !a2.limitsUsed.includes(key)) state = { ...state, activation: { ...a2, limitsUsed: [...a2.limitsUsed, key] } as typeof state.activation }
+  const keys = limitKeysOf(state, b, id, abId, ab, targetId).filter((k) => !a2?.limitsUsed.includes(k))
+  if (keys.length && a2) state = { ...state, activation: { ...a2, limitsUsed: [...a2.limitsUsed, ...keys] } as typeof state.activation }
   return { state, events, attack }
 }
 
@@ -1135,7 +1219,7 @@ function combatChoices(state: GameState, b: B, id: ModelId): CombatChoiceInfo[] 
       }
       if (!meleeOnly) out.push(...specialChoices(state, b, id))
       if (!a.charge && !a.x.meleeOnly.includes(id) && ((m.type !== 'warEngine' && m.type !== 'beast') || (canSpendFocus(state, id, b) && !m.crippled.includes('m')))) {
-        if (hasFlag(state, b, id, 'headbutt') && melee.some((w) => !weaponCrippled(m, w.loc) || true)) out.push({ choice: 'powerAttack', powerAttack: 'headbutt', label: 'Headbutt' })
+        if (hasFlag(state, b, id, 'headbutt')) out.push({ choice: 'powerAttack', powerAttack: 'headbutt', label: 'Headbutt' }) // MK4: a power attack needs no weapon
         if (melee.some((w) => ((w.w.qualities ?? []) as Id[]).includes('core.q.throw') && !weaponCrippled(m, w.loc))) out.push({ choice: 'powerAttack', powerAttack: 'throw', label: 'Throw' })
       }
     }
@@ -1176,12 +1260,18 @@ function rofFor(state: GameState, w: Rec, ownerId: ModelId): { state: GameState;
   return { state: r.state, events: [r.event], n }
 }
 
-function combatAnswer(state0: GameState, b: B, a: ChooseCombatActionAction): Result {
+function combatAnswer(state0: GameState, b: B, a0: ChooseCombatActionAction): Result {
   let state = state0
   const cur = act(state).x.cur
+  let a = a0
   if (a.modelId !== cur || !cur) return reject('E_TARGET_INVALID', `${cur} is the model choosing`)
   const m = state.models[cur]!
   const list = combatChoices(state, b, cur)
+  // a targeted special action answered without a target gets the first option's (the one its hook used to pick by itself)
+  if (a.choice === 'specialAction' && a.abilityId && !a.targetId && needsTarget(rec(b, a.abilityId))) {
+    const first = list.find((c) => c.choice === 'specialAction' && c.abilityId === a.abilityId && c.targetId)
+    if (first) a = { ...a, targetId: first.targetId }
+  }
   const match = list.find((c) => c.choice === a.choice && (c.abilityId ?? null) === (a.abilityId ?? null) && (c.powerAttack ?? null) === (a.powerAttack ?? null) && (c.targetId ?? null) === (a.targetId ?? null))
   if (!match) {
     if (a.choice === 'dual') return reject('E_NO_DUAL_ATTACK', 'this model has no Dual Attack')
@@ -1285,7 +1375,7 @@ function candidateTargets(state: GameState, b: B, attackerId: ModelId, w: Weapon
     if (isMelee(w.w)) {
       if (!within(at, t, w.w.rng ?? 1)) continue
     } else {
-      const reach = weaponRangeFor(state, attackerId, w.w)
+      const reach = weaponRangeFor(state, attackerId, w.w, t.id) // Warping Winds: -3 RNG at a protected model
       if (modelDistance(at, t) > reach + 1e-6) continue
       if (engagers.length && !engagers.includes(t.id) && !hasFlag(state, b, attackerId, 'gunfighter')) continue
     }
@@ -1459,11 +1549,11 @@ function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
     } else {
       for (const t of enemiesOf(state, m.owner)) {
         const wpn = weaponsOf(b, m).find((w) => isMelee(w.w) && (kind !== 'throw' || ((w.w.qualities ?? []) as Id[]).includes('core.q.throw')))
-        if (!wpn) continue
-        const rng = kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn.w.rng ?? 1)
+        if (!wpn && kind !== 'headbutt') continue // a headbutt is made with the head, so a model with no melee weapon (the Doomspitter Raptor) may make it
+        const rng = kind === 'headbutt' ? (m.base === 120 ? 2 : 1) : (wpn!.w.rng ?? 1)
         if (!within(m, t, rng) || !lr(state, b, id, t.id).visible) continue
         if (t.base > m.base || giftBlock(state, b, id, t.id, ['special'])) continue
-        opts.push({ id: `pa:${kind}:${t.id}`, label: `${kind} ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id, weaponId: wpn.weaponId } as Action, ...(m.type === 'warEngine' || m.type === 'beast' ? { cost: costFor(m, 1) } : {}) })
+        opts.push({ id: `pa:${kind}:${t.id}`, label: `${kind} ${t.id}`, action: { type: 'powerAttack', decisionId: did, player: m.owner, modelId: id, kind, targetId: t.id, ...(wpn ? { weaponId: wpn.weaponId } : {}) } as Action, ...(m.type === 'warEngine' || m.type === 'beast' ? { cost: costFor(m, 1) } : {}) })
       }
     }
     // a slam that reached its target must be made (neither part of it may be forfeited); otherwise the attacks may end
@@ -1480,7 +1570,7 @@ function raiseChooseAttack(state0: GameState, b: B, events: GameEvent[]): Out {
   }
   options.push({ id: 'endAttacks', label: 'End attacks', action: { type: 'endAttacks', decisionId: did, player: m.owner, modelId: id } as Action })
   options.push(...any)
-  for (const c of specialChoices(state, b, id, true)) options.push({ id: `sa:${c.abilityId}`, label: c.label, action: { type: 'chooseCombatAction', decisionId: did, player: m.owner, modelId: id, choice: 'specialAction', abilityId: c.abilityId } as Action })
+  for (const c of specialChoices(state, b, id, true)) options.push(anytimeSpecialOption(c, did, m.owner, id))
   const r = raise(state, { player: m.owner, kind: 'chooseAttack', window: 'combat.chooseAttack', context: { modelId: id }, options, canPass: false })
   state = r.state
   return ok(state, events)
@@ -1571,6 +1661,7 @@ function powerAttackAnswer(state0: GameState, b: B, a: import('../actions').Powe
   if (a.kind === 'trample') return reject('E_POWER_ATTACK', 'a trample attacks as part of its move')
   const slam = a.kind === 'slam' ? ac.x.slam : undefined
   if (a.kind === 'slam' && (!slam || slam.targetId !== a.targetId)) return reject('E_TARGET_INVALID', 'the slam attack goes at the declared slam target')
+  if (a.kind === 'slam' && polarityFieldBlocks(state, b, cur, a.targetId)) return reject('E_TARGET_INVALID', 'a Polarity Field: a construct cannot slam that unit')
   const wpn = weaponsOf(b, m).find((w) => w.weaponId === a.weaponId && isMelee(w.w)) ?? weaponsOf(b, m).find((w) => isMelee(w.w))
   if (a.kind === 'throw' && !wpn) return reject('E_POWER_ATTACK', 'no melee weapon')
   if (a.kind === 'throw' && !((wpn!.w.qualities ?? []) as Id[]).includes('core.q.throw')) return reject('E_POWER_ATTACK', 'that weapon cannot throw')
@@ -1763,6 +1854,11 @@ function afterTriggerMove(state0: GameState, b: B, events: GameEvent[], t: Trigg
     state = patchX(state, { queue: [], cur: null, forfeit: act(state).modelIds })
     state = patchAtk(state, { flags: { ...atkOf(state)!.x.flags, endActivation: true } })
   }
+  if (t.abilityId === RIGHTEOUS_ID) {
+    // the unit's model that stepped in (or stayed put) makes one basic melee attack at any enemy it can reach
+    const nested = startTriggeredAttack(state, b, { ownerId: t.modelId, target: 'any', weaponFilter: 'melee', basic: true, abilityId: RIGHTEOUS_ID })
+    if (nested) return fin(nested.state, [...events, ...nested.events])
+  }
   return drive(state, b, events)
 }
 
@@ -1787,7 +1883,7 @@ function defFor(
   const base = (target.crippled.includes('M') || target.inert) ? Math.min(rawBase, 5) : rawBase
   const r = defModifiers(state, target.id, {
     kind, baseDef: base, originId: atk?.originId ?? attacker.id, melee: { reach: (m) => meleeReach(state, b, m.id) },
-    grantedConcealment: effectsOn(state, target.id).some((e) => e.sourceId === 'cry.a.exhaust-fumes'),
+    grantedConcealment: grantedConcealmentOf(state, b, target.id), // Exhaust Fumes, Ashen Veil
     grantedCover: (kind === 'ranged' || kind === 'arcane') && hasGrantedCover(state, b, target.id),
     ignoreTargetInMelee: o.ignoreTIM, ignoreCloudConcealment: hasIgnore(state, b, attacker.id, 'clouds'), ignoreAllConcealment: !!o.ignoreConcealment || hasIgnore(state, b, attacker.id, 'concealment'), ignoreCover: !!o.ignoreCover || hasIgnore(state, b, attacker.id, 'cover'),
   })
@@ -1874,6 +1970,8 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
     const magicStar = !!p.star && !isMelee(w) && hasFlag(state, b, at.id, 'magicAbility')
     kind = p.forceKind ?? (isMelee(w) ? 'melee' : magicStar ? 'arcane' : isSpray(w) ? 'spray' : (w.aoe ?? 0) > 0 ? 'aoe' : 'ranged')
   }
+  // an arcane ★Attack that is printed as a spray (Razor Wind) rolls AAT like any arcane attack but hits every model along its line (flags.sprayLine)
+  const sprayLine = kind === 'arcane' && !spell && !!p.star && (rec(b, p.star).spray === true || w.spray === true || MAGIC_SPRAY_STARS.has(p.star))
   if (hasCondition(state, at, 'blind') && kind !== 'melee' && kind !== 'power') return { rejection: { code: 'E_NOT_AN_OPTION', message: 'a blind model cannot make ranged or magic attacks' } }
   if (spell && state.effects.some((e) => e.targetIds.includes(tg.id) && (e.forbid?.includes('beTargetedBySpell') || (e.forbid?.includes('beTargeted') && e.owner !== at.owner)))) return { rejection: { code: 'E_TARGET_INVALID', message: 'a ward stops spells targeting that model' } }
   if (!p.flags?.frenzy) {
@@ -1897,7 +1995,7 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
   } else if (!witch) {
     const vis = lr(state, b, origin, tg.id, {
       ignoreClouds: hasIgnore(state, b, at.id, 'clouds'),
-      ignoreModels: kind === 'spray' || hasIgnore(state, b, at.id, 'interveningModels') || (!!inst && hasIgnoreWeapon(inst.w, b, 'interveningModels')),
+      ignoreModels: kind === 'spray' || sprayLine || hasIgnore(state, b, at.id, 'interveningModels') || (!!inst && hasIgnoreWeapon(inst.w, b, 'interveningModels')),
     })
     if (!vis.visible) {
       // Wraith Shot: the shot needs no line of sight, so a soul makes it possible
@@ -1920,7 +2018,7 @@ export function declareAttack(state0: GameState, b: B, p: DeclParams): DeclOut {
     stage: 'start', weaponId: spell ? spell.id : p.weaponId, wloc: inst?.loc, group: chosen, specs, rollTargets: [tg.id], results: {}, boosted: !!p.flags?.frenzy, powerful: false,
     noFocus: p.noFocus, atkAdd: 0, jobs: [], jobIdx: 0, aoe: (w.aoe ?? 0) > 0 ? w.aoe : undefined, blastPow: w.blastPow, star, starFlat, blessed: false, denyTough: false, rfp: false,
     needColumn: false, destroyed: [], hitModels: [], trig: [], trigIdx: 0, atkMods: [], dmgMods: {}, parent: p.parent,
-    flags: { ...(forced.length ? { declForced: forced } : {}), ...((specs.includes('cir.a.blood-reaper') || p.star === THRESHER_ID) && !p.additional && kind === 'melee' ? { multi: true } : {}), ...(chosen === 'featherweight-arrow' && kind === 'ranged' ? { multi: true } : {}), ...(p.flags ?? {}) }, chargeAttack: p.chargeAttack,
+    flags: { ...(forced.length ? { declForced: forced } : {}), ...((specs.includes('cir.a.blood-reaper') || p.star === THRESHER_ID) && !p.additional && kind === 'melee' ? { multi: true } : {}), ...(chosen === 'featherweight-arrow' && kind === 'ranged' ? { multi: true } : {}), ...(sprayLine ? { sprayLine: true } : {}), ...(p.flags ?? {}) }, chargeAttack: p.chargeAttack,
     basicRanged: !!p.basic && kind === 'ranged',
   }
   const outOfAct = !a0 || !a0.modelIds.includes(at.id) || !!p.generatedBy
@@ -1962,9 +2060,10 @@ function measure(state0: GameState, b: B): { state: GameState; events: GameEvent
   const sneaky = (atk.kind === 'ranged' || atk.kind === 'aoe' || atk.kind === 'arcane') && stealthy(state, b, tg.id) && !hasIgnore(state, b, at.id, 'stealth') && !flareOver(state, tg) && dst > 5 + 1e-6 && !witch
   if (sneaky) autoMiss = true
   const pistol = !!inst && ((inst.w.qualities ?? []) as Id[]).includes('core.q.pistol')
-  const ignoreTIM = atk.x.specs.some((id) => (rec(b, id).effect ?? []).some((n: Rec) => n.op === 'ignore' && n.ignore === 'targetInMelee')) || hasIgnore(state, b, at.id, 'targetInMelee')
+  const ignoreTIM = atk.x.specs.some((id) => (rec(b, id).effect ?? []).some((n: Rec) => n.op === 'ignore' && n.ignore === 'targetInMelee')) || hasIgnore(state, b, at.id, 'targetInMelee') || !!atk.x.flags.assault
     ? true : pistol ? ('attacker' as const) : false
-  const dk = atk.kind === 'melee' || atk.kind === 'power' ? 'melee' : atk.kind === 'arcane' ? 'arcane' : atk.kind === 'spray' ? 'spray' : 'ranged'
+  const lineSpray = !!atk.x.flags.sprayLine
+  const dk = atk.kind === 'melee' || atk.kind === 'power' ? 'melee' : lineSpray ? 'spray' : atk.kind === 'arcane' ? 'arcane' : atk.kind === 'spray' ? 'spray' : 'ranged'
   // From Beneath, Wraith Shot: the attack ignores cover and concealment
   const wraith = !!atk.x.flags.wraithShot
   const df = defFor(state, b, atk, at, tg, dk, { ignoreTIM, blessed: atk.x.blessed, ignoreCover: wraith || hasIgnore(state, b, at.id, 'cover', atk.x.specs), ignoreConcealment: wraith || hasIgnore(state, b, at.id, 'concealment', atk.x.specs) })
@@ -1987,7 +2086,7 @@ function measure(state0: GameState, b: B): { state: GameState; events: GameEvent
   const [q0, q1] = autoHit && !autoMiss ? hitProbabilityBoost({ stat: statv, mods, dice: { base: 2, added, removed }, target: df.def, autoHit: false, autoMiss: false, dropLowest }) : [null, null]
   // spray: the rolling models are every model the line crosses
   let rollTargets = [tg.id]
-  if (atk.kind === 'spray') rollTargets = sprayTargets(state, b, a2, w)
+  if (atk.kind === 'spray' || lineSpray) rollTargets = sprayTargets(state, b, a2, w)
   else if (atk.x.flags.multi) rollTargets = multiTargets(state, b, a2, w)
   const next: AtkCtx = {
     ...a2, dice: a2.x.boosted ? dice + 1 : dice, mods, hitTarget: df.def, pHit: a2.x.boosted ? p1.pHit : p0.pHit, pHitBoosted: p1.pHit, autoHit, autoMiss,
@@ -2037,6 +2136,8 @@ function multiTargets(state: GameState, b: B, atk: AtkCtx, w: Rec): ModelId[] {
 
 // ---------- the ability runner (descriptor ops + code hooks) ----------
 const DIRECT_ONLY = new Set<Id>(['core.a.brutal-damage'])
+/** Arcane ★Attacks printed as sprays (the weapon record may also say `spray: true`): they roll AAT and hit every model along the line. */
+const MAGIC_SPRAY_STARS = new Set<Id>(['kha.a.razor-wind'])
 
 function d3or(state: GameState, v: number | string | undefined, ownerId: ModelId): { state: GameState; events: GameEvent[]; n: number } {
   if (typeof v === 'number') return { state, events: [], n: v }
@@ -2109,6 +2210,7 @@ function runAbilityRec(state0: GameState, b: B, ab: Rec, abId: Id, ownerId: Mode
       }
       case 'applyCondition':
         if (subj && alive(subj) && n.condition) {
+          if (n.condition === 'disrupted' && hasFlag(state, b, subj.id, 'insulatedCortex')) break // Insulated Cortex: this warjack cannot be disrupted
           if ((n.condition === 'fire' || n.condition === 'corrosion') && (resistsDamageType(state, b, subj.id, [n.condition]) || isIncorporeal(state, b, subj.id))) break
           if (n.condition === 'shadowBind' || n.condition === 'blind') {
             // a one-round condition the model can shake: carried by an effect so it expires on its own
@@ -2138,7 +2240,8 @@ function runAbilityRec(state0: GameState, b: B, ab: Rec, abId: Id, ownerId: Mode
       }
       case 'advance': {
         if (!subj || !a) break
-        const dst = typeof n.dist === 'number' ? n.dist : 0
+        // Enliven (menoth): "a full advance" is the model's own SPD, read now (data may also say dist: 'SPD')
+        const dst = n.dist === 'SPD' || (abId === 'men.a.enliven' && ab.kind === 'specialAction') ? statOf(state, b, subj.id, 'SPD') : typeof n.dist === 'number' ? n.dist : 0
         if (n.direction === 'toward') {
           // Beat Back follow-up: the ability's owner advances toward the model the effect moved
           const mover = state.models[ownerId]
@@ -2396,14 +2499,15 @@ function rollStep(state0: GameState, b: B): { state: GameState; events: GameEven
   const results: AtkX['results'] = {}
   const rollTn: Record<ModelId, number> = {}
   const rollIds: Record<ModelId, string> = {}
-  const dk = atk.kind === 'melee' || atk.kind === 'power' ? 'melee' : atk.kind === 'arcane' ? 'arcane' : atk.kind === 'spray' ? 'spray' : 'ranged'
+  const lineSpray = !!atk.x.flags.sprayLine
+  const dk = atk.kind === 'melee' || atk.kind === 'power' ? 'melee' : lineSpray ? 'spray' : atk.kind === 'arcane' ? 'arcane' : atk.kind === 'spray' ? 'spray' : 'ranged'
   for (const tid of atk.x.rollTargets) {
     const t = state.models[tid]
     if (!t) continue
     let hitTarget = atk.hitTarget
     let autoHit = atk.autoHit
     let autoMiss = atk.autoMiss
-    if (atk.kind === 'spray' || atk.x.flags.multi) {
+    if (atk.kind === 'spray' || lineSpray || atk.x.flags.multi) {
       const df = defFor(state, b, atk, at, t, dk, { ignoreTIM: false, ignoreCover: !!atk.x.flags.wraithShot, ignoreConcealment: !!atk.x.flags.wraithShot })
       hitTarget = df.def; autoHit = df.autoHit; autoMiss = false
     }
@@ -2750,7 +2854,7 @@ function attackDamageTypes(state: GameState, b: B, atk: AtkCtx): DamageType[] {
 }
 
 /** Everything one damage roll of the declared attack would use, for query.attackPreview (no dice are rolled). */
-export interface DamagePreview { pow: number; armor: number; added: number; removed: number; resist: boolean; flat: number; dropLowest: boolean; unboostable: boolean }
+export interface DamagePreview { pow: number; armor: number; added: number; removed: number; resist: boolean; flat: number; dropLowest: boolean; unboostable: boolean; noDamage?: boolean }
 export function previewDamage(state0: GameState, b: B, kind: 'direct' | 'blast'): DamagePreview {
   const atk = atkOf(state0)!
   const at = state0.models[atk.attackerId]!
@@ -2764,9 +2868,10 @@ export function previewDamage(state0: GameState, b: B, kind: 'direct' | 'blast')
   const cur = a.x.cur!
   const inst = atk.spellId ? undefined : weaponsOf(b, at).find((x) => x.weaponId === atk.weaponId && x.loc === atk.x.wloc)
   return {
-    pow: job.pow, armor: armOf(state, b, job.targetId, { armorPiercing: cur.armorPiercing, blessed: a.x.blessed }), added: cur.addDice,
+    pow: job.pow, armor: armOf(state, b, job.targetId, { armorPiercing: cur.armorPiercing, blessed: a.x.blessed }) + unyieldingArm(state, b, job.targetId, atk.kind), added: cur.addDice,
     removed: (inst && weaponCrippled(at, inst.loc) ? 1 : 0) + (at.crippled.includes('b') ? 1 : 0), resist: resistsDamageType(state, b, job.targetId, job.types), flat: cur.flat,
     dropLowest: cur.dropLowest, unboostable: !!job.unboostable,
+    ...(isIncorporeal(state, b, job.targetId) && !job.types.includes('magical') ? { noDamage: true } : {}), // Incorporeal: no non-magical damage
   }
 }
 
@@ -2806,7 +2911,7 @@ function nextJob(state0: GameState, b: B): { state: GameState; events: GameEvent
     const did = nextId(state)
     const at = state.models[a.attackerId]!
     const t = state.models[job.targetId]!
-    const dd = (boost: boolean) => damageDistribution({ pow: job.pow, armor: armOf(state, b, job.targetId, { armorPiercing: a.x.cur!.armorPiercing, blessed: a.x.blessed }), dice: { added: a.x.cur!.addDice, boost }, resist: resistsDamageType(state, b, job.targetId, job.types), flat })
+    const dd = (boost: boolean) => damageDistribution({ pow: job.pow, armor: armOf(state, b, job.targetId, { armorPiercing: a.x.cur!.armorPiercing, blessed: a.x.blessed }) + unyieldingArm(state, b, job.targetId, a.kind), dice: { added: a.x.cur!.addDice, boost }, resist: resistsDamageType(state, b, job.targetId, job.types), flat })
     const boxes = t.damage.track === 'single' ? Math.max(1, t.damage.boxes - t.damage.filled) : 30
     const d0 = dd(false), d1 = dd(true)
     const options: DecisionOption[] = [
@@ -3055,6 +3160,13 @@ function resolveAttack(state0: GameState, b: B): { state: GameState; events: Gam
     if (!alive(state.models[d.ownerId])) continue
     list.push({ ownerId: d.ownerId, tier: state.models[d.ownerId]!.owner === attackerOwner ? 3 : 2, abilityId: d.abilityId })
   }
+  // Righteous Intervention: an armed unit answers a friendly Faction model this enemy attack destroyed (the responder is worked out again when the entry runs)
+  for (const did of atk.x.destroyed) {
+    const dm = state.models[did]
+    if (!dm || dm.owner === attackerOwner) continue
+    const resp = righteousResponder(state, b, did)
+    if (resp) list.push({ ownerId: resp, tier: 2, abilityId: RIGHTEOUS_ID })
+  }
   list.sort((x, y) => x.tier - y.tier)
   state = patchAtk(state, { trig: list, trigIdx: 0, stage: 'trigWait', flags: { ...atk.x.flags, take: undefined, asked: undefined, deferredMake: undefined } })
   return { state, events }
@@ -3072,6 +3184,19 @@ function triggerLoop(state0: GameState, b: B): { state: GameState; events: GameE
     const targetId = t.ownerId === atk.attackerId ? atk.targetId : t.ownerId
     const env: CondEnv = { selfId: t.ownerId, attackerId: atk.attackerId, targetId, atk, act: actInfo(state) }
     const next = (): void => { state = patchAtk(state, { trigIdx: atkOf(state)!.x.trigIdx + 1, flags: { ...atkOf(state)!.x.flags, take: undefined, asked: undefined } }) }
+    if (t.abilityId === RIGHTEOUS_ID) {
+      // Righteous Intervention: the responder advances up to 2" (a move decision, which may be passed), then makes a basic melee attack (afterTriggerMove)
+      const dead = atk.x.destroyed.find((d) => righteousResponder(state, b, d))
+      next()
+      const resp = dead ? righteousResponder(state, b, dead) : null
+      if (!resp) continue
+      const sp = spendRighteous(state, resp)
+      state = sp.state
+      events.push(...sp.events, { type: 'TriggerResolved', sourceId: RIGHTEOUS_ID, ownerId: resp, window: 'attack.resolved', skipped: false })
+      state = patchAtk(state, { stage: 'moveWait' })
+      const mv = raiseTriggerMove(state, b, [], { ctx: 'attack', modelId: resp, dist: 2, mode: 'advance', abilityId: RIGHTEOUS_ID, player: state.models[resp]!.owner, optional: true })
+      return { state: mv.state, events, wait: true }
+    }
     if (!owner || !alive(owner) || !evalCond(state, b, ab.when, env)) { next(); continue }
     if (ab.optional && atk.x.flags.take === undefined) {
       const did = nextId(state)
@@ -3112,9 +3237,9 @@ function triggeredAttackOptions(state0: GameState, b: B, mk: MakeAtk): TrigAtkOp
   const parent = atkOf(state0)!
   const owner = state0.models[mk.ownerId]
   if (!owner || !alive(owner)) return []
-  const targetId = mk.target === 'attacker' ? parent.attackerId : parent.targetId
-  const tm = state0.models[targetId]
-  if (!tm || !alive(tm)) return []
+  // 'any' (Righteous Intervention): every enemy the weapon can reach; otherwise the model the parent attack hit or was made by
+  const fixed = mk.target === 'any' ? null : mk.target === 'attacker' ? parent.attackerId : parent.targetId
+  if (fixed) { const tm = state0.models[fixed]; if (!tm || !alive(tm)) return [] }
   const out: TrigAtkOpt[] = []
   const seen = new Set<Id>()
   for (const w of weaponsOf(b, owner)) {
@@ -3122,19 +3247,22 @@ function triggeredAttackOptions(state0: GameState, b: B, mk: MakeAtk): TrigAtkOp
     seen.add(w.weaponId)
     const f = mk.weaponFilter
     if (f === 'same' ? w.weaponId !== parent.weaponId : f === 'ranged' ? isMelee(w.w) : f === 'melee' ? !isMelee(w.w) : f !== 'any' && f !== w.weaponId) continue
-    const dec = declareAttack({ ...state0, attack: null } as GameState, b, { attackerId: owner.id, targetId, weaponId: w.weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
-    if ('rejection' in dec) continue
-    // an out-of-range ranged shot is pointless: skip weapons that cannot reach
-    const nested = atkOf(dec.state)!
-    if (nested.autoMiss && nested.x.flags.outOfRange) continue
-    out.push({ weaponId: w.weaponId, targetId, pHit: nested.pHit, name: String(w.w.name ?? w.weaponId) })
+    const targets = fixed ? [fixed] : candidateTargets({ ...state0, attack: null } as GameState, b, owner.id, w)
+    for (const targetId of targets) {
+      const dec = declareAttack({ ...state0, attack: null } as GameState, b, { attackerId: owner.id, targetId, weaponId: w.weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
+      if ('rejection' in dec) continue
+      // an out-of-range ranged shot is pointless: skip weapons that cannot reach
+      const nested = atkOf(dec.state)!
+      if (nested.autoMiss && nested.x.flags.outOfRange) continue
+      out.push({ weaponId: w.weaponId, targetId, pHit: nested.pHit, name: String(w.w.name ?? w.weaponId) })
+    }
   }
   return out
 }
 
-function runTriggeredAttack(state0: GameState, b: B, mk: MakeAtk, weaponId: Id): { state: GameState; events: GameEvent[] } {
+function runTriggeredAttack(state0: GameState, b: B, mk: MakeAtk, weaponId: Id, aimAt?: ModelId): { state: GameState; events: GameEvent[] } {
   const parent = atkOf(state0)!
-  const targetId = mk.target === 'attacker' ? parent.attackerId : parent.targetId
+  const targetId = aimAt ?? (mk.target === 'attacker' ? parent.attackerId : parent.targetId)
   const dec = declareAttack({ ...state0, attack: null } as GameState, b, { attackerId: mk.ownerId, targetId, weaponId, additional: false, noFocus: true, chargeAttack: false, generatedBy: parent.attackId, basic: true, parent })
   if ('rejection' in dec) throw new Error('triggered attack no longer legal: ' + dec.rejection.message)
   const o = drive(dec.state, b, [])
@@ -3149,7 +3277,7 @@ function startTriggeredAttack(state0: GameState, b: B, mk: MakeAtk): { state: Ga
   const opts = triggeredAttackOptions(state0, b, mk)
   if (!opts.length) return null
   if (opts.length === 1) {
-    const o = runTriggeredAttack(state0, b, mk, opts[0]!.weaponId)
+    const o = runTriggeredAttack(state0, b, mk, opts[0]!.weaponId, opts[0]!.targetId)
     return { ...o, wait: true }
   }
   const parent = atkOf(state0)!
@@ -3177,7 +3305,7 @@ function triggeredAttackAnswer(state0: GameState, b: B, a: ChooseAttackAction): 
   if (a.additional) return reject('E_NOT_AN_OPTION', 'no additional attack outside an activation')
   if (!triggeredAttackOptions(state0, b, mk).some((o) => o.weaponId === a.weaponId && o.targetId === a.targetId)) return reject('E_NOT_AN_OPTION', 'that attack is not available')
   const state = patchAtk(state0, { stage: 'trigWait', flags: { ...atk.x.flags, trigAtk: undefined } })
-  const o = runTriggeredAttack(state, b, mk, a.weaponId)
+  const o = runTriggeredAttack(state, b, mk, a.weaponId, a.targetId)
   return { state: o.state, events: o.events, pending: o.state.pending }
 }
 
@@ -3434,7 +3562,9 @@ function anytimeAbilityAnswer(state0: GameState, b: B, a: ChooseCombatActionActi
   if (!cur || a.modelId !== cur) return reject('E_TARGET_INVALID', `${cur} is the model ${inMove ? 'moving' : 'attacking'}`)
   const ab = rec(b, a.abilityId ?? '')
   if (!a.abilityId || !isAnytimeAbility(ab)) return reject('E_NOT_AN_OPTION', 'only a self ability can be used between attacks')
-  const r = performSpecialAction(state, b, cur, a.abilityId)
+  let target = a.targetId
+  if (!target && needsTarget(ab)) target = specialChoices(state, b, cur, true).find((c) => c.abilityId === a.abilityId && c.targetId)?.targetId
+  const r = performSpecialAction(state, b, cur, a.abilityId, target)
   if ('rejection' in r) return r
   state = r.state
   if (inMove) return raiseMovement(state, b, r.events) // the movement choice is still to make
@@ -3543,8 +3673,9 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
   if (a.player !== pd.player) return reject('E_NOT_YOUR_DECISION', `the decision belongs to player ${pd.player}`)
   if (pd.kind === 'chooseActivation') return a.type === 'chooseActivation' ? beginActivation(state, b, a.activate) : reject('E_WRONG_DECISION', 'choose a model or unit to activate')
   if (pd.kind === 'channel' && a.type === 'channel') return channelDecisionAnswer(state, b, a)
+  const assaulting = pd.kind === 'chooseAttack' && pd.context.data?.code === 'assault'
   if (isAnytimeAction(a)) {
-    if (!ANYTIME_KINDS.has(pd.kind)) return reject('E_WRONG_DECISION', 'spells, feats and healing are not allowed in the middle of an attack or move')
+    if (!ANYTIME_KINDS.has(pd.kind) || assaulting) return reject('E_WRONG_DECISION', 'spells, feats and healing are not allowed in the middle of an attack or move')
     return anytimeAnswer(state, b, a)
   }
   if (a.type === 'pass') {
@@ -3554,9 +3685,10 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
     if (pd.kind === 'combinedAttack') return reraise(state, b, [])
     if (pd.kind === 'channel') return reraise(state, b, [])
     if (pd.kind === 'chooseAttack' && pd.context.data?.code === 'triggerAttack') return triggeredAttackDeclined(state, b)
+    if (assaulting) return reraise(state, b, []) // no Assault shot: on to the next model, then the Combat Actions
     return reject('E_NOT_AN_OPTION', 'nothing to pass')
   }
-  if (a.type === 'chooseCombatAction' && a.choice === 'specialAction' && (pd.kind === 'chooseAttack' || pd.kind === 'chooseMovement')) return anytimeAbilityAnswer(state, b, a)
+  if (a.type === 'chooseCombatAction' && a.choice === 'specialAction' && (pd.kind === 'chooseAttack' || pd.kind === 'chooseMovement') && !assaulting) return anytimeAbilityAnswer(state, b, a)
   const wrong = (): Result => reject('E_WRONG_DECISION', `${a.type} does not answer a ${pd.kind} decision`)
   switch (pd.kind) {
     case 'chooseMovement': return a.type === 'chooseMovement' ? chooseMovementAnswer(state, b, a) : wrong()
@@ -3565,7 +3697,8 @@ export function handleActivationAction(state: GameState, b: B, a: Action): Resul
     case 'placeTroopers': return a.type === 'placeTroopers' ? placeTroopersAnswer(state, b, a) : wrong()
     case 'chooseCombatAction': return a.type === 'chooseCombatAction' ? combatAnswer(state, b, a) : wrong()
     case 'chooseAttack':
-      if (a.type === 'chooseAttack') return pd.context.data?.code === 'triggerAttack' ? triggeredAttackAnswer(state, b, a) : chooseAttackAnswer(state, b, a)
+      if (a.type === 'chooseAttack') return pd.context.data?.code === 'triggerAttack' ? triggeredAttackAnswer(state, b, a) : assaulting ? assaultAnswer(state, b, a) : chooseAttackAnswer(state, b, a)
+      if (assaulting) return wrong()
       if (a.type === 'combinedAttack') return combinedAttackAnswer(state, b, a)
       if (a.type === 'powerAttack') return powerAttackAnswer(state, b, a)
       if (a.type === 'endAttacks') {

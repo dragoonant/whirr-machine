@@ -84,12 +84,13 @@ const friendsWithin = (state: GameState, selfId: ModelId, range: number): ModelS
 }
 
 /**
- * Empower (star Action, range 6): the friendly warjack in range that can hold focus and has the least gets 1 focus, and a Disruption
- * on it ends first. Core cannot ask a code special action for a target, so the pick is made here (ties: nearest, then id).
+ * Empower (star Action, range 6): the warjack the player names (core's targeted special action; without a name, the friendly warjack in range
+ * that has the least focus, ties nearest then id) gets 1 focus, and a Disruption on it ends first.
  */
 const khaEmpower = (c: HookContext): HookResult => {
   const jacks = friendsWithin(c.state, c.selfId, 6).filter((m) => m.type === 'warEngine' && !m.inert && !m.crippled.includes('C'))
-  const pick = [...jacks].sort((p, q) => p.focus - q.focus)[0]
+  const named = jacks.find((m) => m.id === c.targetId) // the player's choice (a targeted special action)
+  const pick = named ?? [...jacks].sort((p, q) => p.focus - q.focus)[0]
   if (!pick) return noop(c)
   let state = c.state
   const events: GameEvent[] = []
@@ -113,7 +114,8 @@ const khaSigilOfPower = (c: HookContext): HookResult => {
   if (!me) return noop(c)
   const foes = Object.values(c.state.models).filter((m) => m.owner !== me.owner && isOnTable(m) && m.life === 'active')
   const gap = (m: ModelState): number => foes.reduce((n, f) => Math.min(n, modelDistance(m, f)), Infinity)
-  const pick = [...friendsWithin(c.state, c.selfId, 6)].sort((p, q) => gap(p) - gap(q) || p.id.localeCompare(q.id))[0]
+  const near = friendsWithin(c.state, c.selfId, 6)
+  const pick = near.find((m) => m.id === c.targetId) ?? [...near].sort((p, q) => gap(p) - gap(q) || p.id.localeCompare(q.id))[0] // the player's choice, else nearest an enemy
   if (!pick) return noop(c)
   const ids = pick.unitId ? (c.state.units[pick.unitId]?.troopers ?? []).filter((t) => c.state.models[t] && isOnTable(c.state.models[t]!)) : [pick.id]
   const r = applyEffect(c.state, { sourceId: SIGIL, name: 'Sigil of Power', owner: me.owner, casterId: c.selfId, targetIds: ids, mods: [], duration: 'turn' })

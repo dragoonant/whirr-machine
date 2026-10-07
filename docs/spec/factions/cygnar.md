@@ -252,8 +252,8 @@ The Courser has Shield Guard from its head, and the H boxes are on the grid (a c
 | Galvanic Capacitor | Vanes | a marker plus three any-time special actions (self scope), each once per activation of the unit: Lightning Wreath, Polarity Field Generator, Wind Weaver | FAC-CYG-018 |
 | Lightning Wreath | Vanes | code `lightningWreath`: an effect with `grants: Electro Leap` on one friendly model within 3" that has a melee weapon, for the turn | FAC-CYG-018 |
 | Electro Leap | granted | attack plugin `cyg.electro-leap` (onHit): a basic melee hit arcs POW 10 electrical to the nearest non-resistant model within 3" of the one hit, never the attacker | FAC-CYG-018 |
-| Polarity Field Generator | Vanes | code `polarityField` marks the unit for a round; export `polarityFieldBlocks` | FAC-CYG-018 (helper only) |
-| Wind Weaver / Warping Winds | Vanes | code `windWeaver`: a marker effect on the Vane plus a blast-resist snapshot on Cygnar models within 3"; export `warpingWindsRngPenalty` | FAC-CYG-018 (helper only) |
+| Polarity Field Generator | Vanes | code `polarityField` marks the unit for a round; core calls `polarityFieldBlocks` in the charge and slam target lists and answers | FAC-CYG-018, SKF-006 |
+| Wind Weaver / Warping Winds | Vanes | code `windWeaver`: one marker effect on the Vane; the -3 RNG (`weaponRangeFor`) and the blast resistance of Cygnar models within 3" (`resistsDamageType`) are read live | SKC-009, SKC-013, SKF-007 |
 | Plasma Nimbus | Vanes | optional `attack.resolved`, code `plasmaNimbus`: the attacker takes an unboostable POW 10 electrical roll | FAC-CYG-015 |
 | Shield Guard | Courser | coreFlag `shieldGuard`, resolved by the shared Menoth attack plugin | FAC-CYG-017 |
 | Insulated Cortex | Courser | coreFlag `insulatedCortex` (recorded; nothing in Cygnar applies Disruption yet) | data only |
@@ -267,8 +267,6 @@ the Courser, FAC-CYG-018 Galvanic Capacitor (Wreath, Polarity, Wind Weaver); FAC
 
 - Unit boxes (8 and 5) come from Warmachine Academy only; no card dump has unit health. Check them against the app.
 - The Voltaic Blade POW (10 or 12) is unresolved; the app card decides.
-- Not wired into core (see the package issues): the Warping Winds RNG loss, the Polarity Field charge and slam bar, Insulated Cortex, the
-  Courser losing Shield Guard with a crippled Head, a chosen (not auto-picked) Lightning Wreath target, and the shared Shield Guard
-  plugin's limit to leaders, war-engines and solos as the protected model.
+- Wired into core by the M12 follow-ups: the Warping Winds RNG loss, the Polarity Field charge and slam bar, Insulated Cortex, the Courser losing Shield Guard with a crippled Head, a chosen Lightning Wreath target, and Shield Guard covering any model that does not carry the rule itself.
 - The Mid-Year Update changelog also touches Caine in its Storm Legion column (a cut Mage Sight and a new Arcane Sight spell). The Recon
   section's spell list is unverified (`U-cd`); recheck it against the 2026 changelogs.

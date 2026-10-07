@@ -111,14 +111,17 @@ export function warpingWindsRangePenalty(state: GameState, targetId: ModelId): n
   }) ? 3 : 0
 }
 /**
- * The attack range of a ranged weapon for this attacker, live RNG effects included (spells never get it). While an attack by this model is being
- * resolved (`state.attack`) the Warping Winds penalty of its target comes off too, so the real roll and the preview both see it.
+ * The attack range of a ranged weapon for this attacker, live RNG effects included (spells never get it). With `targetId` (the target list, the AI's reach
+ * test) the Warping Winds penalty of that model comes off; without it, while an attack by this model is being resolved (`state.attack`) the penalty of
+ * its target comes off, so the real roll and the preview both see it.
  */
-export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec): number => {
+export const weaponRangeFor = (state: GameState, attackerId: ModelId, w: Rec, targetId?: ModelId): number => {
   const spell = w.recordType === 'spell' || w.kind === 'spell'
   const base = weaponRange(w, spell ? 0 : rangeBonusOf(state, attackerId))
+  if (spell || w.type === 'melee' || w.rng === undefined) return base
+  if (targetId) return Math.max(0, base - warpingWindsRangePenalty(state, targetId))
   const a = state.attack
-  if (spell || !a || a.attackerId !== attackerId || w.type === 'melee' || w.rng === undefined) return base
+  if (!a || a.attackerId !== attackerId) return base
   return Math.max(0, base - warpingWindsRangePenalty(state, a.targetId))
 }
 export const weaponCrippled = (m: ModelState, loc: string): boolean => loc !== '-' && m.crippled.includes(loc)
@@ -236,6 +239,19 @@ function enemyAuraPassives(state: GameState, b: DataBundle, me: ModelState, ctx:
     }
   }
   return out
+}
+
+/**
+ * Concealment a model carries by itself (Exhaust Fumes, Ashen Veil on a Revenger with its Light Immolator arm working), read by the DEF modifiers
+ * for ranged and arcane attacks. Fire resistance does not matter here: the veil shields its carrier from everybody.
+ */
+export function grantedConcealmentOf(state: GameState, b: DataBundle, id: ModelId): boolean {
+  const m = state.models[id]
+  if (!m) return false
+  if (effectsOn(state, id).some((e) => e.sourceId === 'cry.a.exhaust-fumes')) return true
+  if (!ownFlag(state, b, id, 'ashenVeil')) return false
+  const veil = ENEMY_AURAS.find((a) => a.id === ASHEN_VEIL_ID)
+  return !veil?.carrierOk || veil.carrierOk(state, b, m)
 }
 
 /** coreFlag marker -> the core ability that carries the rule (Skirmish WP-CORE): channelling reads `core.a.arc-node`, Cavalry boosts through `core.a.cavalry`. */
@@ -626,6 +642,7 @@ export interface ActX {
   startQueue?: string[] // optional activation.start abilities still to be offered ("<modelId>|<abilityId>")
   extraMelee?: Record<ModelId, number> // Blood Rage: extra melee attacks bought with corpse tokens
   ward?: { cont: unknown; unitForfeit: ModelId[]; queue: { effectId: string; modelId: ModelId }[] } // Admonition wards still to answer after a move
+  assault?: ModelId[] // Assault: models with the rule still to be offered their free ranged attack at the charged model (M12 follow-ups)
 }
 export type ActCtx = import('./types').ActivationContext & { x: ActX }
 export const actOf = (s: GameState): ActCtx | null => (s.activation as ActCtx | null)

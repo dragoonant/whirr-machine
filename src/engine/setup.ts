@@ -113,7 +113,7 @@ export function buildArmy(player: PlayerId, listId: string, bundle: DataBundle):
       models.push(...troopers)
       units.push({ id: uid, profileId: e.profile, owner: player, troopers: troopers.map((t) => t.id), attachments: [], activated: false })
     } else {
-      const m = makeModel(modelId(player, `e${i}`), player, e.profile, p, p.type === 'warEngine' || p.type === 'beast' ? { controllerId: leaderId } : {})
+      const m = makeModel(modelId(player, `e${i}`), player, e.profile, p, p.type === 'warEngine' || p.type === 'beast' || p.type === 'solo' ? { controllerId: leaderId } : {}) // M12: a solo names its Leader too (the Runebearer is in Gunnbjorn's battlegroup)
       models.push(m)
       if ((p.type === 'warEngine' && !p.lesser) || (p.type === 'beast' && p.beastClass !== 'lesser')) cohort = true
     }

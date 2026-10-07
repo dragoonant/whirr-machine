@@ -333,11 +333,8 @@ SKM-001 and SKM-001b (list cost, Cohort, FA, builds a game on Copperline Crossin
 Protective Aura; 021 Arcane Repeater; 022 Bond (a hit boosts for free in CTRL, not outside it); 023 Lucky Shot; 024 Take Up; 025 Bulldoze;
 026 Serenity; 027 Harmonious Exaltation and Guidance; 028 Spell Slave has no legal spell on Gunnbjorn's card.
 
-## Not built in the engine (owned elsewhere)
+## Not built in the engine
 
-- Serenity: `control.ts` must call `serenityStep(state, bundle, player)` (exported from `factions/trollbloods.ts`) after the casters refill.
-- Harmonious Exaltation: `spells.ts` `castCost` must subtract `harmoniousDiscount(state, casterId)` and call `useHarmoniousExaltation` after paying.
-- Lucky Shot: `spells.ts` `beastOptions` and `warlockOptions` cast an animus with no target, so a RNG 6 animus is never offered.
-- Guidance's magical weapons: `activation.ts` reads `wraithbaneOn` (Circle) only; it should also read a `magicalWeapons` effect. Its target is auto-picked because `needsTarget` lists only a few codes.
-- Attached: `setup.ts` gives no controller to solos; if the Runebearer should join the battlegroup it needs one.
+Built by the M12 follow-ups: `control.ts` calls `serenityStep`; `castCost` takes the Harmonious Exaltation discount and spends the marker; an animus with a range (Lucky Shot) is offered with targets; Guidance is a targeted action and its magical weapons are read by core; solos get a controllerId (the Runebearer is in the battlegroup).
+
 - Figures: slugs `wm-dozer-smigg`, `wm-krielstone-bearer`, `wm-stone-scribe`, `wm-runebearer` are WP-FIG's; `src/client/weaponFlavour.ts` has no flavour for `trl.w.bombard` and `trl.w.hand-weapon` (a figures-m9 test fails on the Bombard).

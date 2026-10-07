@@ -523,9 +523,15 @@ export function specialActionValue(env: Env, m: ModelState, a: CombatPick): numb
       return 0.6 * Math.min(3, constructs)
     }
     case 'lightning-wreath': {
-      const melee = friendsIn(s, m, 3, (x) => meleeWeapons(x).length > 0).concat(meleeWeapons(m).length ? [m] : [])
+      // the engine names the model (a targeted action): worth most on one that is about to fight
+      const melee = explicit ? (meleeWeapons(explicit).length ? [explicit] : []) : friendsIn(s, m, 3, (x) => meleeWeapons(x).length > 0).concat(meleeWeapons(m).length ? [m] : [])
       if (!melee.length) return 0
-      return 0.5 + (melee.some((x) => foesNear(x.pos, 5) > 0) ? 0.4 : 0)
+      return 0.5 + (melee.some((x) => foesNear(x.pos, 5) > 0) ? 0.4 : 0) - (melee.every((x) => x.activated) ? 0.45 : 0)
+    }
+    case 'righteous-intervention': {
+      // once per game: arm it when a fight is near and there is somebody worth stepping in for (a friendly Faction model that is not a Cleanser Sanctifier)
+      const kin = friendsIn(s, m, 6, (x) => !x.unitId || x.unitId !== m.unitId).filter((x) => x.profileId.startsWith('men.') && x.profileId !== 'men.cleanser-sanctifier')
+      return foesNear(m.pos, 14) > 0 && kin.length > 0 ? 0.45 : 0
     }
     case 'harmonious-exaltation': {
       const L = leaderOf(s, m.owner)

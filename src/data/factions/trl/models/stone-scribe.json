@@ -31,6 +31,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-stone-scribe",
     "archetype": "infantry"
   },
   "verify": "The card calls this model a Grunt. Values agree in S1 and S10 (SPD 5 MAT 5 DEF 12 ARM 13, Hand Weapon POW 10, 1 box, Tough, 40 mm)."

@@ -138,7 +138,7 @@ const guidedFireDie = (c: HookContext): HookResult => {
     const caster = c.state.models[e.casterId]
     if (!alive(caster)) return false
     if (e.casterId === at.id) return true
-    return at.controllerId === e.casterId && inCtrl(caster, at, statOf(c.state, b, caster.id, 'CTRL'))
+    return prof(b, at).type === 'beast' && at.controllerId === e.casterId && inCtrl(caster, at, statOf(c.state, b, caster.id, 'CTRL')) // warbeasts only (a solo names its Leader too since M12)
   })
   if (!covered) return noop(c)
   return { state: setAtk(c.state, { ...a, x: { ...a.x, boosted: true, flags: { ...a.x.flags, freeBoost: true } } }), events: [] }
@@ -282,17 +282,17 @@ const bulldoze = (c: HookContext): HookResult => {
 const luckyShot = (c: HookContext): HookResult => noop(c)
 
 /**
- * Guidance (the Runebearer's star action): one friendly model within 6" gains Eyeless Sight for a turn. The engine's special-action picker names
- * one target for only a few hooks, so the hook picks: the Leader if it is in range, else the nearest warbeast or war-engine, else the nearest other model.
- * RULING: its second half (the target's weapons deal magical damage) is recorded on the effect (`magicalWeapons`); the attack pipeline does not read it yet.
+ * Guidance (the Runebearer's star action): the friendly model within 6" the player names (core's targeted special action) gains Eyeless Sight for a turn;
+ * called without a name the hook picks: the Leader if it is in range, else the nearest warbeast or war-engine, else the nearest other model.
+ * Its second half (the target's weapons deal magical damage) is recorded on the effect (`magicalWeapons`) and read by the core magical-weapons plugin.
  */
 const guidance = (c: HookContext): HookResult => {
   const me = c.state.models[c.selfId]
   if (!alive(me)) return noop(c)
   const rank = (m: ModelState): number => (m.type === 'leader' ? 0 : m.type === 'beast' || m.type === 'warEngine' ? 1 : 2)
-  const t = Object.values(c.state.models)
-    .filter((m) => m.id !== me.id && m.owner === me.owner && alive(m) && m.life === 'active' && !m.inert && within(me, m, 6))
-    .sort((p, q) => rank(p) - rank(q) || modelDistance(me, p) - modelDistance(me, q) || p.id.localeCompare(q.id))[0]
+  const cands = Object.values(c.state.models).filter((m) => m.id !== me.id && m.owner === me.owner && alive(m) && m.life === 'active' && !m.inert && within(me, m, 6))
+  const t = cands.find((m) => m.id === c.targetId) // the player's choice (a targeted special action)
+    ?? cands.sort((p, q) => rank(p) - rank(q) || modelDistance(me, p) - modelDistance(me, q) || p.id.localeCompare(q.id))[0]
   if (!t) return noop(c)
   const r = applyEffect(c.state, { sourceId: 'trl.a.guidance', name: 'Guidance', owner: me.owner, casterId: me.id, targetIds: [t.id], mods: [], grants: ['trl.a.eyeless-sight'], duration: 'turn', magicalWeapons: true } as Parameters<typeof applyEffect>[1])
   return { state: r.state, events: r.events }
@@ -415,7 +415,7 @@ export const trollbloodsPlugins: AttackPlugin[] = [{
 export function resourcefulFree(state: GameState, b: DataBundle, casterId: ModelId, targetId: ModelId): boolean {
   if (!hasFlag(state, b, casterId, 'resourceful')) return false
   const t = state.models[targetId]
-  return !!t && (targetId === casterId || t.controllerId === casterId)
+  return !!t && (targetId === casterId || (prof(b, t).type === 'beast' && t.controllerId === casterId)) // the battlegroup is the warbeasts (a solo names its Leader too since M12)
 }
 
 /** Sentry (Rapid Fire): upkeep effects whose targets owe one basic ranged attack in the Maintenance Phase. */

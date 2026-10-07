@@ -44,6 +44,7 @@
   "cost": 4,
   "fa": 2,
   "figure": {
+    "slug": "wm-ravager-shaman",
     "archetype": "solo"
   },
   "verify": "App data (S1, S2 agree): SPD 6, AAT 6, MAT 6, DEF 13, ARM 15, 8 boxes, 4 points, FA 2, 40 mm base (S1 base advantage; S4 'Medium'). The January 2024 update (S9) gave it Sky Shaker, 8 boxes and 4 points; the January 2026 changelog (S8) took MAT 7 to 6. S4 (April 2026) still shows MAT 7. RAT 0 stands in for the blank RAT (no ranged weapon; Chain Lightning is an arcane attack on AAT)."

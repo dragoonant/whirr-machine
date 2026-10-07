@@ -8,7 +8,7 @@ import type {
 import { EngineInvariantError } from './types'
 import type { DiceRolled, GameEvent } from './events'
 import { loadBundle } from '../data/index'
-import { abilitiesOf, meleeReach, prof, statOf, weaponRange, rangeBonusOf, weaponsOf, isMelee } from './code-hooks'
+import { abilitiesOf, grantedConcealmentOf, meleeReach, prof, statOf, warpingWindsRangePenalty, weaponRange, rangeBonusOf, weaponsOf, isMelee } from './code-hooks'
 import { damageDistribution, expectedDamage as expDamage, pKill as pKillOf, spiralView, transferPreview as transferPreviewRows } from './damage'
 import { battlegroupInfo, furyInfo, leechPreviewInfo, thresholdInfo } from './fury'
 import { frenzyTarget as frenzyTargetInfo } from './phases/frenzy'
@@ -235,6 +235,8 @@ export interface ControlReport {
   elements: Record<Id, ElementControl>
   vpNow: Record<PlayerId, number>
   killBox: Record<PlayerId, boolean>
+  /** M12: the Kill Box is in force this turn (Skirmish deployment and the first round are not); `killBox` alone only says a Leader stands inside its strip */
+  killBoxActive?: boolean
 }
 export interface StatTrace { stat: Stat; value: number; base: number; steps: { source: string; mode: 'set' | 'double' | 'half' | 'add'; value: number; after: number }[] }
 export interface MoveCheck { ok: boolean; stopAt: Vec2 | null; reason: 'ok' | 'collision' | 'rough' | 'obstacle' | 'obstruction' | 'tooFar' | 'edge' | 'notStraight' | null; distance: number; cost: number }
@@ -269,7 +271,7 @@ export const query = {
     const v = state.models[viewerId], t = state.models[targetId]
     let mods = { concealment: false, cover: false, elevation: false, inMelee: false, stealth: false }
     if (v && t && rep.visible) {
-      const df = defModifiers(state, targetId, { kind: 'ranged', baseDef: statOf(state, b, targetId, 'DEF'), originId: viewerId })
+      const df = defModifiers(state, targetId, { kind: 'ranged', baseDef: statOf(state, b, targetId, 'DEF'), originId: viewerId, grantedConcealment: grantedConcealmentOf(state, b, targetId) })
       const stealth = abilitiesOf(state, b, targetId).includes('core.a.stealth') && modelDistance(v, t) > 5 + 1e-6
       mods = { concealment: df.concealment, cover: df.cover, elevation: df.elevation, inMelee: df.targetInMelee, stealth }
     }
@@ -309,13 +311,16 @@ export const query = {
     const boxes = remainingBoxes(dec.state, targetId)
     const direct = previewDamage(dec.state, b, 'direct')
     const dd = distOf(direct, boostDmg)
-    let exp = expDamage(dd) * roll.pHit
-    let pk = pKillOf(dd, boxes) * roll.pHit
+    // an Incorporeal target takes no damage from a non-magical attack: the odds say so instead of showing the roll's numbers
+    const takes = (d: DamagePreview): number => (d.noDamage ? 0 : 1)
+    let exp = expDamage(dd) * roll.pHit * takes(direct)
+    let pk = pKillOf(dd, boxes) * roll.pHit * takes(direct)
     if (atk.kind === 'aoe' && atk.losVerdict.inRange) {
       // R7.9: a miss with the target in range still hits it (not directly) with the blast POW
-      const bl = distOf(previewDamage(dec.state, b, 'blast'), false)
-      exp += expDamage(bl) * (1 - roll.pHit)
-      pk += pKillOf(bl, boxes) * (1 - roll.pHit)
+      const blast = previewDamage(dec.state, b, 'blast')
+      const bl = distOf(blast, false)
+      exp += expDamage(bl) * (1 - roll.pHit) * takes(blast)
+      pk += pKillOf(bl, boxes) * (1 - roll.pHit) * takes(blast)
     }
     void at
     return {
@@ -324,6 +329,9 @@ export const query = {
       expectedDamage: exp, pKill: pk, autoHit: !!atk.autoHit, autoMiss: !!atk.autoMiss,
     }
   },
+
+  /** Inches of RNG a ranged attack at this model loses to Warping Winds (Wind Weaver, Sky Shaker): 3 within 3" of a friendly carrier of the same faction, else 0. */
+  rangePenalty(state: GameState, targetId: ModelId): number { return warpingWindsRangePenalty(state, targetId) },
 
   /** Threat rings: advance SPD, run SPD+5, charge SPD+3+reach, slam (war-engines) SPD+3, ranged = SPD + longest ranged RNG. */
   threat(state: GameState, modelId: ModelId): ThreatRanges {

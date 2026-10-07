@@ -340,24 +340,16 @@ const huntersGrace = (c: HookContext): HookResult => {
 }
 
 /**
- * Sky Shaker (action): the user gains Warping Winds for a round (the effect warpingWindsRngPenalty / warpingWindsBlastResist read), and the Faction
- * models of its side within 3" get Resistance: Blast, fixed when the action is used.
+ * Sky Shaker (action): the user gains Warping Winds for a round. That one effect is all there is: the -3 RNG (weaponRangeFor, warpingWindsRngPenalty) and the
+ * Resistance: Blast of the Faction models of its side within 3" (resistsDamageType, warpingWindsBlastResist) read it live as the models move.
  */
 const skyShaker = (c: HookContext): HookResult => {
   const b = envOf(c).bundle
   const me = c.state.models[c.selfId]
   if (!me || !isOnTable(me)) return noop(c)
-  const faction = prof(b, me).faction
-  let s = c.state
-  const events: GameEvent[] = []
-  const w = applyEffect(s, { sourceId: 'cir.a.sky-shaker', name: 'Warping Winds', owner: me.owner, casterId: me.id, targetIds: [me.id], mods: [], duration: 'round' })
-  s = w.state; events.push(...w.events)
-  const ids = Object.values(s.models).filter((m) => m.owner === me.owner && nearAlive(s, me, m, 3) && prof(b, m).faction === faction).map((m) => m.id)
-  if (ids.length) {
-    const r = applyEffect(s, { sourceId: 'cir.a.sky-shaker', name: 'Warping Winds: Blast Resistance', owner: me.owner, casterId: me.id, targetIds: ids, mods: [], resist: ['blast'], duration: 'round' })
-    s = r.state; events.push(...r.events)
-  }
-  return { state: s, events }
+  void b
+  const w = applyEffect(c.state, { sourceId: 'cir.a.sky-shaker', name: 'Warping Winds', owner: me.owner, casterId: me.id, targetIds: [me.id], mods: [], duration: 'round' })
+  return { state: w.state, events: w.events }
 }
 
 export const circleHooks: CodeHookRegistry = {
@@ -463,6 +455,10 @@ const chainLightning: AttackPlugin = {
 }
 
 export const circlePlugins: AttackPlugin[] = [bodySnatcher, meleeBonuses, unyielding, chainLightning]
+
+/** Unyielding as ARM for the preview and the boost odds (the roll itself takes the same 2 off the points in the plugin above): 2 against melee and power attacks. */
+export const unyieldingArm = (state: GameState, b: DataBundle, targetId: ModelId, kind: string): number =>
+  (kind === 'melee' || kind === 'power') && has(state, b, targetId, 'cir.a.unyielding') ? 2 : 0
 
 // ---------- seams for core (pure, tested; called from core) ----------
 /** Death-Powered ARM bonus: +1 per corpse token. statOf should add it. */

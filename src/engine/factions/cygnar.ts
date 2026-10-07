@@ -185,13 +185,17 @@ const capacitorEffect = (
 
 /**
  * Lightning Wreath: the Vane picks the friendly model within 3" whose melee weapons will profit most.
- * RULING: the target is auto-picked (models already in melee first, then by MAT, then id) | the special-action flow has no target choice for
- * code abilities | a chosen target is a later core feature.
+ * The player names the model (a targeted special action, targeted.ts); called without one it still picks (models already in melee first, then by MAT, then id).
  */
 const lightningWreath = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   const me = c.state.models[c.selfId]
   if (!alive(me)) return noop(c)
+  // the player's choice (core's targeted special action names the model), when it is a legal one
+  const named = c.targetId ? c.state.models[c.targetId] : undefined
+  if (named && named.id !== me.id && named.owner === me.owner && alive(named) && named.life === 'active' && within(me, named, 3) && weaponsOf(b, named).some((w) => isMelee(w.w))) {
+    return capacitorEffect(c.state, me, 'Lightning Wreath', CAPACITOR_SRC.wreath, [named.id], { duration: 'turn', grants: ['cyg.a.electro-leap'] })
+  }
   const engaged = (m: ModelState): boolean => Object.values(c.state.models).some((e) => e.owner !== m.owner && alive(e) && e.life === 'active' && within(m, e, 1.5))
   const cands = Object.values(c.state.models)
     .filter((m) => m.id !== me.id && m.owner === me.owner && alive(m) && m.life === 'active' && within(me, m, 3) && weaponsOf(b, m).some((w) => isMelee(w.w)))
@@ -210,21 +214,14 @@ const polarityField = (c: HookContext): HookResult => {
 }
 
 /**
- * Wind Weaver: the Vane gains Warping Winds for a round (the marker the RNG helper reads), and friendly Cygnar models within 3" of it
- * resist blast damage for the round.
- * RULING: the blast resistance is a snapshot of who stood within 3" when the effect was used, not a live aura | effects carry a fixed
- * target list and core reads auras from profiles only | the live version is a core change (see issues).
+ * Wind Weaver: the Vane gains Warping Winds for a round: the marker both halves read, live, as the models move (the -3 RNG in weaponRangeFor, and the
+ * blast resistance of Cygnar models within 3" in resistsDamageType through warpingWindsBlastResist). No snapshot effect is made any more.
  */
 const windWeaver = (c: HookContext): HookResult => {
   const b = bundleOf(c)
   const me = c.state.models[c.selfId]
   if (!alive(me)) return noop(c)
-  const mark = capacitorEffect(c.state, me, 'Warping Winds', CAPACITOR_SRC.wind, [me.id], { duration: 'round' })
-  const near = Object.values(c.state.models)
-    .filter((m) => m.owner === me.owner && alive(m) && m.life === 'active' && prof(b, m).faction === 'cyg' && within(me, m, WIND_RANGE))
-    .map((m) => m.id)
-  const blast = capacitorEffect(mark.state, me, 'Warping Winds (blast)', CAPACITOR_SRC.wind, near, { duration: 'round', resist: ['blast'] })
-  return out(blast.state, [...mark.events, ...blast.events])
+  return capacitorEffect(c.state, me, 'Warping Winds', CAPACITOR_SRC.wind, [me.id], { duration: 'round' })
 }
 
 /**

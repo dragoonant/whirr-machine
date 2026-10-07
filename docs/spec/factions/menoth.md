@@ -63,7 +63,7 @@ profile, which the engine can match by profile id.
 ## Ability → data / engine map
 
 **Runs now** = existing engine support. **Engine** = entered as data (a `coreFlag` or ops core ignores, with a
-`verify` note) and waiting on engine work, listed under "New mechanics needed".
+`verify` note) and waiting on engine work (none is left open: see "Mechanics the engine had to add").
 
 | Ability | Data id | Status |
 |---|---|---|
@@ -160,7 +160,9 @@ game. S1+S2+S5.
 - **Marking:** `pyre-ward` (our own design: a flame inside a squared shield outline), not the faction's real icon.
 - **shipName:** Feora, Crusader, Valeria, Pyrrhus, Defenders.
 
-## New mechanics needed (engine owner; data is ready)
+## Mechanics the engine had to add (all built)
+
+The list below was the M9 build list for the engine owner. Every item is built in `src/engine/factions/menoth.ts` or core; it is kept as a map of where each rule lives. The M12 follow-ups also built Righteous Intervention, Penance of the Corrupted, Ashen Veil, Arc Node channelling and Enliven with the target's own SPD (table in the Skirmish section).
 
 - **Four Gifts of Menoth** (faction rule) and **Sanctified Hull**: a Maintenance-Phase choice on the Leader, no
   repeats until all four are used; Flame/Law/Wall as targeting bans for enemy charges and special attacks, spells and
@@ -281,14 +283,14 @@ is now a head option and cannot be crippled (the same call as the Cryx Raptor). 
 | Repel (WA-T) | Repulsor Shield | A hit by the shield pushes the model hit 1" straight away; a melee weapon attack that hits the Revenger pushes the attacker 1" straight away from it once the attack is done; lost with the crippled left arm | **Yes** (`men.a.repel`, `repelResolved` in `menoth.ts`) |
 | Chain (Decapitation, WA-T) | Flail | Damage left after ARM is doubled; a model it disables gets no Tough roll | **Yes** (`men.a.chain`, adjustPoints and onBoxed seams) |
 | Repair [d3+1] | Vassals | ★Action, range 1, heal d3+1 on a friendly construct | **Yes** (`men.a.repair`, the shared `repair` hook) |
-| Enliven | Vassals | ★Action, range 3, round-long: after an enemy attack damages that cohort model it may make a full advance | **Yes**, with a flat 5" advance (RULING) |
+| Enliven | Vassals | ★Action, range 3, round-long: after an enemy attack damages that cohort model it may make a full advance | **Yes**: the advance is the model's own SPD, read when it happens (RULING) |
 | Ancillary Attack | Vassals | ★Action, range 3: a friendly warjack makes one basic attack now, once per turn each | **Yes** (`men.a.ancillary-attack`) |
 | Shield Wall, Resistance: Fire, Shield | Sanctifiers, Revenger | as on the Defenders and Feora | **Yes** |
 | Sanctified Hull | Revenger | as on the Crusader | **Yes** |
-| Arc Node | Revenger | the Leader may channel a spell through it | **No**: `spells.ts` looks for `core.a.arc-node`, which core does not define; the model carries `arcNode: true` and `men.a.arc-node` (flag `arcNode`) for WP-CORE |
-| Ashen Veil | Light Immolator arm | concealment for the carrier; living enemies without Resistance: Fire within 2" take -2 on attack rolls | **No**: no attack-roll seam for an aura on enemy models, no granted concealment (WP-CORE) |
-| Righteous Intervention | Sanctifiers | once per game, in activation: for a round, when an enemy attack destroys a friendly non-Sanctifier within 6", a Sanctifier advances 2" and attacks in melee | **No**: an inert passive (no empty action offered); needs a once-per-game unit action and a reaction to a friendly death (WP-CORE) |
-| Penance of the Corrupted | Vassals | in the Control Phase, in the Leader's CTRL, take damage to give a friendly warjack that much focus | **No**: an inert passive; needs a damage-for-focus step in `focus.ts` (WP-CORE) |
+| Arc Node | Revenger | the Leader may channel a spell through it | **Yes**: core defines `core.a.arc-node`; `men.a.arc-node` (flag `arcNode`) reaches it through the flag marker, so Feora can channel through the Revenger |
+| Ashen Veil | Light Immolator arm | concealment for the carrier; living enemies without Resistance: Fire within 2" take -2 on attack rolls | **Yes**: an enemy aura in `code-hooks.ts` (-2 on attack rolls within 2") and granted concealment (`grantedConcealmentOf`), both off while the arm is crippled |
+| Righteous Intervention | Sanctifiers | once per game, in activation: for a round, when an enemy attack destroys a friendly non-Sanctifier within 6", a Sanctifier advances 2" and attacks in melee | **Yes**: a once-per-game unit action arms a round-long reaction (`menoth.ts`, `phases/activation.ts`) |
+| Penance of the Corrupted | Vassals | in the Control Phase, in the Leader's CTRL, take damage to give a friendly warjack that much focus | **Yes**: the Control Phase focus allocation takes `penance` entries (a Vassal suffers damage, a warjack in the Leader's CTRL gets the focus) |
 
 ## Tests
 

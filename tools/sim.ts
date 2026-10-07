@@ -86,7 +86,9 @@ export function checkState(s: GameState, prev: GameState | null): string[] {
       if (Math.abs(m.pos.x) > half || Math.abs(m.pos.z) > (s.scenario.table?.d ?? 36) / 2 + 0.01) out.push(`${m.id} off the table at (${m.pos.x.toFixed(2)}, ${m.pos.z.toFixed(2)})`)
     }
     const before = prev?.models[m.id]
-    if (before && LIFE_ORDER[m.life] < LIFE_ORDER[before.life] && !(before.life === 'disabled' && m.life === 'active')) out.push(`${m.id} life ${before.life} -> ${m.life}`)
+    // two ways back are legal: a disabled model that makes its Tough roll, and a destroyed Grunt that Grim Returns (Cryx) brings back (its effect is on the model)
+    const returned = before?.life === 'destroyed' && m.life === 'active' && s.effects.some((e) => e.sourceId === 'cry.a.grim-returns' && e.targetIds.includes(m.id))
+    if (before && LIFE_ORDER[m.life] < LIFE_ORDER[before.life] && !(before.life === 'disabled' && m.life === 'active') && !returned) out.push(`${m.id} life ${before.life} -> ${m.life}`)
   }
   if (prev) {
     if (!PHASE_NEXT[prev.phase].includes(s.phase)) out.push(`phase ${prev.phase} -> ${s.phase}`)

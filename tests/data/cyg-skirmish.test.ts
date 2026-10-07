@@ -387,7 +387,7 @@ describe('FAC-CYG-018 Galvanic Capacitor: the Vanes pick distinct effects; Light
     o = send(o, { type: 'chooseCombatAction', modelId: 'A:u4.1', choice: 'specialAction', abilityId: 'cyg.a.lightning-wreath' })
     expect(o.pending.kind).toBe('chooseCombatAction') // an any-time ability does not use the Combat Action up
     expect(offers(o, 'A:u4.1', 'cyg.a.lightning-wreath')).toBe(false)
-    expect(offers(o, 'A:u4.1', 'cyg.a.wind-weaver')).toBe(true)
+    expect(offers(o, 'A:u4.1', 'cyg.a.wind-weaver')).toBe(false) // M12: one capacitor effect per Vane a turn (the card), so this Vane is done; the other Vanes may take the other two
     const wreath = o.state.effects.find((e) => e.sourceId === 'cyg.a.lightning-wreath')!
     expect(wreath.targetIds).toEqual(['A:e1']) // Falk is the friendly melee model in 3"
     expect(abilitiesOf(o.state, bundle, 'A:e1')).toContain('cyg.a.electro-leap')

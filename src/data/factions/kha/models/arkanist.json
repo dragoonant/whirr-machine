@@ -27,6 +27,7 @@
   ],
   "cost": 0,
   "figure": {
+    "slug": "wm-arkanist",
     "archetype": "infantry"
   },
   "verify": "CD and WA stat tables agree (SPD 6 AAT 4 DEF 13 ARM 13, 1 box, small base 30 mm, unarmed). WA strategy prose says AAT 5; table values kept. MAT and RAT 0: no weapons (schema needs them)."

@@ -353,10 +353,10 @@ export function finalResult(state: GameState, bundle: DataBundle): { state: Game
 }
 
 /** query.control (00 section 8): the live report. Pure; wire into index.ts query.control. */
-export function controlReport(state: GameState, bundle: DataBundle): { elements: Record<Id, ElementControl>; vpNow: Record<PlayerId, number>; killBox: Record<PlayerId, boolean> } {
+export function controlReport(state: GameState, bundle: DataBundle): { elements: Record<Id, ElementControl>; vpNow: Record<PlayerId, number>; killBox: Record<PlayerId, boolean>; killBoxActive: boolean } {
   const def = scenarioDef(bundle, state.scenario.id)
   const elements = computeControl(state, def)
   const vpNow = { ...state.scenario.vp }
   for (const el of def.elements) { const c = elements[el.id]!.controller; if (c) vpNow[c] += el.vp.control } // what this point would add
-  return { elements, vpNow, killBox: { A: inKillBox(state, def, 'A'), B: inKillBox(state, def, 'B') } }
+  return { elements, vpNow, killBox: { A: inKillBox(state, def, 'A'), B: inKillBox(state, def, 'B') }, killBoxActive: killBoxActive(state, def) }
 }

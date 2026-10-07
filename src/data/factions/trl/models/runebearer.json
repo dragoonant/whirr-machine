@@ -34,6 +34,7 @@
   "cost": 3,
   "fa": 1,
   "figure": {
+    "slug": "wm-runebearer",
     "archetype": "solo"
   },
   "verify": "Card values agree in S1, S10 and S2 (SPD 6, AAT 6, DEF 12, ARM 14, 5 boxes, 3 points, FA 1, Tough, 40 mm). No melee or ranged weapon, so MAT and RAT are 0. The app keywords do not include Trollkin (kept as on the card)."
