@@ -25,6 +25,7 @@ import { markShadowsDirty, takeShadowsDirty, useAmbientFrames } from './frameRat
 import * as THREE from 'three'
 import { Terrain } from './Terrain'
 import { Zones } from './Zones'
+import { EdgeMarkers } from './EdgeMarkers'
 import { ElementProxies, KillBoxLines, ScenarioElements } from './scenarioElements'
 import type { PlayerId } from '../../engine/index'
 
@@ -137,6 +138,7 @@ function Scene(): ReactElement {
       <Surface w={w} d={d} onShadows={shadows} />
       <Zones />
       <KillBoxLines />
+      <EdgeMarkers />
       <Terrain />
       <ScenarioElements />
       <Figures />

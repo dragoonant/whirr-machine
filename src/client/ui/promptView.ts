@@ -195,7 +195,7 @@ export function buildPromptView(state: GameState, pd: PendingDecision, legal: re
       title = options.some((o) => o.action.type === 'endTurn') ? 'Everything has activated. End your turn.' : 'Pick a model or unit to activate'
       break
     case 'chooseTurnOrder': title = 'You won the roll-off: who goes first?'; break
-    case 'chooseEdge': title = 'Choose your table edge'; break
+    case 'chooseEdge': title = 'Choose your table edge (both edges are marked in gold on the table)'; break
     case 'chooseBoxes': title = `${tgt || who}: choose where the damage lands`; break
     case 'chooseGrid': piece = chooseGridPiece(state, pd); break
     case 'channel': piece = channelPiece(state, pd); break

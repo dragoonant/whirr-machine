@@ -4,6 +4,7 @@
 // The flag-obstruction is virtual (not in state.terrain): it is drawn from elementState[flag].terrainId === null at the flag's position.
 import { useMemo, type ReactElement } from 'react'
 import * as THREE from 'three'
+import { LabelSprite } from './labelSprite'
 import type { GameState, Id, PlayerId, Vec2 } from '../../engine/index'
 import { elementGeom, elementOwner, elementRadius } from '../../engine/scenario'
 import { worldShape, type WorldShape } from '../../engine/terrain'
@@ -99,6 +100,25 @@ function Flag({ colour, y = 0 }: { colour: string; y?: number }): ReactElement {
   )
 }
 
+const KIND_LABEL: Partial<Record<ElementDef['kind'], string>> = {
+  objective50: 'Objective', objective40: 'Objective', flag: 'Flag', scenarioTerrain: 'Scenario terrain', cache: 'Cache',
+}
+const BEACON_HEIGHT = 7
+
+/** A tall, faint light column and a floating name tag, so objectives read from across the table and through terrain. */
+function Beacon({ v }: { v: ElementDrawView }): ReactElement | null {
+  const label = KIND_LABEL[v.def.kind]
+  if (!label) return null
+  const state = v.contested ? 'contested' : v.colour === NEUTRAL_COLOUR ? null : 'held'
+  return (
+    <group>
+      <mesh geometry={GEO.cyl} material={lineMaterial(`beacon:${v.colour}`, v.colour, 0.35)} position={[0, BEACON_HEIGHT / 2, 0]} scale={[0.6, BEACON_HEIGHT, 0.6]} renderOrder={2} />
+      <LabelSprite position={[0, BEACON_HEIGHT + 0.6, 0]} border={v.colour}
+        text={`${label}${v.def.vp.control > 0 ? ` · ${v.def.vp.control} VP` : ''}${state ? ` · ${state}` : ''}`} />
+    </group>
+  )
+}
+
 function Element({ v }: { v: ElementDrawView }): ReactElement {
   const { def } = v
   const ring = def.hold.within + v.r
@@ -137,6 +157,7 @@ function Element({ v }: { v: ElementDrawView }): ReactElement {
           </group>
         )}
         {v.tokens !== null && <Tokens n={v.tokens} r={Math.max(v.r, 1)} />}
+        <Beacon v={v} />
       </group>
     </group>
   )
